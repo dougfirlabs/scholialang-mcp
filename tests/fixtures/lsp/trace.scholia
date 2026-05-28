@@ -1,0 +1,4 @@
+<Observation id="Obs_01" location="src/sample.py:1:2">thing returns a sample string.</Observation>
+<Ref id="Ref_01" target="Obs_01">See the observation.</Ref>
+<Edge id="Edge_01" target="src/sample.py::thing">Function edge.</Edge>
+

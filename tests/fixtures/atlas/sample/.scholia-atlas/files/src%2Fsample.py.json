@@ -1,0 +1,10 @@
+{
+  "source_path": "src/sample.py",
+  "granularity": "file",
+  "prose_preamble": "Small sample module exposing thing().",
+  "scholia_codeblock": "<Observation id=\"Obs_01\">thing returns a sample string.</Observation>",
+  "metadata": {
+    "spec_version": "0.4.0"
+  }
+}
+

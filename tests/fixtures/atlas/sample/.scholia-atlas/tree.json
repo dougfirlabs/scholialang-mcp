@@ -1,0 +1,10 @@
+{
+  "name": "sample",
+  "children": [
+    {
+      "path": "src/sample.py",
+      "summary": "Small sample module."
+    }
+  ]
+}
+

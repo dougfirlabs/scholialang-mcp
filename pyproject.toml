@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scholialang-mcp"
+version = "0.4.0"
+description = "MCP and LSP protocol tooling for Scholia"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "Doug Fir Labs"}]
+dependencies = [
+    "scholialang>=0.4.0",
+]
+keywords = ["scholia", "scholialang", "mcp", "lsp", "agents"]
+
+[project.optional-dependencies]
+claude = []
+codex = []
+ollama = []
+openai = []
+all = []
+dev = [
+    "pytest>=7.0",
+    "pytest-timeout>=2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/dougfirlabs/scholialang-mcp"
+Repository = "https://github.com/dougfirlabs/scholialang-mcp"
+Specification = "https://github.com/dougfirlabs/scholialang-spec"
+
+[project.scripts]
+scholialang-mcp = "scholialang_mcp.server:main"
+scholialang-lsp = "scholialang_mcp.lsp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+timeout = 10
+timeout_method = "signal"
+
