@@ -6,7 +6,8 @@
 - Add a repo-local Codex marketplace entry for `scholialang@scholialang-mcp`.
 - Add full Codex rollout exhaust import into SQLite-backed Scholialang DAGs,
   including raw rollout atoms and OpenTalon-compatible canonical event atoms.
-- Add standalone HTML trace review exports behind explicit `dag_export` options.
+- Add standalone HTML trace review exports behind explicit `dag_export` options,
+  including a searchable viewer and highlighted full SRML tab.
 - Document the plugin storage model, safety policy, install flow, and validation
   commands.
 - Document best practices for quiet Scholialang use during Codex sessions.

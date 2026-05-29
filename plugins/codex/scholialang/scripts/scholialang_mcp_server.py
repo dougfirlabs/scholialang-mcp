@@ -672,6 +672,72 @@ def html_attr(value):
     return html.escape(str(value or ""), quote=True)
 
 
+def render_srml(dag):
+    rows = [f'<Trace id="{html_attr(dag["dag_id"])}" title="{html_attr(dag.get("title", ""))}">']
+    rows.append("  <Metadata>")
+    rows.append(f'    <Project name="{html_attr(dag.get("project_name", "global"))}" path="{html_attr(dag.get("project_path", ""))}"/>')
+    if dag.get("objective"):
+        rows.append(f"    <Objective>{html.escape(dag.get('objective', ''))}</Objective>")
+    rows.append(f'    <Counts nodes="{len(dag.get("nodes", {}))}" edges="{len(dag.get("edges", []))}"/>')
+    rows.append("  </Metadata>")
+    rows.append("  <Atoms>")
+    for node_id in dag.get("order", []):
+        node = dag["nodes"][node_id]
+        kind = html.escape(node.get("kind", "Atom"))
+        created_at = node.get("created_at", "")
+        rows.append(f'    <{kind} id="{html_attr(node_id)}" created_at="{html_attr(created_at)}">')
+        rows.append(f"      <Summary>{html.escape(node.get('summary', ''))}</Summary>")
+        if node.get("content"):
+            rows.append(f"      <Content>{html.escape(node.get('content', ''))}</Content>")
+        for file_ref in node.get("files", []) or []:
+            if isinstance(file_ref, dict):
+                path = file_ref.get("path") or file_ref.get("file") or file_ref.get("name") or json.dumps(file_ref, sort_keys=True)
+                rows.append(f'      <File path="{html_attr(path)}"/>')
+            else:
+                rows.append(f'      <File path="{html_attr(file_ref)}"/>')
+        if node.get("confidence") is not None:
+            rows.append(f"      <Confidence>{html.escape(json.dumps(node.get('confidence'), sort_keys=True))}</Confidence>")
+        rows.append(f"    </{kind}>")
+    rows.append("  </Atoms>")
+    rows.append("  <Relations>")
+    for edge in dag.get("edges", []):
+        label_attr = f' label="{html_attr(edge.get("label"))}"' if edge.get("label") else ""
+        rows.append(
+            f'    <Edge from="{html_attr(edge["from"])}" to="{html_attr(edge["to"])}" '
+            f'relation="{html_attr(edge["relation"])}"{label_attr}/>'
+        )
+    rows.append("  </Relations>")
+    rows.append("</Trace>")
+    return "\n".join(rows)
+
+
+def highlight_srml(srml_text):
+    tag_pattern = re.compile(r"(&lt;/?)([A-Za-z][A-Za-z0-9_-]*)(.*?)(/?&gt;)")
+    attr_pattern = re.compile(r"([A-Za-z_:][A-Za-z0-9_:.-]*)(=)(&quot;.*?&quot;)")
+
+    def highlight_attrs(match):
+        return (
+            f'<span class="srml-attr">{match.group(1)}</span>'
+            f'<span class="srml-punctuation">{match.group(2)}</span>'
+            f'<span class="srml-string">{match.group(3)}</span>'
+        )
+
+    def highlight_tag(match):
+        attrs = attr_pattern.sub(highlight_attrs, match.group(3))
+        return (
+            f'<span class="srml-punctuation">{match.group(1)}</span>'
+            f'<span class="srml-tag">{match.group(2)}</span>'
+            f"{attrs}"
+            f'<span class="srml-punctuation">{match.group(4)}</span>'
+        )
+
+    escaped_lines = []
+    for line in srml_text.splitlines():
+        escaped = html.escape(line)
+        escaped_lines.append(tag_pattern.sub(highlight_tag, escaped))
+    return "\n".join(escaped_lines)
+
+
 def render_trace_html(dag):
     counts = {}
     for node in dag.get("nodes", {}).values():
@@ -690,12 +756,13 @@ def render_trace_html(dag):
         summary = node.get("summary", "")
         content = node.get("content", "")
         search_text = " ".join([node_id, kind, summary, content])
+        created_at = node.get("created_at", "")
         content_block = ""
         if content:
             content_block = (
-                "<details>"
+                '<details class="node-content">'
                 "<summary>Content</summary>"
-                f"<pre>{html.escape(content)}</pre>"
+                f'<pre class="content-pre">{html.escape(content)}</pre>'
                 "</details>"
             )
         node_cards.append(
@@ -703,10 +770,11 @@ def render_trace_html(dag):
                 [
                     f'<article class="node" data-kind="{html_attr(kind)}" data-search="{html_attr(search_text.lower())}">',
                     '  <div class="node-head">',
-                    f'    <span class="kind">{html.escape(kind)}</span>',
-                    f'    <code>{html.escape(node_id)}</code>',
+                    f'    <span class="kind kind-{html_attr(kind.lower())}">{html.escape(kind)}</span>',
+                    f'    <code class="node-id">{html.escape(node_id)}</code>',
                     "  </div>",
-                    f"  <p>{html.escape(summary)}</p>",
+                    f'  <p class="summary">{html.escape(summary)}</p>',
+                    f'  <div class="node-meta"><span>{html.escape(created_at)}</span></div>' if created_at else "",
                     f"  {content_block}",
                     "</article>",
                 ]
@@ -718,7 +786,7 @@ def render_trace_html(dag):
         edge_items.append(
             "<li>"
             f"<code>{html.escape(edge['from'])}</code> "
-            f"<span>{html.escape(edge['relation'])}</span> "
+            f"<span class=\"relation\">{html.escape(edge['relation'])}</span> "
             f"<code>{html.escape(edge['to'])}</code>"
             f"{html.escape(label)}"
             "</li>"
@@ -727,34 +795,241 @@ def render_trace_html(dag):
         f'<option value="{html_attr(kind)}">{html.escape(kind)}</option>'
         for kind in sorted(counts)
     )
+    srml_text = render_srml(dag)
+    srml_code = highlight_srml(srml_text)
     css = """
-:root { color-scheme: light dark; --bg: Canvas; --fg: CanvasText; --muted: #667085; --line: #d0d7de; --panel: color-mix(in srgb, Canvas 96%, CanvasText 4%); --accent: #6f42c1; --green: #1a7f37; --red: #cf222e; }
+:root {
+  color-scheme: light;
+  --background: #fafafa;
+  --foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --primary: #18181b;
+  --primary-foreground: #fafafa;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --ring: #2563eb;
+  --tag: #6d28d9;
+  --attr: #047857;
+  --string: #b45309;
+  --punctuation: #71717a;
+  --shadow: 0 1px 2px rgba(24, 24, 27, 0.06), 0 1px 1px rgba(24, 24, 27, 0.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background: #09090b;
+    --foreground: #fafafa;
+    --muted: #18181b;
+    --muted-foreground: #a1a1aa;
+    --card: #101012;
+    --card-foreground: #fafafa;
+    --border: #27272a;
+    --input: #27272a;
+    --primary: #fafafa;
+    --primary-foreground: #18181b;
+    --secondary: #18181b;
+    --secondary-foreground: #fafafa;
+    --ring: #60a5fa;
+    --tag: #c084fc;
+    --attr: #34d399;
+    --string: #fbbf24;
+    --punctuation: #a1a1aa;
+    --shadow: none;
+  }
+}
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-header { position: sticky; top: 0; z-index: 2; padding: 14px 18px; background: color-mix(in srgb, Canvas 92%, transparent); border-bottom: 1px solid var(--line); backdrop-filter: blur(10px); }
-h1 { margin: 0 0 8px; font-size: 18px; letter-spacing: 0; }
-.meta, .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.pill { border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; color: var(--muted); background: var(--panel); }
-.toolbar { margin-top: 12px; }
-input, select { min-height: 32px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: Canvas; color: CanvasText; font: inherit; }
-input { min-width: min(520px, 100%); flex: 1; }
-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
-.node { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 12px; }
+html { background: var(--background); }
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+button, input, select { font: inherit; }
+.shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 16px 0;
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+}
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+h1 { margin: 0; font-size: 22px; line-height: 1.25; letter-spacing: 0; }
+h2 { margin: 0; font-size: 15px; letter-spacing: 0; }
+.export-badge {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: var(--muted-foreground);
+  background: var(--card);
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+}
+.meta, .toolbar, .view-head, .tabs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.meta { margin-top: 14px; }
+.pill {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 9px;
+  color: var(--muted-foreground);
+  background: var(--secondary);
+  font-size: 12px;
+}
+.toolbar {
+  margin-top: 14px;
+  align-items: stretch;
+}
+.field {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--input);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--card);
+  color: var(--muted-foreground);
+  box-shadow: var(--shadow);
+}
+.field input {
+  width: min(520px, 52vw);
+  min-width: 180px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+}
+select {
+  min-height: 36px;
+  border: 1px solid var(--input);
+  border-radius: 8px;
+  padding: 0 34px 0 10px;
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: var(--shadow);
+}
+.tabs {
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  background: var(--muted);
+}
+.tab, .copy-button {
+  min-height: 30px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.tab[aria-selected="true"], .copy-button {
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: var(--shadow);
+}
+.copy-button {
+  border: 1px solid var(--border);
+}
+main { padding: 18px 0 28px; }
+.view { display: none; }
+.view.active { display: block; }
+.view-head { justify-content: space-between; margin-bottom: 10px; }
+.nodes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr)); gap: 10px; }
+.node {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--card-foreground);
+  padding: 13px;
+  box-shadow: var(--shadow);
+}
 .node[hidden] { display: none; }
 .node-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
-.kind { color: var(--accent); font-weight: 700; }
-code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
-pre { overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid var(--line); border-radius: 6px; padding: 10px; background: Canvas; max-height: 55vh; }
-details { margin-top: 8px; }
-summary { cursor: pointer; color: var(--green); }
-.edges { margin-top: 20px; }
-.edges li { margin: 4px 0; }
+.kind { color: var(--tag); font-weight: 700; }
+.node-id, code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+.node-id { color: var(--muted-foreground); overflow-wrap: anywhere; }
+.summary { margin: 10px 0 6px; }
+.node-meta { color: var(--muted-foreground); font-size: 12px; }
+.content-pre, .srml-pre {
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--muted);
+}
+.content-pre { max-height: 38vh; }
+.node-content { margin-top: 9px; }
+summary { cursor: pointer; color: var(--tag); font-weight: 600; }
+.edges { margin-top: 18px; }
+.edges ul {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.edges li {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.relation { color: var(--tag); font-weight: 600; }
+.srml-pre {
+  max-height: none;
+  min-height: 60vh;
+  background: #0a0a0a;
+  color: #e5e7eb;
+  border-color: #27272a;
+}
+.srml-tag { color: #c084fc; font-weight: 700; }
+.srml-attr { color: #34d399; }
+.srml-string { color: #fbbf24; }
+.srml-punctuation { color: #a1a1aa; }
+@media (max-width: 680px) {
+  .shell { width: min(100% - 20px, 1180px); }
+  .title-row { display: block; }
+  .export-badge { display: inline-flex; margin-top: 10px; }
+  .field { width: 100%; }
+  .field input { width: 100%; }
+  select, .tabs { width: 100%; margin-left: 0; }
+  .tabs { justify-content: stretch; }
+  .tab { flex: 1; }
+}
 """
     js = """
 const q = document.querySelector("#q");
 const kind = document.querySelector("#kind");
 const nodes = Array.from(document.querySelectorAll(".node"));
 const shown = document.querySelector("#shown");
+const tabs = Array.from(document.querySelectorAll(".tab"));
+const views = Array.from(document.querySelectorAll(".view"));
+const copyButton = document.querySelector("#copy-srml");
 function applyFilter() {
   const needle = q.value.trim().toLowerCase();
   const selected = kind.value;
@@ -770,6 +1045,22 @@ function applyFilter() {
 }
 q.addEventListener("input", applyFilter);
 kind.addEventListener("change", applyFilter);
+for (const tab of tabs) {
+  tab.addEventListener("click", () => {
+    for (const item of tabs) item.setAttribute("aria-selected", item === tab ? "true" : "false");
+    for (const view of views) view.classList.toggle("active", view.id === tab.dataset.view);
+  });
+}
+copyButton.addEventListener("click", async () => {
+  const srml = document.querySelector("#srml-code").innerText;
+  try {
+    await navigator.clipboard.writeText(srml);
+    copyButton.textContent = "Copied";
+  } catch (_error) {
+    copyButton.textContent = "Select SRML";
+  }
+  setTimeout(() => { copyButton.textContent = "Copy SRML"; }, 1200);
+});
 applyFilter();
 """
     return f"""<!doctype html>
@@ -782,24 +1073,50 @@ applyFilter();
 </head>
 <body>
 <header>
-  <h1>{html.escape(dag.get("title") or dag["dag_id"])}</h1>
-  <div class="meta">
-    <span class="pill">dag {html.escape(dag["dag_id"])}</span>
-    <span class="pill">{len(dag.get("nodes", {}))} nodes</span>
-    <span class="pill">{len(dag.get("edges", []))} edges</span>
-    {count_items}
-    <span class="pill" id="shown"></span>
-  </div>
-  <div class="toolbar">
-    <input id="q" type="search" placeholder="Search summaries and content">
-    <select id="kind"><option value="">All kinds</option>{kind_options}</select>
+  <div class="shell">
+    <div class="title-row">
+      <div>
+        <p class="eyebrow">Scholialang Trace</p>
+        <h1>{html.escape(dag.get("title") or dag["dag_id"])}</h1>
+      </div>
+      <div class="export-badge">Local HTML export</div>
+    </div>
+    <div class="meta">
+      <span class="pill">dag {html.escape(dag["dag_id"])}</span>
+      <span class="pill">{len(dag.get("nodes", {}))} nodes</span>
+      <span class="pill">{len(dag.get("edges", []))} edges</span>
+      {count_items}
+      <span class="pill" id="shown"></span>
+    </div>
+    <div class="toolbar">
+      <label class="field" for="q"><span>Search</span><input id="q" type="search" placeholder="summaries and content"></label>
+      <select id="kind" aria-label="Filter by atom kind"><option value="">All kinds</option>{kind_options}</select>
+      <div class="tabs" role="tablist" aria-label="Trace views">
+        <button class="tab" type="button" data-view="graph-view" role="tab" aria-selected="true">Trace</button>
+        <button class="tab" type="button" data-view="srml-view" role="tab" aria-selected="false">SRML</button>
+      </div>
+    </div>
   </div>
 </header>
-<main>
-{''.join(node_cards)}
-  <section class="edges">
-    <h2>Edges</h2>
-    <ul>{''.join(edge_items)}</ul>
+<main class="shell">
+  <section id="graph-view" class="view active" role="tabpanel">
+    <div class="view-head">
+      <h2>Atoms</h2>
+    </div>
+    <div class="nodes">
+      {''.join(node_cards)}
+    </div>
+    <section class="edges">
+      <div class="view-head"><h2>Edges</h2></div>
+      <ul>{''.join(edge_items)}</ul>
+    </section>
+  </section>
+  <section id="srml-view" class="view" role="tabpanel">
+    <div class="view-head">
+      <h2>Full SRML</h2>
+      <button id="copy-srml" class="copy-button" type="button">Copy SRML</button>
+    </div>
+    <pre class="srml-pre"><code id="srml-code">{srml_code}</code></pre>
   </section>
 </main>
 <script>{js}</script>
@@ -903,19 +1220,7 @@ def tool_dag_export(args):
     if export_format == "json":
         text = json.dumps(dag, indent=2, sort_keys=True)
     elif export_format == "xml":
-        rows = [f'<Trace id="{html.escape(dag["dag_id"])}" title="{html.escape(dag.get("title", ""))}">']
-        for node_id in dag.get("order", []):
-            node = dag["nodes"][node_id]
-            kind = html.escape(node.get("kind", "Atom"))
-            rows.append(f'  <{kind} id="{html.escape(node_id)}">')
-            rows.append(f'    <Summary>{html.escape(node.get("summary", ""))}</Summary>')
-            if node.get("content"):
-                rows.append(f'    <Content>{html.escape(node.get("content", ""))}</Content>')
-            rows.append(f"  </{kind}>")
-        for edge in dag.get("edges", []):
-            rows.append(f'  <Edge from="{html.escape(edge["from"])}" to="{html.escape(edge["to"])}" relation="{html.escape(edge["relation"])}"/>')
-        rows.append("</Trace>")
-        text = "\n".join(rows)
+        text = render_srml(dag)
     elif export_format == "html":
         text = render_trace_html(dag)
     else:

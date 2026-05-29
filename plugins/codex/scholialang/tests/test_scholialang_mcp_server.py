@@ -131,6 +131,10 @@ class ScholialangDagTests(unittest.TestCase):
         self.assertNotIn(str(export_path), content)
         self.assertIn("<!doctype html>", html_text)
         self.assertIn('id="q"', html_text)
+        self.assertIn('id="srml-view"', html_text)
+        self.assertIn("Full SRML", html_text)
+        self.assertIn('class="srml-tag">Trace', html_text)
+        self.assertIn('class="srml-attr">id', html_text)
         self.assertIn("Command output captured.", html_text)
         self.assertIn("The exported trace is readable.", html_text)
 

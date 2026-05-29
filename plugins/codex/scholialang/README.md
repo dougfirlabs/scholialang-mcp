@@ -147,7 +147,9 @@ analysis, or debugging of Codex behavior.
 ## Lightweight Trace Review UI
 
 `scholia.dag_export` can produce a standalone HTML trace viewer. This is
-default-off and should be requested explicitly:
+default-off and should be requested explicitly. The viewer uses a local,
+shadcn-style interface with searchable atom cards, kind filters, edge review,
+and a highlighted full SRML tab.
 
 ```json
 {

@@ -72,6 +72,9 @@ write under:
 /path/to/project/.scholialang/exports/
 ```
 
+The viewer includes searchable atom cards, kind filters, edges, and a
+highlighted full SRML tab for reviewing the XML-like Scholialang source.
+
 Keep generated review HTML ignored by default. Commit curated SRML or Markdown
 summaries only after review.
 
