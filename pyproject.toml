@@ -40,7 +40,6 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 addopts = "-q"
-testpaths = ["tests"]
+testpaths = ["tests", "plugins/codex/scholialang/tests"]
 timeout = 10
 timeout_method = "signal"
-

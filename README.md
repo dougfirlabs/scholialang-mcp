@@ -5,6 +5,8 @@
 - an MCP server exposing Scholia atlas lookup tools over stdio
 - an MVP LSP server for editor navigation in `.scholia` traces
 - provider stubs for Claude, Codex, Ollama, and OpenAI host adapters
+- a local Codex plugin for SQLite-backed Scholialang DAG traces and full Codex
+  rollout exhaust imports
 
 The repo is intentionally separate from `scholialang`, which contains the
 language model, parser, validator, and serializers. This package depends on
@@ -63,6 +65,37 @@ python -m scholialang_mcp codex-config --repo-root /path/to/repo
 The command does not edit user config; it prints the `[mcp_servers]` section so
 installers and host-specific packages can apply it with explicit user consent.
 
+## Codex Plugin
+
+The release-ready Codex plugin lives at:
+
+```text
+plugins/codex/scholialang/
+```
+
+It bundles its own stdio MCP server, Codex skill, local SQLite trace store, and
+Codex rollout exhaust importer. It is separate from the host-neutral atlas MCP
+server above because it is packaged as a Codex plugin and exposes local trace
+workflow tools such as `scholia.dag_start`, `scholia.dag_add_atom`,
+`scholia.dag_export`, and `scholia.codex_import_thread`.
+
+Install it from this repository:
+
+```sh
+codex plugin marketplace add "$(pwd)"
+codex plugin add scholialang@scholialang-mcp
+```
+
+Start a new Codex thread after installation so Codex loads the plugin skill and
+MCP tools.
+
+The plugin stores traces locally at `~/.scholialang/scholialang.sqlite3` by
+default. Set `SCHOLIALANG_HOME` before launching Codex to use a different
+storage root.
+
+See `plugins/codex/scholialang/README.md` for the full tool list, safety model,
+and release validation commands.
+
 ## LSP Server
 
 Run the LSP server:
@@ -92,4 +125,3 @@ Deferred past v0.4:
 
 Editor wiring uses the normal stdio LSP shape. VS Code, Neovim, and Emacs
 adapters should launch `scholialang-lsp --workspace-root <repo>`.
-
