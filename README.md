@@ -93,6 +93,35 @@ The plugin stores traces locally at `~/.scholialang/scholialang.sqlite3` by
 default. Set `SCHOLIALANG_HOME` before launching Codex to use a different
 storage root.
 
+### Project-Local Trace Storage
+
+For project work, prefer a repository-local storage root so Scholialang traces
+travel with the checkout during development but raw SQLite state stays private:
+
+```sh
+cd /path/to/project
+export SCHOLIALANG_HOME="$PWD/.scholialang"
+codex
+```
+
+That stores the working trace database at:
+
+```text
+/path/to/project/.scholialang/scholialang.sqlite3
+```
+
+Recommended project `.gitignore` entries:
+
+```gitignore
+.scholialang/*.sqlite3
+.scholialang/*.sqlite3-*
+.scholialang/exports/
+```
+
+Commit curated SRML or Markdown summaries only after review. Keep raw full
+Codex exhaust imports local unless the repository is private and the trace has
+been checked for sensitive tool output.
+
 See `plugins/codex/scholialang/README.md` for the full tool list, safety model,
 and release validation commands.
 
