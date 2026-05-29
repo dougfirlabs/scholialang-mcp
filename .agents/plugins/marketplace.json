@@ -15,6 +15,30 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Coding"
+    },
+    {
+      "name": "scholialang-claude-code",
+      "source": {
+        "source": "local",
+        "path": "./plugins/claude-code/scholialang"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Coding"
+    },
+    {
+      "name": "scholialang-ollama",
+      "source": {
+        "source": "local",
+        "path": "./plugins/ollama/scholialang"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Coding"
     }
   ]
 }

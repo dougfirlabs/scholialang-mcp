@@ -1,0 +1,14 @@
+{
+  "_comment": "open-webui MCP config fragment. Drop into the appropriate MCP servers config block under your open-webui installation. Replace SCHOLIALANG_MCP_DIR with the absolute path to the plugins/ollama/scholialang/ directory. Restart open-webui after editing.",
+  "scholialang": {
+    "command": "python3",
+    "args": [
+      "SCHOLIALANG_MCP_DIR/scripts/scholialang_mcp_server.py"
+    ],
+    "cwd": "SCHOLIALANG_MCP_DIR",
+    "transport": "stdio",
+    "env": {
+      "SCHOLIALANG_HOME": "${HOME}/.scholialang"
+    }
+  }
+}
