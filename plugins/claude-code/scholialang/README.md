@@ -27,18 +27,50 @@ service, bearer token, webhook, or remote worker.
 
 ## Storage
 
-Trace data is stored locally in SQLite:
+By default, trace data is stored locally in SQLite under the user's home
+directory:
 
 ```text
 ~/.scholialang/scholialang.sqlite3
 ```
 
-Set `SCHOLIALANG_HOME` before launching Claude Code to use a different storage
-root. Exports are written under:
+Set `SCHOLIALANG_HOME` before launching Claude Code to use a different
+storage root. Exports are written under:
 
 ```text
 ~/.scholialang/exports/
 ```
+
+### Project-Local Storage
+
+For day-to-day project work, prefer storing the working Scholialang
+database inside the repository checkout and keeping it out of Git:
+
+```sh
+cd /path/to/project
+export SCHOLIALANG_HOME="$PWD/.scholialang"
+claude
+```
+
+With that setup, the plugin stores traces at:
+
+```text
+/path/to/project/.scholialang/scholialang.sqlite3
+```
+
+Recommended `.gitignore` entries:
+
+```gitignore
+.scholialang/*.sqlite3
+.scholialang/*.sqlite3-*
+.scholialang/exports/
+```
+
+Use the local SQLite database as working memory. Commit only curated
+SRML or Markdown trace artifacts after review, usually under a
+project-owned directory such as `scholia/traces/`. Raw full rollout or
+exhaust imports should stay local unless the repository is private and
+the trace has been reviewed for sensitive tool output.
 
 ## Install From This Repository
 
@@ -103,11 +135,17 @@ length/hash metadata.
 
 ## Cross-Plugin Consistency
 
-The Codex, Claude Code, and Ollama plugins in this repo all ship the same
-MCP server script and the same vendored validator snapshot. Switching
-between plugins does not change the tool surface, the storage layout, or the
-validator semantics. The local SQLite database is shared across plugins —
-traces captured in Codex are visible from Claude Code and vice versa.
+The Codex, Claude Code, and Ollama plugins in this repo all ship the
+same MCP server script and the same vendored validator snapshot.
+Switching between plugins does not change the tool surface, the storage
+schema, or the validator semantics.
+
+When every plugin uses the default `~/.scholialang/` storage root, the
+local SQLite database is shared — traces captured in Codex are visible
+from Claude Code and vice versa. Under project-local storage
+(`SCHOLIALANG_HOME="$PWD/.scholialang"`), traces are siloed per repo
+unless every harness in that project points at the same
+`SCHOLIALANG_HOME`.
 
 ## Validation
 

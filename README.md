@@ -106,6 +106,45 @@ falls back to the vendored snapshot at
 `<plugin>/scripts/_scholia_vendored/`. Check the `lint_engine` field
 returned by `scholia.catalog` to see which engine is active.
 
+### Storage Model
+
+By default every plugin writes to `~/.scholialang/scholialang.sqlite3`,
+so traces captured in one harness are visible from the others. Set
+`SCHOLIALANG_HOME` before launching the harness to override the storage
+root.
+
+### Project-Local Trace Storage
+
+For project work, prefer a repository-local storage root so Scholialang
+traces travel with the checkout during development but raw SQLite state
+stays private:
+
+```sh
+cd /path/to/project
+export SCHOLIALANG_HOME="$PWD/.scholialang"
+# then launch your harness (codex, claude, your Ollama harness, etc.)
+```
+
+That stores the working trace database at:
+
+```text
+/path/to/project/.scholialang/scholialang.sqlite3
+```
+
+Recommended project `.gitignore` entries:
+
+```gitignore
+.scholialang/*.sqlite3
+.scholialang/*.sqlite3-*
+.scholialang/exports/
+```
+
+Project-local storage silos traces per repo — they are no longer shared
+across harnesses unless every harness in that project points at the same
+`SCHOLIALANG_HOME`. Commit curated SRML or Markdown summaries only after
+review. Keep raw full rollout/exhaust imports local unless the repository
+is private and the trace has been checked for sensitive tool output.
+
 See each plugin's `README.md` for harness-specific install instructions,
 safety model, and release validation commands.
 

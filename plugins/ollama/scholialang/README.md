@@ -73,11 +73,45 @@ environment the harness uses to spawn the MCP server.
 
 ## Storage
 
-The local SQLite database lives at `~/.scholialang/scholialang.sqlite3`
-and is shared across all three plugins (Codex, Claude Code, Ollama).
-Traces captured during an Ollama-harness session are visible from Codex
-and Claude Code sessions and vice versa. Set `SCHOLIALANG_HOME` in the
-harness's environment to override the storage root.
+By default, the local SQLite database lives at
+`~/.scholialang/scholialang.sqlite3` and is shared across all three
+plugins (Codex, Claude Code, Ollama-host). Traces captured during an
+Ollama-harness session are visible from Codex and Claude Code sessions
+and vice versa.
+
+Set `SCHOLIALANG_HOME` in the harness's environment to override the
+storage root.
+
+### Project-Local Storage
+
+For project work, point the harness at a repository-local database so
+working state stays inside the checkout:
+
+```sh
+cd /path/to/project
+export SCHOLIALANG_HOME="$PWD/.scholialang"
+# then launch your harness (Continue, Cline, open-webui, etc.)
+```
+
+That stores the working trace database at:
+
+```text
+/path/to/project/.scholialang/scholialang.sqlite3
+```
+
+Recommended `.gitignore` entries:
+
+```gitignore
+.scholialang/*.sqlite3
+.scholialang/*.sqlite3-*
+.scholialang/exports/
+```
+
+Project-local storage silos traces per repo. To keep them cross-visible
+with Codex or Claude Code on the same project, point those harnesses at
+the same `SCHOLIALANG_HOME`. Commit curated SRML or Markdown summaries
+only after review; keep raw exhaust imports local unless the repo is
+private and reviewed for sensitive content.
 
 ## Safety Model
 

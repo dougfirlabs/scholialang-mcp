@@ -20,7 +20,8 @@ bearer token, webhook, or Cloudflare worker.
 
 ## Storage
 
-Trace data is stored locally in SQLite:
+By default, trace data is stored locally in SQLite under the user's home
+directory:
 
 ```text
 ~/.scholialang/scholialang.sqlite3
@@ -32,6 +33,37 @@ Exports are written under:
 ```text
 ~/.scholialang/exports/
 ```
+
+### Project-Local Storage
+
+For day-to-day project work, prefer storing the working Scholialang database
+inside the repository checkout and keeping it out of Git:
+
+```sh
+cd /path/to/project
+export SCHOLIALANG_HOME="$PWD/.scholialang"
+codex
+```
+
+With that setup, the plugin stores traces at:
+
+```text
+/path/to/project/.scholialang/scholialang.sqlite3
+```
+
+Recommended `.gitignore` entries:
+
+```gitignore
+.scholialang/*.sqlite3
+.scholialang/*.sqlite3-*
+.scholialang/exports/
+```
+
+Use the local SQLite database as working memory. Commit only curated SRML or
+Markdown trace artifacts after review, usually under a project-owned directory
+such as `scholia/traces/`. Raw full Codex exhaust imports should stay local
+unless the repository is private and the trace has been reviewed for sensitive
+tool output.
 
 ## Install From This Repository
 
