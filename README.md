@@ -125,6 +125,9 @@ been checked for sensitive tool output.
 See `plugins/codex/scholialang/README.md` for the full tool list, safety model,
 and release validation commands.
 
+For default session behavior and trace review guidance, see
+`docs/codex-session-best-practices.md`.
+
 ## LSP Server
 
 Run the LSP server:

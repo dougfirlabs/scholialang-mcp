@@ -19,6 +19,14 @@ are user-facing work artifacts, not hidden chain-of-thought.
 - Do not record secrets, credentials, private keys, raw customer data, or hidden chain-of-thought.
 - Prefer short summaries plus file references over copying large file contents into a trace.
 
+## Codex Session Defaults
+
+- Keep Scholialang quiet by default in chat. Do not emit a trace link after every response.
+- Do not import full Codex exhaust unless the user asks for audit/provenance, token usage, or Codex behavior debugging.
+- At the start of substantial project work, use `scholia.dag_list`, `scholia.dag_summary`, `scholia.dag_frontier`, or `scholia.dag_search` for bounded project recall before reading large traces.
+- During work, append concise atoms only at meaningful boundaries.
+- Before ending substantial work, add a compact summary or finding and call `scholia.dag_compact` when the trace is getting large.
+
 ## Codex Exhaust Imports
 
 `scholia.codex_import_thread` is for durable audit trails. It preserves raw
@@ -38,6 +46,8 @@ decode, reconstruct, or narrate private chain-of-thought from an exhaust trace.
 - Call `scholia.dag_read` with bounded `limit` and avoid `include_nodes=true` unless exact atoms are needed.
 - Call `scholia.dag_compact` before carrying old work across threads or long-running sessions.
 - Use trace IDs and atom IDs in conversation instead of pasting whole traces.
+- Use `scholia.dag_export` with `format: "html"` and `write_file: true` only when the user wants a local trace review UI.
+- Leave `include_trace_link` false unless the user asks Codex to show the local export path in chat.
 - The default local database is `~/.scholialang/scholialang.sqlite3`; only mention or inspect it when the user asks about storage/debugging.
 
 ## Project Path
@@ -53,4 +63,4 @@ root. If unavailable, omit it and the MCP server will use its global store.
 4. `scholia.dag_frontier` and `scholia.dag_summary` when resuming work.
 5. `scholia.dag_neighbors` for focused recall around one atom.
 6. `scholia.dag_search` to locate prior decisions or findings.
-7. `scholia.dag_export` only when the user asks for a sharable artifact.
+7. `scholia.dag_export` only when the user asks for a sharable artifact or local trace review UI.

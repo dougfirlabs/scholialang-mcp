@@ -15,6 +15,7 @@ bearer token, webhook, or Cloudflare worker.
   tools.
 - `scholia.codex_import_thread` for importing Codex rollout JSONL into a
   durable exhaust DAG.
+- standalone HTML trace review exports via `scholia.dag_export`.
 - A Codex skill that teaches agents when to capture, compact, search, and export
   Scholialang traces.
 
@@ -129,6 +130,43 @@ Typical input:
 Use the raw exhaust DAG for audit/provenance. For human reading, generate a
 deduped semantic view or compact summary so repeated user/assistant surfaces do
 not look like repeated conversational turns.
+
+## Session Defaults
+
+The plugin should be quiet during ordinary Codex work:
+
+- no automatic full exhaust import
+- no automatic trace review export
+- no automatic trace link in every response
+- bounded project recall through summaries, search, frontier, and neighborhoods
+- concise atom appends at meaningful work boundaries
+
+Use full exhaust import only when the user asks for audit/provenance, token
+analysis, or debugging of Codex behavior.
+
+## Lightweight Trace Review UI
+
+`scholia.dag_export` can produce a standalone HTML trace viewer. This is
+default-off and should be requested explicitly:
+
+```json
+{
+  "dag_id": "dag_...",
+  "project_path": "/path/to/project",
+  "format": "html",
+  "write_file": true,
+  "include_trace_link": false
+}
+```
+
+With project-local storage, HTML exports are written under:
+
+```text
+/path/to/project/.scholialang/exports/
+```
+
+Set `include_trace_link` to `true` only when the user wants Codex to surface the
+local export path in chat.
 
 ## Safety Model
 

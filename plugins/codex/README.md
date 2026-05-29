@@ -41,3 +41,8 @@ Ignore the working SQLite database and generated exports by default:
 If a trace should become part of the project history, commit a curated SRML or
 Markdown export outside the ignored working store after reviewing it for
 sensitive tool output.
+
+Normal Codex sessions should use Scholialang quietly: bounded summaries,
+frontiers, searches, and concise end-of-session state. Full exhaust imports and
+HTML trace viewers are explicit review/audit actions, not automatic defaults.
+See `../../docs/codex-session-best-practices.md`.

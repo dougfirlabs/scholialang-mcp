@@ -668,6 +668,154 @@ def build_summary(dag, max_items=8, focus_atom_id=None):
     return "\n".join(lines).strip()
 
 
+def html_attr(value):
+    return html.escape(str(value or ""), quote=True)
+
+
+def render_trace_html(dag):
+    counts = {}
+    for node in dag.get("nodes", {}).values():
+        kind = node.get("kind", "Unknown")
+        counts[kind] = counts.get(kind, 0) + 1
+    count_items = " ".join(
+        f'<span class="pill">{html.escape(kind)} {count}</span>'
+        for kind, count in sorted(counts.items())
+    )
+    node_cards = []
+    for node_id in dag.get("order", []):
+        node = dag["nodes"].get(node_id)
+        if not node:
+            continue
+        kind = node.get("kind", "Atom")
+        summary = node.get("summary", "")
+        content = node.get("content", "")
+        search_text = " ".join([node_id, kind, summary, content])
+        content_block = ""
+        if content:
+            content_block = (
+                "<details>"
+                "<summary>Content</summary>"
+                f"<pre>{html.escape(content)}</pre>"
+                "</details>"
+            )
+        node_cards.append(
+            "\n".join(
+                [
+                    f'<article class="node" data-kind="{html_attr(kind)}" data-search="{html_attr(search_text.lower())}">',
+                    '  <div class="node-head">',
+                    f'    <span class="kind">{html.escape(kind)}</span>',
+                    f'    <code>{html.escape(node_id)}</code>',
+                    "  </div>",
+                    f"  <p>{html.escape(summary)}</p>",
+                    f"  {content_block}",
+                    "</article>",
+                ]
+            )
+        )
+    edge_items = []
+    for edge in dag.get("edges", []):
+        label = f" {edge.get('label')}" if edge.get("label") else ""
+        edge_items.append(
+            "<li>"
+            f"<code>{html.escape(edge['from'])}</code> "
+            f"<span>{html.escape(edge['relation'])}</span> "
+            f"<code>{html.escape(edge['to'])}</code>"
+            f"{html.escape(label)}"
+            "</li>"
+        )
+    kind_options = "\n".join(
+        f'<option value="{html_attr(kind)}">{html.escape(kind)}</option>'
+        for kind in sorted(counts)
+    )
+    css = """
+:root { color-scheme: light dark; --bg: Canvas; --fg: CanvasText; --muted: #667085; --line: #d0d7de; --panel: color-mix(in srgb, Canvas 96%, CanvasText 4%); --accent: #6f42c1; --green: #1a7f37; --red: #cf222e; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+header { position: sticky; top: 0; z-index: 2; padding: 14px 18px; background: color-mix(in srgb, Canvas 92%, transparent); border-bottom: 1px solid var(--line); backdrop-filter: blur(10px); }
+h1 { margin: 0 0 8px; font-size: 18px; letter-spacing: 0; }
+.meta, .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pill { border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; color: var(--muted); background: var(--panel); }
+.toolbar { margin-top: 12px; }
+input, select { min-height: 32px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: Canvas; color: CanvasText; font: inherit; }
+input { min-width: min(520px, 100%); flex: 1; }
+main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
+.node { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 12px; }
+.node[hidden] { display: none; }
+.node-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.kind { color: var(--accent); font-weight: 700; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+pre { overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid var(--line); border-radius: 6px; padding: 10px; background: Canvas; max-height: 55vh; }
+details { margin-top: 8px; }
+summary { cursor: pointer; color: var(--green); }
+.edges { margin-top: 20px; }
+.edges li { margin: 4px 0; }
+"""
+    js = """
+const q = document.querySelector("#q");
+const kind = document.querySelector("#kind");
+const nodes = Array.from(document.querySelectorAll(".node"));
+const shown = document.querySelector("#shown");
+function applyFilter() {
+  const needle = q.value.trim().toLowerCase();
+  const selected = kind.value;
+  let count = 0;
+  for (const node of nodes) {
+    const okKind = !selected || node.dataset.kind === selected;
+    const okText = !needle || node.dataset.search.includes(needle);
+    const show = okKind && okText;
+    node.hidden = !show;
+    if (show) count++;
+  }
+  shown.textContent = `${count} shown`;
+}
+q.addEventListener("input", applyFilter);
+kind.addEventListener("change", applyFilter);
+applyFilter();
+"""
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{html.escape(dag.get("title") or dag["dag_id"])}</title>
+<style>{css}</style>
+</head>
+<body>
+<header>
+  <h1>{html.escape(dag.get("title") or dag["dag_id"])}</h1>
+  <div class="meta">
+    <span class="pill">dag {html.escape(dag["dag_id"])}</span>
+    <span class="pill">{len(dag.get("nodes", {}))} nodes</span>
+    <span class="pill">{len(dag.get("edges", []))} edges</span>
+    {count_items}
+    <span class="pill" id="shown"></span>
+  </div>
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Search summaries and content">
+    <select id="kind"><option value="">All kinds</option>{kind_options}</select>
+  </div>
+</header>
+<main>
+{''.join(node_cards)}
+  <section class="edges">
+    <h2>Edges</h2>
+    <ul>{''.join(edge_items)}</ul>
+  </section>
+</main>
+<script>{js}</script>
+</body>
+</html>"""
+
+
+def export_extension(export_format):
+    return {
+        "markdown": "md",
+        "json": "json",
+        "xml": "srml",
+        "html": "html",
+    }.get(export_format, "txt")
+
+
 def tool_dag_summary(args):
     dag = load_dag(dag_id_arg(args), args.get("project_path"))
     max_items = int(args.get("max_items", 8))
@@ -768,6 +916,8 @@ def tool_dag_export(args):
             rows.append(f'  <Edge from="{html.escape(edge["from"])}" to="{html.escape(edge["to"])}" relation="{html.escape(edge["relation"])}"/>')
         rows.append("</Trace>")
         text = "\n".join(rows)
+    elif export_format == "html":
+        text = render_trace_html(dag)
     else:
         lines = [build_summary(dag, 12), "", "## Nodes"]
         for node_id in dag.get("order", []):
@@ -781,7 +931,19 @@ def tool_dag_export(args):
         for edge in dag.get("edges", []):
             lines.append(f"- {edge['from']} -[{edge['relation']}]-> {edge['to']}")
         text = "\n".join(lines).strip()
-    return content_result(compact_text(text, int(args.get("max_chars", 20000))), {"dag_id": dag["dag_id"], "format": export_format})
+    structured = {"dag_id": dag["dag_id"], "format": export_format}
+    if bool(args.get("write_file", False)):
+        export_dir = storage_root() / "exports"
+        export_dir.mkdir(parents=True, exist_ok=True)
+        export_path = export_dir / f"{dag['dag_id']}.{export_extension(export_format)}"
+        export_path.write_text(text, encoding="utf-8")
+        structured["export_path"] = str(export_path)
+        if bool(args.get("include_trace_link", False)):
+            response_text = f"Exported {export_format} trace for {dag['dag_id']} to {export_path}."
+        else:
+            response_text = f"Exported {export_format} trace for {dag['dag_id']}."
+        return content_result(response_text, structured)
+    return content_result(compact_text(text, int(args.get("max_chars", 20000))), structured)
 
 
 def tool_catalog(_args):
@@ -1684,7 +1846,13 @@ def tool_schema(name):
     if name.endswith("dag_search") or name.endswith("trace_search"):
         return schema({"query": {"type": "string"}, "project_path": {"type": "string"}, "limit": {"type": "integer"}}, ["query"])
     if name.endswith("dag_export") or name.endswith("trace_export"):
-        return schema({**common_dag, "format": {"type": "string", "enum": ["markdown", "json", "xml"]}, "max_chars": {"type": "integer"}})
+        return schema({
+            **common_dag,
+            "format": {"type": "string", "enum": ["markdown", "json", "xml", "html"]},
+            "max_chars": {"type": "integer"},
+            "write_file": {"type": "boolean"},
+            "include_trace_link": {"type": "boolean"},
+        })
     if name.endswith("codex_import_thread"):
         return schema({
             **common_dag,
@@ -1721,7 +1889,7 @@ def list_tools():
         "scholia.dag_frontier": "Return current graph frontier nodes.",
         "scholia.dag_search": "Search local DAG metadata and atoms.",
         "scholia.dag_compact": "Store and return a compact graph summary.",
-        "scholia.dag_export": "Export a DAG as markdown, JSON, or XML.",
+        "scholia.dag_export": "Export a DAG as markdown, JSON, XML/SRML, or standalone HTML.",
         "scholia.codex_import_thread": "Import a Codex rollout JSONL as an event-sourced Scholialang exhaust DAG.",
         "scholia.trace_start": "Compatibility alias for scholia.dag_start.",
         "scholia.trace_append": "Compatibility alias for scholia.dag_add_atom.",

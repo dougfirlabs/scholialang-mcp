@@ -102,6 +102,38 @@ class ScholialangDagTests(unittest.TestCase):
                 }
             )
 
+    def test_html_export_can_write_quiet_trace_viewer(self):
+        dag_id = self.start_dag()
+        observation = self.add_atom(dag_id, "Observation", "Command output captured.")
+        self.add_atom(
+            dag_id,
+            "Finding",
+            "The exported trace is readable.",
+            [{"to": observation, "relation": "derived_from"}],
+        )
+
+        result = server.tool_dag_export(
+            {
+                "dag_id": dag_id,
+                "project_path": self.project_path,
+                "format": "html",
+                "write_file": True,
+                "include_trace_link": False,
+            }
+        )
+        structured = result["structuredContent"]
+        export_path = Path(structured["export_path"])
+        content = result["content"][0]["text"]
+        html_text = export_path.read_text(encoding="utf-8")
+
+        self.assertEqual(structured["format"], "html")
+        self.assertTrue(export_path.exists())
+        self.assertNotIn(str(export_path), content)
+        self.assertIn("<!doctype html>", html_text)
+        self.assertIn('id="q"', html_text)
+        self.assertIn("Command output captured.", html_text)
+        self.assertIn("The exported trace is readable.", html_text)
+
     def test_trace_aliases_use_dag_store(self):
         started = server.TOOLS["scholia.trace_start"]({"project_path": self.project_path, "title": "Alias"})
         trace_id = started["structuredContent"]["trace_id"]
