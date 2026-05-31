@@ -35,6 +35,7 @@ from .atoms import (
     V04B_EDGE_TYPES,
     Action,
     Atom,
+    Concluding,
     Constraint,
     Deciding,
     Edge,
@@ -54,6 +55,8 @@ from .atoms import (
     is_valid_location,
     parse_operators_from_content,
 )
+
+CONCLUSION_TYPES = (Finding, Concluding)
 
 
 RULE_WELL_FORMED = "well_formed"
@@ -356,13 +359,13 @@ def check_unknown_operator(
 def check_decision_closed(
     trace: list[Step], _index: dict[str, Atom]
 ) -> list[ValidationError]:
-    """Rule 3 — every ``<Deciding>`` produces a ``<Finding>``."""
+    """Rule 3 — every ``<Deciding>`` produces a conclusion atom."""
     errors: list[ValidationError] = []
     for atom in _walk_atoms(trace):
         if not isinstance(atom, Deciding):
             continue
         if not any(
-            isinstance(descendant, Finding)
+            isinstance(descendant, CONCLUSION_TYPES)
             for child in atom.children
             for descendant in _descend(child)
         ) and "decision =" not in atom.content:
@@ -371,7 +374,7 @@ def check_decision_closed(
                     rule=RULE_DECISION_CLOSED,
                     atom_id=atom.id or "",
                     message=(
-                        "Deciding block has no child Finding — branch "
+                        "Deciding block has no child Finding or Concluding — branch "
                         "choice not recorded."
                     ),
                 )
@@ -385,10 +388,10 @@ def check_decision_closed(
 def check_action_recorded(
     trace: list[Step], _index: dict[str, Atom]
 ) -> list[ValidationError]:
-    """Rule 4 — every ``<Action>`` is followed by or contains a Finding.
+    """Rule 4 — every ``<Action>`` is followed by or contains a conclusion.
 
-    The §8 composition rule says an Action must produce a Finding. We
-    accept either a direct child Finding or a sibling Finding that
+    The §8 composition rule says an Action must produce a conclusion. We
+    accept either a direct child conclusion or a sibling conclusion that
     appears later in the same Step — agents often write the Finding
     as a peer atom rather than nesting it.
     """
@@ -398,9 +401,9 @@ def check_action_recorded(
         for i, atom in enumerate(step.atoms):
             if not isinstance(atom, Action):
                 continue
-            has_nested = any(isinstance(c, Finding) for c in atom.children)
+            has_nested = any(isinstance(c, CONCLUSION_TYPES) for c in atom.children)
             has_sibling = any(
-                isinstance(sib, Finding) for sib in step.atoms[i + 1 :]
+                isinstance(sib, CONCLUSION_TYPES) for sib in step.atoms[i + 1 :]
             )
             if not (has_nested or has_sibling):
                 errors.append(
@@ -408,7 +411,7 @@ def check_action_recorded(
                         rule=RULE_ACTION_RECORDED,
                         atom_id=atom.id or "",
                         message=(
-                            "Action has no recording Finding (neither "
+                            "Action has no recording Finding or Concluding (neither "
                             "nested nor sibling)."
                         ),
                     )
@@ -473,7 +476,7 @@ def check_hypothesis_evaluated(
 def check_retract_consistent(
     trace: list[Step], index: dict[str, Atom]
 ) -> list[ValidationError]:
-    """Rule 6 — every Retract names an existing Finding id."""
+    """Rule 6 — every Retract names an existing conclusion id."""
     errors: list[ValidationError] = []
     for atom in _walk_atoms(trace):
         if not isinstance(atom, Retract):
@@ -500,14 +503,14 @@ def check_retract_consistent(
                     ),
                 )
             )
-        elif not isinstance(referenced, Finding):
+        elif not isinstance(referenced, CONCLUSION_TYPES):
             errors.append(
                 ValidationError(
                     rule=RULE_RETRACT_CONSISTENT,
                     atom_id=atom.id or "",
                     message=(
                         f"Retract target '{target}' is a "
-                        f"{referenced.kind}, not a Finding."
+                        f"{referenced.kind}, not a Finding or Concluding."
                     ),
                 )
             )
@@ -604,14 +607,14 @@ _GOAL_STATUSES = {"met", "unmet", "partially_met", "met_late"}
 def check_goal_declared(
     trace: list[Step], _index: dict[str, Atom]
 ) -> list[ValidationError]:
-    """Rule 8 — every required Goal has a status-declaring Finding."""
+    """Rule 8 — every required Goal has a status-declaring conclusion."""
     if any(atom.kind == "Meta:research-mode" for atom in _walk_atoms(trace)):
         return []
 
     errors: list[ValidationError] = []
-    findings_by_goal: dict[str, list[Finding]] = {}
+    findings_by_goal: dict[str, list[Atom]] = {}
     for atom in _walk_atoms(trace):
-        if isinstance(atom, Finding) and atom.for_goal:
+        if isinstance(atom, CONCLUSION_TYPES) and getattr(atom, "for_goal", None):
             findings_by_goal.setdefault(atom.for_goal, []).append(atom)
 
     for atom in _walk_atoms(trace):
@@ -641,7 +644,7 @@ def check_goal_declared(
                 rule=RULE_GOAL_DECLARED,
                 atom_id=goal_id,
                 message=(
-                    f"Required Goal '{goal_id}' has no Finding with "
+                    f"Required Goal '{goal_id}' has no Finding or Concluding with "
                     "for_goal and status in met/unmet/partially_met."
                 ),
             )

@@ -18,6 +18,11 @@ SERVER_VERSION = "0.2.0"
 MAX_TEXT = 6000
 
 
+def _has_goal_concluding(atoms_mod):
+    kinds = getattr(atoms_mod, "ATOM_KINDS", ())
+    return "Goal" in kinds and "Concluding" in kinds
+
+
 def _load_scholia_engine():
     """Resolve the validator/parser. Prefer the installed scholialang package
     (kept in lockstep with the spec); fall back to the vendored snapshot
@@ -26,24 +31,28 @@ def _load_scholia_engine():
         from scholialang import validator as _validator_mod  # type: ignore
         from scholialang import parser as _parser_mod  # type: ignore
         from scholialang import atoms as _atoms_mod  # type: ignore
-        return _validator_mod, _parser_mod, _atoms_mod, "scholialang-package"
+        if _has_goal_concluding(_atoms_mod):
+            return _validator_mod, _parser_mod, _atoms_mod, "scholialang-package"
     except ImportError:
-        vendored_dir = Path(__file__).resolve().parent
-        if str(vendored_dir) not in sys.path:
-            sys.path.insert(0, str(vendored_dir))
-        from _scholia_vendored import validator as _validator_mod  # type: ignore
-        from _scholia_vendored import parser as _parser_mod  # type: ignore
-        from _scholia_vendored import atoms as _atoms_mod  # type: ignore
-        return _validator_mod, _parser_mod, _atoms_mod, "scholialang-vendored"
+        pass
+    vendored_dir = Path(__file__).resolve().parent
+    if str(vendored_dir) not in sys.path:
+        sys.path.insert(0, str(vendored_dir))
+    from _scholia_vendored import validator as _validator_mod  # type: ignore
+    from _scholia_vendored import parser as _parser_mod  # type: ignore
+    from _scholia_vendored import atoms as _atoms_mod  # type: ignore
+    return _validator_mod, _parser_mod, _atoms_mod, "scholialang-vendored"
 
 
 SCHOLIA_VALIDATOR, SCHOLIA_PARSER, SCHOLIA_ATOMS, LINT_ENGINE = _load_scholia_engine()
 
 ATOM_KINDS = [
+    "Goal",
     "Hypothesis",
     "Observation",
     "Evidence",
     "Finding",
+    "Concluding",
     "Deciding",
     "Action",
     "Contradiction",
@@ -52,10 +61,12 @@ ATOM_KINDS = [
 ]
 
 ATOMS = [
+    {"id": "goal", "tag": "Goal", "summary": "The target proposition the trace is pursuing."},
     {"id": "hypothesis", "tag": "Hypothesis", "summary": "A proposition the agent will test."},
     {"id": "observation", "tag": "Observation", "summary": "External input from a command, file, query, or review."},
     {"id": "evidence", "tag": "Evidence", "summary": "Material that supports, refutes, or qualifies a hypothesis."},
     {"id": "finding", "tag": "Finding", "summary": "A conclusion drawn from available evidence."},
+    {"id": "concluding", "tag": "Concluding", "summary": "A premise-backed final or checkpoint conclusion."},
     {"id": "decision", "tag": "Deciding", "summary": "A branch point and selected path."},
     {"id": "action", "tag": "Action", "summary": "A durable external state change."},
     {"id": "contradiction", "tag": "Contradiction", "summary": "Two trace claims that cannot both be true."},
@@ -377,8 +388,11 @@ def optional_list(args, key):
 def normalize_kind(kind):
     raw = str(kind or "Finding").strip()
     aliases = {
+        "conclusion": "Concluding",
+        "concluding": "Concluding",
         "decision": "Deciding",
         "deciding": "Deciding",
+        "goal": "Goal",
         "retraction": "Retract",
         "retract": "Retract",
     }
@@ -519,8 +533,20 @@ def tool_dag_start(args):
             ),
         )
         conn.commit()
+        goal_summary = compact_text(args.get("objective") or args.get("title") or "Trace objective", 500)
+        goal_content = compact_text(args.get("objective") or goal_summary, MAX_TEXT)
+        goal_atom = tool_dag_add_atom(
+            {
+                "dag_id": dag_id,
+                "project_path": info["project_path"],
+                "kind": "Goal",
+                "summary": goal_summary,
+                "content": goal_content,
+            }
+        )["structuredContent"]["atom"]
         dag = load_dag_conn(conn, dag_id)
         structured = dag_metadata(dag)
+        structured["goal_atom"] = goal_atom
         return content_result(f"Started Scholialang SQLite DAG {dag_id} for {info['project_name']}.", structured)
     finally:
         conn.close()
@@ -669,7 +695,7 @@ def build_summary(dag, max_items=8, focus_atom_id=None):
     else:
         recent_nodes = [dag["nodes"][node_id] for node_id in dag.get("order", [])[-max_items:] if node_id in dag["nodes"]]
         heading = "Recent Nodes"
-    frontier = frontier_nodes(dag, kind_filter=["Finding", "Deciding", "Action", "Summary"])[:max_items]
+    frontier = frontier_nodes(dag, kind_filter=["Concluding", "Finding", "Deciding", "Action", "Summary"])[:max_items]
     lines = [
         f"# {dag.get('title', dag.get('dag_id'))}",
         "",
@@ -1045,7 +1071,7 @@ def codex_event_atom_kind(payload_type, payload):
     if payload_type == "agent_message":
         return "Finding"
     if payload_type == "task_complete":
-        return "Summary"
+        return "Concluding"
     if payload_type == "message":
         role = payload.get("role")
         if role == "user":
@@ -1507,7 +1533,11 @@ def tool_codex_import_thread(args):
 
     dag_id = args.get("dag_id")
     if dag_id:
-        load_dag(dag_id, project_path)
+        existing_dag = load_dag(dag_id, project_path)
+        goal_atom_id = next(
+            (node_id for node_id in existing_dag.get("order", []) if existing_dag["nodes"].get(node_id, {}).get("kind") == "Goal"),
+            None,
+        )
     else:
         started = tool_dag_start(
             {
@@ -1518,6 +1548,8 @@ def tool_codex_import_thread(args):
             }
         )
         dag_id = started["structuredContent"]["dag_id"]
+        goal_atom = started["structuredContent"].get("goal_atom") or {}
+        goal_atom_id = goal_atom.get("id")
 
     imported = 0
     parse_errors = 0
@@ -1548,6 +1580,9 @@ def tool_codex_import_thread(args):
             if key in thread_row.keys():
                 metadata[key] = thread_row[key]
 
+    root_links = []
+    if goal_atom_id:
+        root_links.append({"to": goal_atom_id, "relation": "refers", "label": "rollout source for trace goal"})
     root_atom = tool_dag_add_atom(
         {
             "dag_id": dag_id,
@@ -1556,6 +1591,7 @@ def tool_codex_import_thread(args):
             "summary": f"Codex rollout source resolved for {thread_id or path.name}.",
             "content": json.dumps(metadata, indent=2, sort_keys=True),
             "files": [str(path)],
+            "links": root_links,
         }
     )["structuredContent"]["atom"]["id"]
     previous_atom_id = root_atom
@@ -1711,15 +1747,18 @@ def tool_codex_import_thread(args):
         "canonical_policy": metadata["canonical_policy"],
         "hidden_reasoning_policy": "reasoning/encrypted_content is recorded by length/hash/reference only, never materialized",
     }
+    final_links = [{"to": previous_atom_id, "relation": "after"}]
+    if goal_atom_id:
+        final_links.append({"to": goal_atom_id, "relation": "derived_from", "label": "for_goal status=met"})
     tool_dag_add_atom(
         {
             "dag_id": dag_id,
             "project_path": project_path,
-            "kind": "Summary",
+            "kind": "Concluding",
             "summary": f"Imported {imported} Codex rollout events into an observable exhaust trail.",
             "content": json.dumps(final_summary, indent=2, sort_keys=True),
             "files": [str(path)],
-            "links": [{"to": previous_atom_id, "relation": "after"}],
+            "links": final_links,
         }
     )
     tool_dag_compact({"dag_id": dag_id, "project_path": project_path, "max_items": 20})

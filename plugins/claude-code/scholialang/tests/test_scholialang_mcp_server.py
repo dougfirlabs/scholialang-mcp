@@ -83,8 +83,26 @@ class ScholialangDagTests(unittest.TestCase):
             edge_count = conn.execute("SELECT COUNT(*) FROM edges WHERE dag_id = ?", (dag_id,)).fetchone()[0]
         finally:
             conn.close()
-        self.assertEqual(node_count, 4)
+        self.assertEqual(node_count, 5)
         self.assertEqual(edge_count, 3)
+
+    def test_catalog_and_lint_support_goal_and_concluding(self):
+        catalog = server.tool_catalog({})["structuredContent"]
+        tags = {item["tag"] for item in catalog["atoms"]}
+        self.assertIn("Goal", tags)
+        self.assertIn("Concluding", tags)
+
+        result = server.tool_lint_snippet(
+            {
+                "snippet": (
+                    '<Goal id="Goal_01" priority="required">ship the fix</Goal>'
+                    '<Concluding id="Concluding_01" for_goal="Goal_01" status="met">'
+                    'REFER:Goal_01 done'
+                    '</Concluding>'
+                )
+            }
+        )["structuredContent"]
+        self.assertTrue(result["ok"], result)
 
     def test_cycle_is_rejected(self):
         dag_id = self.start_dag()
@@ -122,7 +140,7 @@ class ScholialangDagTests(unittest.TestCase):
                 "include_nodes": True,
             }
         )
-        self.assertEqual(read["structuredContent"]["dag"]["node_count"], 1)
+        self.assertEqual(read["structuredContent"]["dag"]["node_count"], 2)
 
     def test_json_rpc_tools_list_includes_dag_tools(self):
         response = server.handle_message({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
@@ -206,7 +224,10 @@ class ScholialangDagTests(unittest.TestCase):
             }
         )["structuredContent"]
         summaries = [node["summary"] for node in read["nodes"]]
+        kinds = [node["kind"] for node in read["nodes"]]
         content = "\n".join(node.get("content", "") for node in read["nodes"])
+        self.assertIn("Goal", kinds)
+        self.assertIn("Concluding", kinds)
         self.assertTrue(any("captures user prompt" in summary for summary in summaries))
         self.assertTrue(any("Codex canonical event" in summary and "task_tool_call" in summary for summary in summaries))
         self.assertIn('"event": "task_tool_result"', content)
@@ -224,6 +245,9 @@ class ScholialangDagTests(unittest.TestCase):
                 edge["relation"] == "derived_from" and edge.get("label") == "canonical tool result for tool_use_id"
                 for edge in read["edges"]
             )
+        )
+        self.assertTrue(
+            any(edge["relation"] == "derived_from" and edge.get("label") == "for_goal status=met" for edge in read["edges"])
         )
 
     def test_codex_import_thread_normalizes_opentalon_cli_stream(self):

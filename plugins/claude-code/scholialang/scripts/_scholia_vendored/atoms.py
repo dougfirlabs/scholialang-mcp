@@ -175,6 +175,15 @@ class Finding(Atom):
 
 
 @dataclass
+class Concluding(Atom):
+    """§3b — a premise-backed final or checkpoint conclusion."""
+
+    for_goal: Optional[str] = None
+    status: Optional[str] = None
+    kind: ClassVar[str] = "Concluding"
+
+
+@dataclass
 class Contradiction(Atom):
     """§3b — detected inconsistency; forces a ``<Deciding>`` to retract."""
 
@@ -520,6 +529,7 @@ _ATOM_CLASSES: dict[str, type[Atom]] = {
     "Hypothesis": Hypothesis,
     "Evidence": Evidence,
     "Finding": Finding,
+    "Concluding": Concluding,
     "Contradiction": Contradiction,
     "Uncertainty": Uncertainty,
     "Retract": Retract,
@@ -654,6 +664,7 @@ KIND_SPECIFIC_FIELDS: dict[str, tuple[str, ...]] = {
     "Action": ("timestamp",),
     "Evidence": ("for_ref", "polarity"),
     "Finding": ("for_goal", "status"),
+    "Concluding": ("for_goal", "status"),
     "Uncertainty": ("on", "confidence"),
     "Retract": ("target", "reason", "replacement"),
     "Deciding": ("options",),
