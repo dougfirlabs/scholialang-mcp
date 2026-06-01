@@ -1,0 +1,39 @@
+{
+  "name": "scholialang",
+  "version": "0.1.0",
+  "description": "Local Scholialang tracing and reference tools for Codex.",
+  "author": {
+    "name": "Doug Fir Labs",
+    "url": "https://scholialang.org/"
+  },
+  "homepage": "https://scholialang.org/",
+  "repository": "https://github.com/dougfirlabs/scholialang-mcp",
+  "license": "MIT",
+  "keywords": [
+    "scholialang",
+    "mcp",
+    "trace",
+    "codex",
+    "structured-reasoning"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Scholialang",
+    "shortDescription": "Track explicit work traces locally.",
+    "longDescription": "Scholialang adds local MCP tools for project-aware trace capture, compact summaries, search, export, and reference lookup. It stores traces on your machine and helps Codex retrieve small summaries instead of repeatedly carrying full work history in context.",
+    "developerName": "Doug Fir Labs",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Start a Scholialang trace for this project.",
+      "Summarize recent Scholialang traces.",
+      "Search my Scholialang traces for decisions."
+    ],
+    "brandColor": "#24483F",
+    "composerIcon": "./assets/scholialang.svg"
+  },
+  "mcpServers": "./.mcp.json"
+}

@@ -39,8 +39,12 @@ scholialang-lsp = "scholialang_mcp.lsp.server:main"
 where = ["src"]
 
 [tool.pytest.ini_options]
-addopts = "-q"
-testpaths = ["tests"]
+addopts = "-q --import-mode=importlib"
+testpaths = [
+    "tests",
+    "plugins/codex/scholialang/tests",
+    "plugins/claude-code/scholialang/tests",
+    "plugins/ollama/scholialang/tests",
+]
 timeout = 10
 timeout_method = "signal"
-

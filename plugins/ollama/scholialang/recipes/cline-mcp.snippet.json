@@ -1,0 +1,26 @@
+{
+  "_comment": "Drop into cline_mcp_settings.json. Replace SCHOLIALANG_MCP_DIR with the absolute path to the plugins/ollama/scholialang/ directory. Restart VS Code (or reload the Cline extension) after editing.",
+  "mcpServers": {
+    "scholialang": {
+      "command": "python3",
+      "args": [
+        "SCHOLIALANG_MCP_DIR/scripts/scholialang_mcp_server.py"
+      ],
+      "cwd": "SCHOLIALANG_MCP_DIR",
+      "env": {
+        "SCHOLIALANG_HOME": "${env:HOME}/.scholialang"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "scholia.catalog",
+        "scholia.lookup",
+        "scholia.dag_summary",
+        "scholia.dag_search",
+        "scholia.dag_frontier",
+        "scholia.dag_neighbors",
+        "scholia.lint_snippet",
+        "scholia.lint_trace"
+      ]
+    }
+  }
+}

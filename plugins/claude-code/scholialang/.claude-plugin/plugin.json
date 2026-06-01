@@ -1,0 +1,41 @@
+{
+  "name": "scholialang",
+  "version": "0.2.0",
+  "description": "Local Scholialang tracing, structured-reasoning DAG, full v0.4 grammar validator, and Codex/Claude Code rollout import for Claude Code.",
+  "author": {
+    "name": "Doug Fir Labs",
+    "url": "https://scholialang.org/"
+  },
+  "homepage": "https://scholialang.org/",
+  "repository": "https://github.com/dougfirlabs/scholialang-mcp",
+  "license": "MIT",
+  "keywords": [
+    "scholialang",
+    "mcp",
+    "trace",
+    "claude-code",
+    "structured-reasoning",
+    "validator",
+    "dag"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Scholialang",
+    "shortDescription": "Local structured-reasoning DAG + validator for Claude Code.",
+    "longDescription": "Scholialang lets Claude Code capture explicit reasoning as a local SQLite-backed DAG, lint snippets against the full v0.4 Scholia grammar, and query prior decisions for token-efficient recall across sessions.",
+    "developerName": "Doug Fir Labs",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Start a Scholialang trace for this project.",
+      "Lint this Scholia snippet against the full v0.4 grammar.",
+      "Summarize my recent Scholialang traces."
+    ],
+    "brandColor": "#24483F",
+    "composerIcon": "./assets/scholialang.svg"
+  }
+}

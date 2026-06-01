@@ -1,0 +1,17 @@
+# Drop this fragment into ~/.continue/config.yaml under the top-level
+# `mcpServers:` key. Replace SCHOLIALANG_MCP_DIR with the absolute path
+# to the plugins/ollama/scholialang/ directory in your local checkout.
+#
+# Continue.dev loads MCP servers at session start; restart Continue or
+# open a new chat after editing.
+
+mcpServers:
+  scholialang:
+    command: python3
+    args:
+      - SCHOLIALANG_MCP_DIR/scripts/scholialang_mcp_server.py
+    cwd: SCHOLIALANG_MCP_DIR
+    env:
+      # Override if you want per-project storage instead of the global
+      # ~/.scholialang database.
+      SCHOLIALANG_HOME: "${HOME}/.scholialang"

@@ -5,6 +5,13 @@
 - an MCP server exposing Scholia atlas lookup tools over stdio
 - an MVP LSP server for editor navigation in `.scholia` traces
 - provider stubs for Claude, Codex, Ollama, and OpenAI host adapters
+- **three release-ready plugins** for the major coding harnesses, each
+  with the same stdio MCP server, the same SQLite-backed local DAG,
+  the same full v0.4 grammar validator, and shared storage:
+  - `plugins/codex/scholialang/` — Codex plugin
+  - `plugins/claude-code/scholialang/` — Claude Code plugin
+  - `plugins/ollama/scholialang/` — Ollama / local-model recipes for
+    Continue.dev, Cline, open-webui, and generic stdio hosts
 
 The repo is intentionally separate from `scholialang`, which contains the
 language model, parser, validator, and serializers. This package depends on
@@ -63,6 +70,84 @@ python -m scholialang_mcp codex-config --repo-root /path/to/repo
 The command does not edit user config; it prints the `[mcp_servers]` section so
 installers and host-specific packages can apply it with explicit user consent.
 
+## Harness Plugins
+
+Three release-ready plugin trees ship with this repo, one per major
+coding harness. Each plugin bundles the same stdio MCP server, the same
+local SQLite DAG store, the same full v0.4 grammar validator, and the
+same Codex rollout importer. Traces written in one harness are visible
+from the other two (shared `~/.scholialang/scholialang.sqlite3`).
+
+| Harness | Tree | Install |
+| --- | --- | --- |
+| Codex | `plugins/codex/scholialang/` | `codex plugin marketplace add "$(pwd)"` then `codex plugin add scholialang@scholialang-mcp` |
+| Claude Code | `plugins/claude-code/scholialang/` | `/plugin marketplace add /path/to/scholialang-mcp` then `/plugin install scholialang@scholialang-mcp` inside Claude Code |
+| Ollama (Continue / Cline / open-webui / generic stdio) | `plugins/ollama/scholialang/` | Drop a snippet from `recipes/` into your harness config |
+
+Each plugin's tool surface is identical:
+
+- `scholia.dag_*` — local SQLite DAG traces
+- `scholia.trace_*` — compatibility aliases
+- `scholia.catalog`, `scholia.lookup` — reference lookups across the
+  full v0.4 closed-set vocabulary (31 atom kinds, 11 canonical
+  operators, v0.3.1 edge/effect/ref types, v0.4-B edge types)
+- `scholia.lint_snippet` — full v0.4 grammar validation (closed-set
+  atoms, reference completeness, decision closure, action recording,
+  hypothesis evaluation, retract consistency, constraint respect, goal
+  declaration, operator vocabulary, location/edge shape). Pass
+  `mode='tag_balance'` for the legacy tag-only check.
+- `scholia.lint_trace` — per-rule structured error output for CI gates
+  and dashboards
+- `scholia.codex_import_thread` — import Codex rollout JSONL as an
+  event-sourced exhaust DAG
+
+The validator prefers the installed `scholialang` Python package and
+falls back to the vendored snapshot at
+`<plugin>/scripts/_scholia_vendored/`. Check the `lint_engine` field
+returned by `scholia.catalog` to see which engine is active.
+
+### Storage Model
+
+By default every plugin writes to `~/.scholialang/scholialang.sqlite3`,
+so traces captured in one harness are visible from the others. Set
+`SCHOLIALANG_HOME` before launching the harness to override the storage
+root.
+
+### Project-Local Trace Storage
+
+For project work, prefer a repository-local storage root so Scholialang
+traces travel with the checkout during development but raw SQLite state
+stays private:
+
+```sh
+cd /path/to/project
+export SCHOLIALANG_HOME="$PWD/.scholialang"
+# then launch your harness (codex, claude, your Ollama harness, etc.)
+```
+
+That stores the working trace database at:
+
+```text
+/path/to/project/.scholialang/scholialang.sqlite3
+```
+
+Recommended project `.gitignore` entries:
+
+```gitignore
+.scholialang/*.sqlite3
+.scholialang/*.sqlite3-*
+.scholialang/exports/
+```
+
+Project-local storage silos traces per repo — they are no longer shared
+across harnesses unless every harness in that project points at the same
+`SCHOLIALANG_HOME`. Commit curated SRML or Markdown summaries only after
+review. Keep raw full rollout/exhaust imports local unless the repository
+is private and the trace has been checked for sensitive tool output.
+
+See each plugin's `README.md` for harness-specific install instructions,
+safety model, and release validation commands.
+
 ## LSP Server
 
 Run the LSP server:
@@ -92,4 +177,3 @@ Deferred past v0.4:
 
 Editor wiring uses the normal stdio LSP shape. VS Code, Neovim, and Emacs
 adapters should launch `scholialang-lsp --workspace-root <repo>`.
-
