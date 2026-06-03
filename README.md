@@ -59,9 +59,9 @@ Missing artifacts return structured `not_generated_yet` responses so host
 agents can fall back to ordinary file reads. Regeneration is host-specific in
 v0.4 and returns `regenerate_unavailable` unless a host adapter enables it.
 
-### Codex Global MCP Snippet
+### Codex Atlas MCP Snippet
 
-To expose the server globally to Codex, add the snippet printed by:
+To expose the atlas lookup server globally to Codex, add the snippet printed by:
 
 ```sh
 python -m scholialang_mcp codex-config --repo-root /path/to/repo
@@ -69,6 +69,26 @@ python -m scholialang_mcp codex-config --repo-root /path/to/repo
 
 The command does not edit user config; it prints the `[mcp_servers]` section so
 installers and host-specific packages can apply it with explicit user consent.
+
+### Codex Trace MCP Snippet
+
+The trace/DAG tools used by the Codex plugin (`scholia_dag_start`,
+`scholia_dag_add_atom`, `scholia_codex_import_thread`, and related tools) are
+served by the bundled Codex plugin server, not by the atlas lookup server above.
+For reliable availability in every new Codex chat, register that server as a
+direct global MCP server:
+
+```sh
+codex mcp add scholialang -- python3 /path/to/scholialang-mcp/plugins/codex/scholialang/scripts/scholialang_mcp_server.py
+```
+
+Or print the equivalent `~/.codex/config.toml` snippet:
+
+```sh
+python -m scholialang_mcp codex-trace-config --repo-root /path/to/scholialang-mcp
+# from an uninstalled source checkout:
+PYTHONPATH=src python3 -m scholialang_mcp codex-trace-config --repo-root /path/to/scholialang-mcp
+```
 
 ## Harness Plugins
 
@@ -80,31 +100,31 @@ from the other two (shared `~/.scholialang/scholialang.sqlite3`).
 
 | Harness | Tree | Install |
 | --- | --- | --- |
-| Codex | `plugins/codex/scholialang/` | `codex plugin marketplace add "$(pwd)"` then `codex plugin add scholialang@scholialang-mcp` |
+| Codex | `plugins/codex/scholialang/` | `codex plugin marketplace add "$(pwd)"`, `codex plugin add scholialang@scholialang-mcp`, then `codex mcp add scholialang -- python3 "$(pwd)/plugins/codex/scholialang/scripts/scholialang_mcp_server.py"` |
 | Claude Code | `plugins/claude-code/scholialang/` | `/plugin marketplace add /path/to/scholialang-mcp` then `/plugin install scholialang@scholialang-mcp` inside Claude Code |
 | Ollama (Continue / Cline / open-webui / generic stdio) | `plugins/ollama/scholialang/` | Drop a snippet from `recipes/` into your harness config |
 
 Each plugin's tool surface is identical:
 
-- `scholia.dag_*` — local SQLite DAG traces
-- `scholia.trace_*` — compatibility aliases
-- `scholia.catalog`, `scholia.lookup` — reference lookups across the
+- `scholia_dag_*` — local SQLite DAG traces
+- `scholia_trace_*` — compatibility aliases
+- `scholia_catalog`, `scholia_lookup` — reference lookups across the
   full v0.4 closed-set vocabulary (31 atom kinds, 11 canonical
   operators, v0.3.1 edge/effect/ref types, v0.4-B edge types)
-- `scholia.lint_snippet` — full v0.4 grammar validation (closed-set
+- `scholia_lint_snippet` — full v0.4 grammar validation (closed-set
   atoms, reference completeness, decision closure, action recording,
   hypothesis evaluation, retract consistency, constraint respect, goal
   declaration, operator vocabulary, location/edge shape). Pass
   `mode='tag_balance'` for the legacy tag-only check.
-- `scholia.lint_trace` — per-rule structured error output for CI gates
+- `scholia_lint_trace` — per-rule structured error output for CI gates
   and dashboards
-- `scholia.codex_import_thread` — import Codex rollout JSONL as an
+- `scholia_codex_import_thread` — import Codex rollout JSONL as an
   event-sourced exhaust DAG
 
 The validator prefers the installed `scholialang` Python package and
 falls back to the vendored snapshot at
 `<plugin>/scripts/_scholia_vendored/`. Check the `lint_engine` field
-returned by `scholia.catalog` to see which engine is active.
+returned by `scholia_catalog` to see which engine is active.
 
 ### Storage Model
 

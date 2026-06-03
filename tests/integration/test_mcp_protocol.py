@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from scholialang_mcp.server import codex_trace_config_snippet
+
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "tests" / "fixtures" / "atlas" / "sample"
@@ -97,3 +99,10 @@ def test_disabled_mode_refuses_tools() -> None:
         proc.terminate()
         proc.wait(timeout=5)
 
+
+def test_codex_trace_config_points_at_bundled_trace_server() -> None:
+    snippet = codex_trace_config_snippet(ROOT, python_bin="python3")
+
+    assert "[mcp_servers.scholialang]" in snippet
+    assert "[mcp_servers.scholialang_atlas]" not in snippet
+    assert "plugins/codex/scholialang/scripts/scholialang_mcp_server.py" in snippet

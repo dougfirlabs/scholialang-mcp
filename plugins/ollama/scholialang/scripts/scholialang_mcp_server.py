@@ -1492,7 +1492,7 @@ def codex_canonical_content(record, raw_line, line_no):
     content = {
         **record,
         "scholia": {
-            "source": "opentalon-stage:rsi_codex_parser",
+            "source": "internal agent harness:rsi_codex_parser",
             "rollout_line": line_no,
             "raw_line_sha256": sha256_text(raw_line),
         },
@@ -1573,7 +1573,7 @@ def tool_codex_import_thread(args):
         "rollout_sha256": sha256_text(raw_text),
         "codex_home": str(home),
         "canonical_events": include_canonical_events,
-        "canonical_policy": "OpenTalon stage rsi_codex_parser parity: preserve raw rollout atoms and derive task_message/task_tool_call/task_tool_result/token_usage/task_output envelopes.",
+        "canonical_policy": "internal agent harness stage rsi_codex_parser parity: preserve raw rollout atoms and derive task_message/task_tool_call/task_tool_result/token_usage/task_output envelopes.",
     }
     if thread_row is not None:
         for key in ("title", "cwd", "model", "reasoning_effort", "source", "thread_source", "tokens_used"):
@@ -1691,7 +1691,7 @@ def tool_codex_import_thread(args):
                     {
                         "to": atom_id,
                         "relation": "derived_from",
-                        "label": "canonical OpenTalon-style event derived from raw Codex rollout event",
+                        "label": "canonical internal agent harness event derived from raw Codex rollout event",
                     }
                 ]
                 if event_type == "task_tool_result":
@@ -1778,31 +1778,63 @@ def tool_codex_import_thread(args):
     return content_result(json.dumps(structured, indent=2, sort_keys=True), structured)
 
 
+CANONICAL_TOOLS = {
+    "scholia_dag_start": tool_dag_start,
+    "scholia_dag_add_atom": tool_dag_add_atom,
+    "scholia_dag_link": tool_dag_link,
+    "scholia_dag_list": tool_dag_list,
+    "scholia_dag_summary": tool_dag_summary,
+    "scholia_dag_read": tool_dag_read,
+    "scholia_dag_neighbors": tool_dag_neighbors,
+    "scholia_dag_frontier": tool_dag_frontier,
+    "scholia_dag_search": tool_dag_search,
+    "scholia_dag_compact": tool_dag_compact,
+    "scholia_dag_export": tool_dag_export,
+    "scholia_codex_import_thread": tool_codex_import_thread,
+    "scholia_trace_start": tool_dag_start,
+    "scholia_trace_append": tool_dag_add_atom,
+    "scholia_trace_list": tool_dag_list,
+    "scholia_trace_summary": tool_dag_summary,
+    "scholia_trace_read": tool_dag_read,
+    "scholia_trace_search": tool_dag_search,
+    "scholia_trace_compact": tool_dag_compact,
+    "scholia_trace_export": tool_dag_export,
+    "scholia_catalog": tool_catalog,
+    "scholia_lookup": tool_lookup,
+    "scholia_lint_snippet": tool_lint_snippet,
+    "scholia_lint_trace": tool_lint_trace,
+}
+
+LEGACY_TOOL_ALIASES = {
+    "scholia.dag_start": "scholia_dag_start",
+    "scholia.dag_add_atom": "scholia_dag_add_atom",
+    "scholia.dag_link": "scholia_dag_link",
+    "scholia.dag_list": "scholia_dag_list",
+    "scholia.dag_summary": "scholia_dag_summary",
+    "scholia.dag_read": "scholia_dag_read",
+    "scholia.dag_neighbors": "scholia_dag_neighbors",
+    "scholia.dag_frontier": "scholia_dag_frontier",
+    "scholia.dag_search": "scholia_dag_search",
+    "scholia.dag_compact": "scholia_dag_compact",
+    "scholia.dag_export": "scholia_dag_export",
+    "scholia.codex_import_thread": "scholia_codex_import_thread",
+    "scholia.trace_start": "scholia_trace_start",
+    "scholia.trace_append": "scholia_trace_append",
+    "scholia.trace_list": "scholia_trace_list",
+    "scholia.trace_summary": "scholia_trace_summary",
+    "scholia.trace_read": "scholia_trace_read",
+    "scholia.trace_search": "scholia_trace_search",
+    "scholia.trace_compact": "scholia_trace_compact",
+    "scholia.trace_export": "scholia_trace_export",
+    "scholia.catalog": "scholia_catalog",
+    "scholia.lookup": "scholia_lookup",
+    "scholia.lint_snippet": "scholia_lint_snippet",
+    "scholia.lint_trace": "scholia_lint_trace",
+}
+
 TOOLS = {
-    "scholia.dag_start": tool_dag_start,
-    "scholia.dag_add_atom": tool_dag_add_atom,
-    "scholia.dag_link": tool_dag_link,
-    "scholia.dag_list": tool_dag_list,
-    "scholia.dag_summary": tool_dag_summary,
-    "scholia.dag_read": tool_dag_read,
-    "scholia.dag_neighbors": tool_dag_neighbors,
-    "scholia.dag_frontier": tool_dag_frontier,
-    "scholia.dag_search": tool_dag_search,
-    "scholia.dag_compact": tool_dag_compact,
-    "scholia.dag_export": tool_dag_export,
-    "scholia.codex_import_thread": tool_codex_import_thread,
-    "scholia.trace_start": tool_dag_start,
-    "scholia.trace_append": tool_dag_add_atom,
-    "scholia.trace_list": tool_dag_list,
-    "scholia.trace_summary": tool_dag_summary,
-    "scholia.trace_read": tool_dag_read,
-    "scholia.trace_search": tool_dag_search,
-    "scholia.trace_compact": tool_dag_compact,
-    "scholia.trace_export": tool_dag_export,
-    "scholia.catalog": tool_catalog,
-    "scholia.lookup": tool_lookup,
-    "scholia.lint_snippet": tool_lint_snippet,
-    "scholia.lint_trace": tool_lint_trace,
+    **CANONICAL_TOOLS,
+    **{legacy: CANONICAL_TOOLS[canonical] for legacy, canonical in LEGACY_TOOL_ALIASES.items()},
 }
 
 
@@ -1883,39 +1915,39 @@ def tool_schema(name):
 
 def list_tools():
     descriptions = {
-        "scholia.dag_start": "Start a project-aware local Scholialang DAG in SQLite.",
-        "scholia.dag_add_atom": "Add an atom node and optional edges to a local SQLite DAG.",
-        "scholia.dag_link": "Create an explicit acyclic edge between two atoms.",
-        "scholia.dag_list": "List recent local DAGs.",
-        "scholia.dag_summary": "Return a compact graph summary for token-efficient recall.",
-        "scholia.dag_read": "Read bounded DAG metadata, nodes, and edges.",
-        "scholia.dag_neighbors": "Read a bounded neighborhood around one atom.",
-        "scholia.dag_frontier": "Return current graph frontier nodes.",
-        "scholia.dag_search": "Search local DAG metadata and atoms.",
-        "scholia.dag_compact": "Store and return a compact graph summary.",
-        "scholia.dag_export": "Export a DAG as markdown, JSON, or XML.",
-        "scholia.codex_import_thread": "Import a Codex rollout JSONL as an event-sourced Scholialang exhaust DAG.",
-        "scholia.trace_start": "Compatibility alias for scholia.dag_start.",
-        "scholia.trace_append": "Compatibility alias for scholia.dag_add_atom.",
-        "scholia.trace_list": "Compatibility alias for scholia.dag_list.",
-        "scholia.trace_summary": "Compatibility alias for scholia.dag_summary.",
-        "scholia.trace_read": "Compatibility alias for scholia.dag_read.",
-        "scholia.trace_search": "Compatibility alias for scholia.dag_search.",
-        "scholia.trace_compact": "Compatibility alias for scholia.dag_compact.",
-        "scholia.trace_export": "Compatibility alias for scholia.dag_export.",
-        "scholia.catalog": "List Scholialang atoms, operators, relations, and resources.",
-        "scholia.lookup": "Lookup a Scholialang atom, operator, or relation.",
-        "scholia.lint_snippet": "Validate a Scholia snippet against the full v0.4 grammar (closed-set atoms, reference completeness, decision/action/hypothesis closure). Pass mode='tag_balance' for the legacy tag-only check.",
-        "scholia.lint_trace": "Validate a Scholia trace and return per-rule structured errors plus counts. Use for CI gates and dashboard rendering.",
+        "scholia_dag_start": "Start a project-aware local Scholialang DAG in SQLite.",
+        "scholia_dag_add_atom": "Add an atom node and optional edges to a local SQLite DAG.",
+        "scholia_dag_link": "Create an explicit acyclic edge between two atoms.",
+        "scholia_dag_list": "List recent local DAGs.",
+        "scholia_dag_summary": "Return a compact graph summary for token-efficient recall.",
+        "scholia_dag_read": "Read bounded DAG metadata, nodes, and edges.",
+        "scholia_dag_neighbors": "Read a bounded neighborhood around one atom.",
+        "scholia_dag_frontier": "Return current graph frontier nodes.",
+        "scholia_dag_search": "Search local DAG metadata and atoms.",
+        "scholia_dag_compact": "Store and return a compact graph summary.",
+        "scholia_dag_export": "Export a DAG as markdown, JSON, or XML.",
+        "scholia_codex_import_thread": "Import a Codex rollout JSONL as an event-sourced Scholialang exhaust DAG.",
+        "scholia_trace_start": "Compatibility alias for scholia_dag_start.",
+        "scholia_trace_append": "Compatibility alias for scholia_dag_add_atom.",
+        "scholia_trace_list": "Compatibility alias for scholia_dag_list.",
+        "scholia_trace_summary": "Compatibility alias for scholia_dag_summary.",
+        "scholia_trace_read": "Compatibility alias for scholia_dag_read.",
+        "scholia_trace_search": "Compatibility alias for scholia_dag_search.",
+        "scholia_trace_compact": "Compatibility alias for scholia_dag_compact.",
+        "scholia_trace_export": "Compatibility alias for scholia_dag_export.",
+        "scholia_catalog": "List Scholialang atoms, operators, relations, and resources.",
+        "scholia_lookup": "Lookup a Scholialang atom, operator, or relation.",
+        "scholia_lint_snippet": "Validate a Scholia snippet against the full v0.4 grammar (closed-set atoms, reference completeness, decision/action/hypothesis closure). Pass mode='tag_balance' for the legacy tag-only check.",
+        "scholia_lint_trace": "Validate a Scholia trace and return per-rule structured errors plus counts. Use for CI gates and dashboard rendering.",
     }
     return [
         {
             "name": name,
-            "title": name.replace("scholia.", "").replace("_", " ").title(),
+            "title": name.replace("scholia_", "").replace("_", " ").title(),
             "description": descriptions[name],
             "inputSchema": tool_schema(name),
         }
-        for name in TOOLS
+        for name in CANONICAL_TOOLS
     ]
 
 
@@ -1945,9 +1977,10 @@ def dispatch(method, params):
     if method == "tools/call":
         name = require_str(params, "name")
         args = params.get("arguments") or {}
-        if name not in TOOLS:
+        name = LEGACY_TOOL_ALIASES.get(name, name)
+        if name not in CANONICAL_TOOLS:
             raise ValueError(f"unknown tool: {name}")
-        return TOOLS[name](args)
+        return CANONICAL_TOOLS[name](args)
     if method == "resources/list":
         resources = []
         for uri, text in RESOURCE_TEXT.items():

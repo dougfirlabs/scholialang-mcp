@@ -5,11 +5,11 @@
 - Add the local Codex Scholialang plugin under `plugins/codex/scholialang`.
 - Add a repo-local Codex marketplace entry for `scholialang@scholialang-mcp`.
 - Add full Codex rollout exhaust import into SQLite-backed Scholialang DAGs,
-  including raw rollout atoms and OpenTalon-compatible canonical event atoms.
+  including raw rollout atoms and internal agent harness canonical event atoms.
 - Document the plugin storage model, safety policy, install flow, and validation
   commands.
 - **Port the full scholialang v0.4 grammar validator into the bundled MCP
-  server.** `scholia.lint_snippet` now runs the complete 11-rule check
+  server.** `scholia_lint_snippet` now runs the complete 11-rule check
   (well-formed, reference complete, decision closed, action recorded,
   hypothesis evaluated, retract consistent, constraint respected, goal
   declared, unknown operator, location/edge shape, v0.3.1 optional
@@ -17,9 +17,9 @@
   `mode='tag_balance'`. Validator prefers the installed `scholialang`
   package; falls back to a vendored snapshot at
   `scripts/_scholia_vendored/` when the package isn't available.
-- Add `scholia.lint_trace` returning per-rule structured errors and
+- Add `scholia_lint_trace` returning per-rule structured errors and
   counts for CI gates and dashboards.
-- Expand `scholia.catalog` to expose the full v0.4 closed-set
+- Expand `scholia_catalog` to expose the full v0.4 closed-set
   vocabulary (atom kinds, canonical operators, edge types, effect
   kinds, ref types) plus `lint_engine` and `validator_version`.
 - **Add the Claude Code plugin under `plugins/claude-code/scholialang/`.**

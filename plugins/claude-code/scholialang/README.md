@@ -9,18 +9,18 @@ service, bearer token, webhook, or remote worker.
 
 ## What It Ships
 
-- `scholia.dag_*` tools for project-aware Scholialang DAG traces.
-- `scholia.trace_*` compatibility aliases for trace-oriented callers.
-- `scholia.catalog`, `scholia.lookup` reference tools (full v0.4 closed-set
+- `scholia_dag_*` tools for project-aware Scholialang DAG traces.
+- `scholia_trace_*` compatibility aliases for trace-oriented callers.
+- `scholia_catalog`, `scholia_lookup` reference tools (full v0.4 closed-set
   atom kinds, canonical operators, edge types, effect kinds, ref types).
-- `scholia.lint_snippet` — full v0.4 grammar validation (closed-set atoms,
+- `scholia_lint_snippet` — full v0.4 grammar validation (closed-set atoms,
   reference completeness, decision closure, action recording, hypothesis
   evaluation, retract consistency, constraint respect, goal declaration,
   operator vocabulary, location/edge shape). Pass `mode='tag_balance'` for the
   legacy tag-only check.
-- `scholia.lint_trace` — per-rule structured error output for CI gates and
+- `scholia_lint_trace` — per-rule structured error output for CI gates and
   dashboards.
-- `scholia.codex_import_thread` for importing Codex rollout JSONL into a
+- `scholia_codex_import_thread` for importing Codex rollout JSONL into a
   durable exhaust DAG (cross-harness retro-analysis).
 - A Claude Code skill that teaches the agent when to capture, validate,
   compact, search, and export Scholialang traces.
@@ -111,7 +111,7 @@ Expected: `lint_snippet` returns `ok=false` with the `goal_declared` and
 The plugin prefers the installed `scholialang` Python package (kept in
 lockstep with the spec). If unavailable, it falls back to the vendored
 validator snapshot at `scripts/_scholia_vendored/`. Inspect the
-`lint_engine` field returned by `scholia.catalog` or `scholia.lint_snippet`
+`lint_engine` field returned by `scholia_catalog` or `scholia_lint_snippet`
 to see which engine is in use:
 
 - `scholialang-package` — the installed pip package
