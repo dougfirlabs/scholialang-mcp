@@ -411,13 +411,30 @@ def codex_config_snippet(repo_root: Path, *, python_bin: Optional[str] = None) -
     )
 
 
+def codex_trace_config_snippet(repo_root: Path, *, python_bin: Optional[str] = None) -> str:
+    bin_path = python_bin or sys.executable or "python3"
+    script = (
+        repo_root.resolve()
+        / "plugins"
+        / "codex"
+        / "scholialang"
+        / "scripts"
+        / "scholialang_mcp_server.py"
+    )
+    return (
+        "[mcp_servers.scholialang]\n"
+        f"command = {json.dumps(bin_path)}\n"
+        f"args = [{json.dumps(str(script))}]\n"
+    )
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m scholialang_mcp")
     parser.add_argument(
         "subcommand",
         nargs="?",
         default="serve",
-        choices=("serve", "check", "codex-config"),
+        choices=("serve", "check", "codex-config", "codex-trace-config"),
     )
     parser.add_argument("--repo-root", default=".", help="Workspace root to serve.")
     args = parser.parse_args(argv)
@@ -442,6 +459,10 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if args.subcommand == "codex-config":
         print(codex_config_snippet(repo))
+        return 0
+
+    if args.subcommand == "codex-trace-config":
+        print(codex_trace_config_snippet(repo))
         return 0
 
     server = ScholiaMCPServer(ScholiaServerConfig(repo))
@@ -471,4 +492,3 @@ def main(argv: Optional[list[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

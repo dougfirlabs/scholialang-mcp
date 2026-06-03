@@ -145,9 +145,10 @@ class ScholialangDagTests(unittest.TestCase):
     def test_json_rpc_tools_list_includes_dag_tools(self):
         response = server.handle_message({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
         names = [tool["name"] for tool in response["result"]["tools"]]
-        self.assertIn("scholia.dag_start", names)
-        self.assertIn("scholia.dag_frontier", names)
-        self.assertIn("scholia.codex_import_thread", names)
+        self.assertIn("scholia_dag_start", names)
+        self.assertIn("scholia_dag_frontier", names)
+        self.assertIn("scholia_codex_import_thread", names)
+        self.assertNotIn("scholia.dag_start", names)
 
     def test_codex_import_thread_builds_exhaust_dag(self):
         rollout_path = Path(self.tempdir.name) / "rollout.jsonl"
@@ -250,7 +251,7 @@ class ScholialangDagTests(unittest.TestCase):
             any(edge["relation"] == "derived_from" and edge.get("label") == "for_goal status=met" for edge in read["edges"])
         )
 
-    def test_codex_import_thread_normalizes_opentalon_cli_stream(self):
+    def test_codex_import_thread_normalizes_internal_agent_harness_cli_stream(self):
         rollout_path = Path(self.tempdir.name) / "codex-cli.jsonl"
         events = [
             {"type": "thread.started", "thread_id": "thread_cli"},
@@ -383,11 +384,11 @@ class ScholialangValidatorTests(unittest.TestCase):
 
     def test_lint_tools_registered_in_tools_list(self):
         names = {t["name"] for t in server.list_tools()}
-        self.assertIn("scholia.lint_snippet", names)
-        self.assertIn("scholia.lint_trace", names)
+        self.assertIn("scholia_lint_snippet", names)
+        self.assertIn("scholia_lint_trace", names)
 
     def test_lint_snippet_schema_accepts_mode(self):
-        schema = server.tool_schema("scholia.lint_snippet")
+        schema = server.tool_schema("scholia_lint_snippet")
         self.assertIn("mode", schema["properties"])
         self.assertIn("snippet", schema["required"])
 

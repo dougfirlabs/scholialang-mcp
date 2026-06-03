@@ -16,9 +16,14 @@ Install from the repository root:
 ```sh
 codex plugin marketplace add "$(pwd)"
 codex plugin add scholialang@scholialang-mcp
+codex mcp add scholialang -- python3 "$(pwd)/plugins/codex/scholialang/scripts/scholialang_mcp_server.py"
 ```
 
-The plugin is local-first and stores trace data under `~/.scholialang` unless
+The plugin install provides the Codex skill and marketplace metadata. The direct
+`codex mcp add` registration exposes the `scholia_*` trace tools to new Codex
+threads without depending on plugin-provided MCP injection.
+
+The server is local-first and stores trace data under `~/.scholialang` unless
 `SCHOLIALANG_HOME` is set before Codex launches.
 
 For project-local traces, launch Codex from the repository with a local storage

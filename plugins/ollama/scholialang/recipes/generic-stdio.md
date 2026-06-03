@@ -33,14 +33,14 @@ The harness must:
 If your harness supports per-tool approval policy, mark these as
 auto-approve for ergonomic use:
 
-- `scholia.catalog`
-- `scholia.lookup`
-- `scholia.dag_summary`
-- `scholia.dag_search`
-- `scholia.dag_frontier`
-- `scholia.dag_neighbors`
-- `scholia.lint_snippet`
-- `scholia.lint_trace`
+- `scholia_catalog`
+- `scholia_lookup`
+- `scholia_dag_summary`
+- `scholia_dag_search`
+- `scholia_dag_frontier`
+- `scholia_dag_neighbors`
+- `scholia_lint_snippet`
+- `scholia_lint_trace`
 
 These are all read-only or pure-function tools. Leave write tools
 (`dag_start`, `dag_add_atom`, `dag_link`, `dag_compact`,

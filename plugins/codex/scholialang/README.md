@@ -9,11 +9,11 @@ bearer token, webhook, or Cloudflare worker.
 
 ## What It Ships
 
-- `scholia.dag_*` tools for project-aware Scholialang DAG traces.
-- `scholia.trace_*` compatibility aliases for trace-oriented callers.
-- `scholia.catalog`, `scholia.lookup`, and `scholia.lint_snippet` reference
+- `scholia_dag_*` tools for project-aware Scholialang DAG traces.
+- `scholia_trace_*` compatibility aliases for trace-oriented callers.
+- `scholia_catalog`, `scholia_lookup`, and `scholia_lint_snippet` reference
   tools.
-- `scholia.codex_import_thread` for importing Codex rollout JSONL into a
+- `scholia_codex_import_thread` for importing Codex rollout JSONL into a
   durable exhaust DAG.
 - A Codex skill that teaches agents when to capture, compact, search, and export
   Scholialang traces.
@@ -72,11 +72,20 @@ From the repository root:
 ```sh
 codex plugin marketplace add "$(pwd)"
 codex plugin add scholialang@scholialang-mcp
+codex mcp add scholialang -- python3 "$(pwd)/plugins/codex/scholialang/scripts/scholialang_mcp_server.py"
 ```
 
-Start a new Codex thread after installing. Codex loads plugin skills and MCP
-tools at thread start, so already-open threads may keep an older loaded tool
-set.
+The plugin install gives Codex the Scholialang skill and marketplace metadata.
+The direct `codex mcp add` registration is the reliable path for exposing the
+`scholia_*` trace tools in every new chat. Start a new Codex thread after
+installing; already-open threads may keep an older loaded tool set.
+
+To print the equivalent `~/.codex/config.toml` block instead of running
+`codex mcp add`, use this from the repository root:
+
+```sh
+PYTHONPATH=src python3 -m scholialang_mcp codex-trace-config --repo-root "$(pwd)"
+```
 
 ## Smoke Test
 
@@ -91,7 +100,7 @@ added, and the frontier summary returns the final finding.
 
 ## Codex Exhaust Import
 
-Use `scholia.codex_import_thread` to convert a Codex rollout JSONL into an
+Use `scholia_codex_import_thread` to convert a Codex rollout JSONL into an
 event-sourced Scholialang DAG.
 
 The importer stores the full observable exhaust trail:
@@ -102,7 +111,7 @@ The importer stores the full observable exhaust trail:
 - parse errors preserved as trace atoms
 - tool result links back to tool call atoms
 
-It also derives OpenTalon-compatible canonical envelopes from raw Codex events:
+It also derives internal agent harness canonical envelopes from raw Codex events:
 
 - `task_message`
 - `task_tool_call`
@@ -111,7 +120,7 @@ It also derives OpenTalon-compatible canonical envelopes from raw Codex events:
 - `task_output`
 
 Codex CLI `command_execution` frames are normalized the same way as
-OpenTalon's stage parser: a synthetic bash call, a synthetic bash result, and
+the internal agent harness stage parser: a synthetic bash call, a synthetic bash result, and
 the original raw frame preserved as `task_output`.
 
 Typical input:
@@ -154,5 +163,5 @@ python3 /path/to/plugin-creator/scripts/validate_plugin.py plugins/codex/scholia
 ```
 
 The first release candidate was dogfooded against a live Codex rollout and
-verified to import both raw events and canonical OpenTalon-style events into
-SQLite-backed Scholialang DAGs.
+verified to import both raw events and canonical internal agent harness events
+into SQLite-backed Scholialang DAGs.
