@@ -24,6 +24,7 @@ VALID_MODES = (MODE_OFF, MODE_ENABLED)
 
 SERVER_NAME = "mcp__scholialang__atlas"
 MCP_PROTOCOL_VERSION = "2024-11-05"
+SUPPORTED_MCP_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
 SERVER_VERSION = "0.4.0"
 
 REFUSAL_STATUS = "refused"
@@ -352,6 +353,13 @@ def _invoke_tool(server: ScholiaMCPServer, name: str, args: dict[str, Any]) -> d
     raise KeyError(name)
 
 
+def _negotiated_protocol_version(params: dict[str, Any]) -> str:
+    requested = params.get("protocolVersion")
+    if requested in SUPPORTED_MCP_PROTOCOL_VERSIONS:
+        return str(requested)
+    return MCP_PROTOCOL_VERSION
+
+
 def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Optional[dict[str, Any]]:
     method = str(payload.get("method") or "")
     params = payload.get("params") or {}
@@ -366,7 +374,7 @@ def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Option
         return _ok(
             request_id,
             {
-                "protocolVersion": MCP_PROTOCOL_VERSION,
+                "protocolVersion": _negotiated_protocol_version(params),
                 "capabilities": {"tools": {"listChanged": False}},
                 "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
             },

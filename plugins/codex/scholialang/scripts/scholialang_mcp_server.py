@@ -13,6 +13,7 @@ from pathlib import Path
 
 
 PROTOCOL_VERSION = "2025-11-25"
+SUPPORTED_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26")
 SERVER_NAME = "scholialang"
 SERVER_VERSION = "0.2.0"
 MAX_TEXT = 6000
@@ -1847,6 +1848,13 @@ def schema(properties=None, required=None):
     }
 
 
+def negotiated_protocol_version(params):
+    requested = params.get("protocolVersion")
+    if requested in SUPPORTED_PROTOCOL_VERSIONS:
+        return requested
+    return PROTOCOL_VERSION
+
+
 def tool_schema(name):
     common_dag = {"dag_id": {"type": "string"}, "trace_id": {"type": "string"}, "project_path": {"type": "string"}}
     if name.endswith("dag_start") or name.endswith("trace_start"):
@@ -1864,7 +1872,10 @@ def tool_schema(name):
             "summary": {"type": "string"},
             "content": {"type": "string"},
             "files": {"type": "array", "items": {"type": "string"}},
-            "confidence": {"type": ["number", "string", "null"]},
+            "confidence": {
+                "type": "string",
+                "description": "Optional confidence value, normally a decimal string in [0.0, 1.0].",
+            },
             "refs": {"type": "array", "items": {"type": "string"}},
             "links": {"type": "array", "items": {"type": "object"}},
         }, ["summary"])
@@ -1965,7 +1976,7 @@ def rpc_error(message_id, code, message, data=None):
 def dispatch(method, params):
     if method == "initialize":
         return {
-            "protocolVersion": PROTOCOL_VERSION,
+            "protocolVersion": negotiated_protocol_version(params),
             "capabilities": {"tools": {}, "resources": {}},
             "serverInfo": {"name": SERVER_NAME, "title": "Scholialang", "version": SERVER_VERSION},
             "instructions": "Use Scholialang DAG tools for explicit local SQLite work traces. Prefer summaries, frontier, search, and neighborhoods for token efficiency.",

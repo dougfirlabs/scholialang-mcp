@@ -39,8 +39,21 @@ def test_mcp_tools_list_and_file_lookup() -> None:
         env=_env(),
     )
     try:
-        init = _rpc(proc, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
+        init = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-06-18",
+                    "capabilities": {},
+                    "clientInfo": {"name": "pytest", "version": "0"},
+                },
+            },
+        )
         assert init["result"]["serverInfo"]["name"] == "mcp__scholialang__atlas"
+        assert init["result"]["protocolVersion"] == "2025-06-18"
 
         listed = _rpc(proc, {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
         tools = listed["result"]["tools"]
