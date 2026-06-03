@@ -150,6 +150,36 @@ class ScholialangDagTests(unittest.TestCase):
         self.assertIn("scholia_codex_import_thread", names)
         self.assertNotIn("scholia.dag_start", names)
 
+    def test_initialize_negotiates_supported_protocol_version(self):
+        response = server.handle_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-06-18",
+                    "capabilities": {},
+                    "clientInfo": {"name": "codex", "version": "test"},
+                },
+            }
+        )
+        self.assertEqual(response["result"]["protocolVersion"], "2025-06-18")
+
+    def test_tool_schemas_avoid_type_arrays(self):
+        response = server.handle_message({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
+
+        def walk(value):
+            if isinstance(value, dict):
+                self.assertFalse(isinstance(value.get("type"), list), value)
+                for child in value.values():
+                    walk(child)
+            elif isinstance(value, list):
+                for child in value:
+                    walk(child)
+
+        for tool in response["result"]["tools"]:
+            walk(tool["inputSchema"])
+
     def test_codex_import_thread_builds_exhaust_dag(self):
         rollout_path = Path(self.tempdir.name) / "rollout.jsonl"
         events = [
