@@ -3,9 +3,8 @@
     "scholialang": {
       "command": "python3",
       "args": [
-        "./scripts/scholialang_mcp_server.py"
-      ],
-      "cwd": "."
+        "${CLAUDE_PLUGIN_ROOT}/scripts/scholialang_mcp_server.py"
+      ]
     }
   }
 }

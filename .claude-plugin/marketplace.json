@@ -1,0 +1,20 @@
+{
+  "name": "scholialang-mcp",
+  "owner": {
+    "name": "Doug Fir Labs",
+    "email": "info@dougfirlabs.com",
+    "url": "https://scholialang.org/"
+  },
+  "metadata": {
+    "description": "Scholialang protocol tooling for Claude Code.",
+    "version": "0.2.0"
+  },
+  "plugins": [
+    {
+      "name": "scholialang",
+      "source": "./plugins/claude-code/scholialang",
+      "description": "Local Scholialang tracing, structured-reasoning DAG, full v0.4 grammar validator, and Codex/Claude Code rollout import for Claude Code.",
+      "category": "Coding"
+    }
+  ]
+}
