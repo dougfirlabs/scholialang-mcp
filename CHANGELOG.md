@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Claude Code plugin 0.3.1:** remove the redundant `"hooks"` key from
+  `plugin.json`. Claude Code auto-loads `hooks/hooks.json` by convention, so
+  also declaring it in the manifest caused a "Duplicate hooks file detected"
+  error on `/reload-plugins`. The hook file is unchanged and still auto-loads.
 - **Default per-project auto-emit (Approach A: smart server + thin host
   adapters).** Out of the box, the plugin now keeps a Scholialang trace per
   project, one DAG per session, tagged by host.
