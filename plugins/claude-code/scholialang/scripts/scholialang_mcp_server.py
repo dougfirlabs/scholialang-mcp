@@ -15,7 +15,7 @@ from pathlib import Path
 PROTOCOL_VERSION = "2025-11-25"
 SUPPORTED_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26")
 SERVER_NAME = "scholialang"
-SERVER_VERSION = "0.2.0"
+SERVER_VERSION = "0.3.0"
 MAX_TEXT = 6000
 
 
@@ -138,8 +138,19 @@ def connect():
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
+    # Two hosts (e.g. Claude Code + Codex) may write the same shared DB at once.
+    # WAL serializes writers; busy_timeout makes the second writer wait instead
+    # of raising "database is locked".
+    conn.execute("PRAGMA busy_timeout = 5000")
     init_db(conn)
     return conn
+
+
+def _ensure_column(conn, table, column, decl):
+    """Add a column to an existing table if missing (idempotent migration)."""
+    existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+    if column not in existing:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
 
 def init_db(conn):
@@ -163,6 +174,7 @@ def init_db(conn):
           project_name TEXT NOT NULL,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
+          session_key TEXT,
           FOREIGN KEY (project_key) REFERENCES projects(project_key) ON DELETE CASCADE
         );
 
@@ -214,6 +226,13 @@ def init_db(conn):
         CREATE INDEX IF NOT EXISTS idx_edges_dag_from ON edges(dag_id, from_atom_id);
         CREATE INDEX IF NOT EXISTS idx_edges_dag_to ON edges(dag_id, to_atom_id);
         """
+    )
+    # Migrate pre-0.3.0 databases and back the idempotent session lookup.
+    _ensure_column(conn, "dags", "session_key", "TEXT")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_dags_session ON dags(project_key, session_key)")
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_dags_session_unique "
+        "ON dags(project_key, session_key) WHERE session_key IS NOT NULL"
     )
 
 
@@ -273,6 +292,8 @@ def dag_metadata(dag):
         "title": dag.get("title", ""),
         "objective": dag.get("objective", ""),
         "tags": dag.get("tags", []),
+        "session_key": dag.get("session_key"),
+        "host": (dag.get("session_key") or "").split(":", 1)[0] or None,
         "project_path": dag.get("project_path"),
         "project_name": dag.get("project_name"),
         "project_key": dag.get("project_key"),
@@ -329,6 +350,7 @@ def row_to_dag(conn, row):
         "title": row["title"],
         "objective": row["objective"],
         "tags": json_loads(row["tags_json"], []),
+        "session_key": row["session_key"] if "session_key" in row.keys() else None,
         "project_key": row["project_key"],
         "project_path": row["project_path"],
         "project_name": row["project_name"],
@@ -633,6 +655,179 @@ def tool_dag_link(args):
         conn.close()
 
 
+def autoemit_disabled_reason(project_path=None):
+    """Return a short reason string if auto-emit is OFF, else None.
+
+    One opt-out, honored identically by every host because every host calls
+    this same server. Off wins: either the SCHOLIA_AUTOEMIT env switch or a
+    per-project .scholia-off marker disables the auto path. Explicit,
+    user-driven tracing (auto=False) is never gated here.
+    """
+    flag = os.environ.get("SCHOLIA_AUTOEMIT")
+    if flag is not None and flag.strip().lower() in {"0", "false", "off", "no"}:
+        return "env:SCHOLIA_AUTOEMIT"
+    if project_path:
+        try:
+            if (Path(project_path).expanduser() / ".scholia-off").exists():
+                return "file:.scholia-off"
+        except OSError:
+            pass
+    return None
+
+
+def autoemit_enabled(project_path=None):
+    return autoemit_disabled_reason(project_path) is None
+
+
+def session_key_for(host, session_id):
+    return f"{host or 'unknown'}:{session_id or 'default'}"
+
+
+def find_session_dag_row(conn, project_key, session_key):
+    return conn.execute(
+        "SELECT * FROM dags WHERE project_key = ? AND session_key = ? ORDER BY created_at ASC LIMIT 1",
+        (project_key, session_key),
+    ).fetchone()
+
+
+def tool_dag_ensure_session(args):
+    """Idempotent find-or-create of the current session's per-project DAG.
+
+    Keyed by (project, host, session_id) so re-fires (resume/compact) return
+    the same DAG, and a Claude Code session and a Codex session on the same
+    repo get distinct, host-tagged traces. Gated by the shared opt-out when
+    auto=True; explicit calls (auto=False) always create.
+    """
+    project_path = args.get("project_path")
+    host = compact_text(args.get("host") or "unknown", 60)
+    session_id = compact_text(args.get("session_id") or "default", 200)
+    auto = args.get("auto", True)
+    session_key = session_key_for(host, session_id)
+
+    if auto:
+        reason = autoemit_disabled_reason(project_path)
+        if reason is not None:
+            structured = {
+                "enabled": False,
+                "created": False,
+                "skipped": True,
+                "reason": reason,
+                "host": host,
+                "session_id": session_id,
+                "session_key": session_key,
+            }
+            return content_result(f"Auto-emit disabled ({reason}); no session DAG created.", structured)
+
+    conn = connect()
+    try:
+        info = project_info(project_path)
+        upsert_project(conn, info)
+        existing = find_session_dag_row(conn, info["project_key"], session_key)
+        if existing is None:
+            dag_id = "dag_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "_" + secrets.token_hex(4)
+            timestamp = now()
+            tags = optional_list(args, "tags")
+            merged_tags = list(dict.fromkeys([*tags, f"host:{host}", f"session:{session_id}", "autoemit"]))
+            title = compact_text(args.get("title") or f"{info['project_name']} session ({host})", 200)
+            objective = compact_text(
+                args.get("objective") or f"Auto-emitted session trace for {info['project_name']} via {host}.",
+                1000,
+            )
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO dags (
+                      dag_id, title, objective, tags_json, project_key, project_path,
+                      project_name, created_at, updated_at, session_key
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        dag_id,
+                        title,
+                        objective,
+                        json_dumps(merged_tags),
+                        info["project_key"],
+                        info["project_path"],
+                        info["project_name"],
+                        timestamp,
+                        timestamp,
+                        session_key,
+                    ),
+                )
+                conn.commit()
+            except sqlite3.IntegrityError:
+                # Another host/process created the same session DAG concurrently.
+                conn.rollback()
+                existing = find_session_dag_row(conn, info["project_key"], session_key)
+            else:
+                goal_atom = tool_dag_add_atom(
+                    {
+                        "dag_id": dag_id,
+                        "project_path": info["project_path"],
+                        "kind": "Goal",
+                        "summary": objective,
+                        "content": objective,
+                    }
+                )["structuredContent"]["atom"]
+                dag = load_dag_conn(conn, dag_id)
+                structured = dag_metadata(dag)
+                structured.update(
+                    {"enabled": True, "created": True, "host": host, "session_id": session_id, "goal_atom": goal_atom}
+                )
+                return content_result(
+                    f"Started session DAG {dag_id} for {info['project_name']} ({host}).", structured
+                )
+
+        dag = row_to_dag(conn, existing)
+        structured = dag_metadata(dag)
+        structured.update({"enabled": True, "created": False, "host": host, "session_id": session_id})
+        return content_result(
+            f"Resumed session DAG {dag['dag_id']} for {info['project_name']} ({host}).", structured
+        )
+    finally:
+        conn.close()
+
+
+def tool_dag_finish_session(args):
+    """Append a closing Summary/Concluding atom to this session's DAG.
+
+    Re-derives the DAG from (project, host, session_id) so the caller need not
+    track the dag_id. Safe no-op when no session DAG exists (e.g. opt-out was
+    active at session start).
+    """
+    project_path = args.get("project_path")
+    host = compact_text(args.get("host") or "unknown", 60)
+    session_id = compact_text(args.get("session_id") or "default", 200)
+    session_key = session_key_for(host, session_id)
+    conn = connect()
+    try:
+        info = project_info(project_path)
+        existing = find_session_dag_row(conn, info["project_key"], session_key)
+        dag_id = existing["dag_id"] if existing is not None else None
+        project_path_resolved = info["project_path"]
+    finally:
+        conn.close()
+
+    if dag_id is None:
+        structured = {"found": False, "host": host, "session_id": session_id, "session_key": session_key}
+        return content_result("No session DAG to finish.", structured)
+
+    kind = normalize_kind(args.get("kind") or "Summary")
+    summary_text = args.get("summary") or "Session ended."
+    atom = tool_dag_add_atom(
+        {
+            "dag_id": dag_id,
+            "project_path": project_path_resolved,
+            "kind": kind,
+            "summary": compact_text(summary_text, 500),
+            "content": compact_text(summary_text, MAX_TEXT),
+        }
+    )["structuredContent"]["atom"]
+    structured = {"found": True, "dag_id": dag_id, "atom": atom, "host": host, "session_id": session_id}
+    return content_result(f"Finished session DAG {dag_id} ({host}).", structured)
+
+
 def all_dags(project_path=None):
     conn = connect()
     try:
@@ -848,6 +1043,7 @@ def tool_catalog(_args):
         "scholia_v031_ref_types": sorted(getattr(SCHOLIA_ATOMS, "V031_REF_TYPES", [])),
         "scholia_validator_version": getattr(SCHOLIA_ATOMS, "SCHOLIA_VALIDATOR_VERSION", "unknown"),
         "lint_engine": LINT_ENGINE,
+        "autoemit_default": True,
     }
     return content_result(json.dumps(structured, indent=2, sort_keys=True), structured)
 
@@ -1783,6 +1979,8 @@ CANONICAL_TOOLS = {
     "scholia_dag_start": tool_dag_start,
     "scholia_dag_add_atom": tool_dag_add_atom,
     "scholia_dag_link": tool_dag_link,
+    "scholia_dag_ensure_session": tool_dag_ensure_session,
+    "scholia_dag_finish_session": tool_dag_finish_session,
     "scholia_dag_list": tool_dag_list,
     "scholia_dag_summary": tool_dag_summary,
     "scholia_dag_read": tool_dag_read,
@@ -1810,6 +2008,8 @@ LEGACY_TOOL_ALIASES = {
     "scholia.dag_start": "scholia_dag_start",
     "scholia.dag_add_atom": "scholia_dag_add_atom",
     "scholia.dag_link": "scholia_dag_link",
+    "scholia.dag_ensure_session": "scholia_dag_ensure_session",
+    "scholia.dag_finish_session": "scholia_dag_finish_session",
     "scholia.dag_list": "scholia_dag_list",
     "scholia.dag_summary": "scholia_dag_summary",
     "scholia.dag_read": "scholia_dag_read",
@@ -1881,6 +2081,24 @@ def tool_schema(name):
         }, ["summary"])
     if name.endswith("dag_link"):
         return schema({**common_dag, "from": {"type": "string"}, "to": {"type": "string"}, "relation": {"type": "string"}, "label": {"type": "string"}}, ["from", "to"])
+    if name.endswith("dag_ensure_session"):
+        return schema({
+            "project_path": {"type": "string"},
+            "session_id": {"type": "string"},
+            "host": {"type": "string"},
+            "auto": {"type": "boolean"},
+            "title": {"type": "string"},
+            "objective": {"type": "string"},
+            "tags": {"type": "array", "items": {"type": "string"}},
+        })
+    if name.endswith("dag_finish_session"):
+        return schema({
+            "project_path": {"type": "string"},
+            "session_id": {"type": "string"},
+            "host": {"type": "string"},
+            "summary": {"type": "string"},
+            "kind": {"type": "string"},
+        })
     if name.endswith("dag_list") or name.endswith("trace_list"):
         return schema({"project_path": {"type": "string"}, "limit": {"type": "integer"}})
     if name.endswith("dag_summary") or name.endswith("trace_summary") or name.endswith("dag_compact") or name.endswith("trace_compact"):
@@ -1929,6 +2147,8 @@ def list_tools():
         "scholia_dag_start": "Start a project-aware local Scholialang DAG in SQLite.",
         "scholia_dag_add_atom": "Add an atom node and optional edges to a local SQLite DAG.",
         "scholia_dag_link": "Create an explicit acyclic edge between two atoms.",
+        "scholia_dag_ensure_session": "Idempotently find-or-create this session's per-project DAG (host-tagged, opt-out aware). Safe to call repeatedly.",
+        "scholia_dag_finish_session": "Append a closing Summary/Concluding atom to this session's per-project DAG.",
         "scholia_dag_list": "List recent local DAGs.",
         "scholia_dag_summary": "Return a compact graph summary for token-efficient recall.",
         "scholia_dag_read": "Read bounded DAG metadata, nodes, and edges.",

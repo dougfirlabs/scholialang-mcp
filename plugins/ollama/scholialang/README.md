@@ -49,6 +49,12 @@ Mistral, Gemma, or anything else served by Ollama all work.
 4. Open a new harness session — MCP servers load at session start.
 5. Ask the model: *"Start a Scholialang trace for this project."*
 
+For default, per-project **auto-emit** (no need to ask each session), paste
+`recipes/autoemit-system-prompt.md` into your harness's system prompt. The model
+then opens/resumes a session trace via the idempotent `scholia_dag_ensure_session`
+and appends atoms as it works. Opt out with `SCHOLIA_AUTOEMIT=0` or a
+`.scholia-off` file in the project root.
+
 ## Recipes
 
 | Harness | File | Notes |
@@ -57,6 +63,7 @@ Mistral, Gemma, or anything else served by Ollama all work.
 | Cline (VS Code) | `recipes/cline-mcp.snippet.json` | Add to `cline_mcp_settings.json`. |
 | open-webui | `recipes/open-webui-mcp.snippet.json` | Add to the open-webui MCP config. |
 | Generic stdio MCP host | `recipes/generic-stdio.md` | Use this if your harness speaks MCP over stdio but isn't listed. |
+| Auto-emit system prompt | `recipes/autoemit-system-prompt.md` | Paste into the harness system prompt to enable default per-project auto-emit. |
 
 ## Validation Engine
 

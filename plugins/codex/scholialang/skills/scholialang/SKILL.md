@@ -14,6 +14,29 @@ Codex exposes Scholialang MCP tools with underscore names, such as
 `scholia_dag_start`. Dotted names such as `scholia.dag_start` are legacy aliases
 for hosts that allow dots in tool names.
 
+## Auto-Emit (Default)
+
+Scholialang auto-emits by default, per project. Codex has no lifecycle hooks, so
+this is best-effort and model-driven: at the **start of any non-trivial task**,
+call `scholia_dag_ensure_session` once with `project_path` (the workspace root),
+`host: "codex"`, and `session_id` set to the Codex thread/conversation id (use a
+stable `codex-<date>` token if no id is exposed). It is idempotent — repeat calls
+return the same session DAG. Then append semantic atoms at meaningful boundaries
+with `scholia_dag_add_atom` (using the returned `dag_id`):
+
+- `Observation`, `Deciding` (name the chosen path), `Finding`, `Action` (durable
+  changes), `Contradiction`/`Retract`, and a `Concluding` at the end linked to
+  the trace `Goal`.
+
+Each session is its own DAG tagged `host:codex` and `session:<id>`, so a repo used
+from both Codex and Claude Code yields distinct, tool-labeled traces in one
+project bucket.
+
+**Opt-out (one switch, honored server-side):** `SCHOLIA_AUTOEMIT=0` (or
+`false`/`off`) disables globally; a `.scholia-off` file in the project root
+disables that repo. `scholia_dag_ensure_session` returns `{enabled:false,
+skipped:true}` when opted out — don't force a trace in that case.
+
 ## When To Start Or Append
 
 - If the user asks to use Scholialang, track a trace, dogfood traces, summarize decisions, or preserve context, call `scholia_dag_start` for the current project if there is no active DAG. `scholia_dag_start` creates the trace-level `Goal` atom from the objective.

@@ -345,6 +345,139 @@ class ScholialangDagTests(unittest.TestCase):
         )
 
 
+class AutoEmitSessionTests(unittest.TestCase):
+    """Default per-project auto-emit: idempotent session DAGs, host tagging,
+    opt-out gating, session close, schema migration, and concurrency pragma."""
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.old_home = os.environ.get("SCHOLIALANG_HOME")
+        self.old_flag = os.environ.get("SCHOLIA_AUTOEMIT")
+        os.environ["SCHOLIALANG_HOME"] = self.tempdir.name
+        os.environ.pop("SCHOLIA_AUTOEMIT", None)
+        self.project_path = str(Path(self.tempdir.name) / "project")
+        Path(self.project_path).mkdir(parents=True, exist_ok=True)
+
+    def tearDown(self):
+        for key, val in (("SCHOLIALANG_HOME", self.old_home), ("SCHOLIA_AUTOEMIT", self.old_flag)):
+            if val is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = val
+        self.tempdir.cleanup()
+
+    def ensure(self, **kw):
+        args = {"project_path": self.project_path, "session_id": "sess-1", "host": "claude-code"}
+        args.update(kw)
+        return server.tool_dag_ensure_session(args)["structuredContent"]
+
+    def test_ensure_session_creates_dag_with_goal_and_tags(self):
+        res = self.ensure()
+        self.assertTrue(res["enabled"])
+        self.assertTrue(res["created"])
+        self.assertEqual(res["host"], "claude-code")
+        self.assertIn("goal_atom", res)
+        self.assertIn("host:claude-code", res["tags"])
+        self.assertIn("session:sess-1", res["tags"])
+        self.assertEqual(res["session_key"], "claude-code:sess-1")
+
+    def test_ensure_session_is_idempotent(self):
+        first = self.ensure()
+        second = self.ensure()
+        self.assertTrue(first["created"])
+        self.assertFalse(second["created"])
+        self.assertEqual(first["dag_id"], second["dag_id"])
+
+    def test_two_hosts_same_session_get_distinct_dags(self):
+        cc = self.ensure(host="claude-code")
+        codex = self.ensure(host="codex")
+        self.assertNotEqual(cc["dag_id"], codex["dag_id"])
+        self.assertEqual(cc["session_key"], "claude-code:sess-1")
+        self.assertEqual(codex["session_key"], "codex:sess-1")
+
+    def test_optout_env_skips_creation(self):
+        os.environ["SCHOLIA_AUTOEMIT"] = "0"
+        res = self.ensure()
+        self.assertFalse(res["enabled"])
+        self.assertTrue(res.get("skipped"))
+        listing = server.tool_dag_list({"project_path": self.project_path})["structuredContent"]
+        self.assertEqual(listing["dags"], [])
+
+    def test_optout_file_skips_creation(self):
+        (Path(self.project_path) / ".scholia-off").write_text("")
+        res = self.ensure()
+        self.assertFalse(res["enabled"])
+        self.assertTrue(res.get("skipped"))
+        self.assertEqual(res["reason"], "file:.scholia-off")
+
+    def test_explicit_auto_false_creates_even_when_disabled(self):
+        os.environ["SCHOLIA_AUTOEMIT"] = "0"
+        res = self.ensure(auto=False)
+        self.assertTrue(res["created"])
+
+    def test_finish_session_appends_summary(self):
+        created = self.ensure()
+        fin = server.tool_dag_finish_session(
+            {
+                "project_path": self.project_path,
+                "session_id": "sess-1",
+                "host": "claude-code",
+                "summary": "wrapped up",
+            }
+        )["structuredContent"]
+        self.assertTrue(fin["found"])
+        self.assertEqual(fin["dag_id"], created["dag_id"])
+        self.assertEqual(fin["atom"]["kind"], "Summary")
+
+    def test_finish_session_missing_is_safe(self):
+        fin = server.tool_dag_finish_session(
+            {"project_path": self.project_path, "session_id": "nope", "host": "claude-code"}
+        )["structuredContent"]
+        self.assertFalse(fin["found"])
+
+    def test_connect_sets_busy_timeout(self):
+        conn = server.connect()
+        try:
+            timeout = conn.execute("PRAGMA busy_timeout").fetchone()[0]
+            self.assertGreaterEqual(timeout, 1000)
+        finally:
+            conn.close()
+
+    def test_session_key_column_exists_on_fresh_db(self):
+        conn = server.connect()
+        try:
+            cols = {row[1] for row in conn.execute("PRAGMA table_info(dags)")}
+            self.assertIn("session_key", cols)
+        finally:
+            conn.close()
+
+    def test_migration_adds_session_key_to_existing_db(self):
+        db = Path(self.tempdir.name) / "scholialang.sqlite3"
+        legacy = sqlite3.connect(db)
+        legacy.executescript(
+            "CREATE TABLE dags (dag_id TEXT PRIMARY KEY, title TEXT, objective TEXT, "
+            "tags_json TEXT, project_key TEXT, project_path TEXT, project_name TEXT, "
+            "created_at TEXT, updated_at TEXT);"
+        )
+        legacy.commit()
+        legacy.close()
+        conn = server.connect()
+        try:
+            cols = {row[1] for row in conn.execute("PRAGMA table_info(dags)")}
+            self.assertIn("session_key", cols)
+        finally:
+            conn.close()
+
+    def test_session_tools_registered_with_schema(self):
+        names = {t["name"] for t in server.list_tools()}
+        self.assertIn("scholia_dag_ensure_session", names)
+        self.assertIn("scholia_dag_finish_session", names)
+        sch = server.tool_schema("scholia_dag_ensure_session")
+        self.assertIn("session_id", sch["properties"])
+        self.assertIn("host", sch["properties"])
+        self.assertIn("auto", sch["properties"])
+
+
 class ScholialangValidatorTests(unittest.TestCase):
     """Coverage for the full v0.4 grammar validator surface.
 

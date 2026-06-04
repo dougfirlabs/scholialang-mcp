@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+- **Default per-project auto-emit (Approach A: smart server + thin host
+  adapters).** Out of the box, the plugin now keeps a Scholialang trace per
+  project, one DAG per session, tagged by host.
+  - **Server core (shared by all three variants):** new idempotent
+    `scholia_dag_ensure_session` tool (find-or-create the current session's
+    per-project DAG, keyed by `host:session_id`, with a partial unique index +
+    `IntegrityError` retry for concurrent hosts) and `scholia_dag_finish_session`
+    (append the closing `Summary`/`Concluding`). Adds a `session_key` column with
+    a guarded migration for pre-0.3.0 databases, a `PRAGMA busy_timeout` so two
+    hosts writing the shared SQLite store wait instead of erroring, and `host` /
+    `session_key` surfaced in DAG metadata.
+  - **Opt-out (one switch, enforced server-side so every host honors it):**
+    `SCHOLIA_AUTOEMIT=0` (or `false`/`off`) disables globally; a `.scholia-off`
+    file in the project root disables that repo. Explicit, user-requested tracing
+    (`auto=false`) still works.
+  - **Claude Code adapter (guaranteed boundaries):** `SessionStart` hook opens/
+    resumes the session DAG and injects its `dag_id` + emit guidance; `SessionEnd`
+    hook appends the closing summary. Hooks are import-safe, fail closed, and
+    never break the session. Skill documents the auto-emit convention.
+  - **Codex + Ollama adapters (best-effort, no lifecycle hooks):** Codex skill
+    instructs the model to call `ensure_session` (host `codex`) at task start;
+    Ollama ships `recipes/autoemit-system-prompt.md` for generic MCP hosts.
+  - **Anti-drift:** `scripts/sync_plugins.sh` propagates the canonical Claude Code
+    server + vendored validator to the Codex and Ollama variants, keeping the
+    three byte-identical (already enforced by the test suite).
 - Add the local Codex Scholialang plugin under `plugins/codex/scholialang`.
 - Add a repo-local Codex marketplace entry for `scholialang@scholialang-mcp`.
 - Add full Codex rollout exhaust import into SQLite-backed Scholialang DAGs,
