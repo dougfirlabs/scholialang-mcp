@@ -28,6 +28,16 @@ The harness must:
 4. Send `tools/list` after `initialize` to discover the
    `scholia.*` tool surface.
 
+## Auto-Emit (Default)
+
+Scholialang auto-emits a per-project trace by default. Generic MCP hosts have no
+lifecycle hooks, so this is model-driven: paste `recipes/autoemit-system-prompt.md`
+into your harness's system prompt. The model then calls `scholia_dag_ensure_session`
+(idempotent) at the start of work and appends atoms at meaningful boundaries.
+
+Opt out with `SCHOLIA_AUTOEMIT=0` in the server's environment, or a `.scholia-off`
+file in the project root — both are enforced server-side.
+
 ## Suggested Auto-Approve List
 
 If your harness supports per-tool approval policy, mark these as
@@ -41,8 +51,13 @@ auto-approve for ergonomic use:
 - `scholia_dag_neighbors`
 - `scholia_lint_snippet`
 - `scholia_lint_trace`
+- `scholia_dag_ensure_session`
+- `scholia_dag_finish_session`
 
-These are all read-only or pure-function tools. Leave write tools
+The first eight are read-only or pure-function tools. The two
+`*_session` tools are idempotent session-lifecycle helpers — auto-approve
+them so default auto-emit can open and close the per-project session DAG
+without a prompt every session. Leave the content write tools
 (`dag_start`, `dag_add_atom`, `dag_link`, `dag_compact`,
 `codex_import_thread`) on the standard prompt-for-approval path so the
 user keeps editorial control over what lands in the persistent DAG.

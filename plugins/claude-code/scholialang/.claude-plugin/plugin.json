@@ -1,7 +1,7 @@
 {
   "name": "scholialang",
-  "version": "0.2.0",
-  "description": "Local Scholialang tracing, structured-reasoning DAG, full v0.4 grammar validator, and Codex/Claude Code rollout import for Claude Code.",
+  "version": "0.3.0",
+  "description": "Local Scholialang tracing with default per-project auto-emit, structured-reasoning DAG, full v0.4 grammar validator, and Codex/Claude Code rollout import for Claude Code.",
   "author": {
     "name": "Doug Fir Labs",
     "url": "https://scholialang.org/"
@@ -20,6 +20,7 @@
   ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
+  "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Scholialang",
     "shortDescription": "Local structured-reasoning DAG + validator for Claude Code.",
