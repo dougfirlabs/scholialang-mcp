@@ -1,7 +1,7 @@
 # Scholialang Claude Code Plugin
 
 Local Claude Code plugin for explicit Scholialang traces, SQLite-backed DAG
-storage, full v0.4 grammar validation, and rollout exhaust imports.
+storage, full v0.5 grammar validation, and rollout exhaust imports.
 
 This plugin is intentionally local-first. The MCP server runs over stdio inside
 Claude Code, writes to a local SQLite database, and does not require a hosted
@@ -11,15 +11,16 @@ service, bearer token, webhook, or remote worker.
 
 - `scholia_dag_*` tools for project-aware Scholialang DAG traces.
 - `scholia_trace_*` compatibility aliases for trace-oriented callers.
-- `scholia_catalog`, `scholia_lookup` reference tools (full v0.4 closed-set
-  atom kinds, canonical operators, edge types, effect kinds, ref types).
-- `scholia_lint_snippet` — full v0.4 grammar validation (closed-set atoms,
+- `scholia_catalog`, `scholia_lookup` reference tools (full v0.5 closed-set
+  atom kinds, canonical operators, edge types, effect kinds, ref types, and
+  criticality ladder).
+- `scholia_lint_snippet` — full v0.5 grammar validation (closed-set atoms,
   reference completeness, decision closure, action recording, hypothesis
   evaluation, retract consistency, constraint respect, goal declaration,
-  operator vocabulary, location/edge shape). Pass `mode='tag_balance'` for the
-  legacy tag-only check.
-- `scholia_lint_trace` — per-rule structured error output for CI gates and
-  dashboards.
+  operator vocabulary, location/edge shape, Concluding closure errors, and
+  warning checks). Pass `mode='tag_balance'` for the legacy tag-only check.
+- `scholia_lint_trace` — per-rule structured error and warning output for CI
+  gates and dashboards.
 - `scholia_codex_import_thread` for importing Codex rollout JSONL into a
   durable exhaust DAG (cross-harness retro-analysis).
 - A Claude Code skill that teaches the agent when to capture, validate,
@@ -99,7 +100,7 @@ frontier summary returns the final finding.
 For the validator surface:
 
 ```text
-Lint this Scholia snippet with the full v0.4 grammar:
+Lint this Scholia snippet with the full v0.5 grammar:
 <Step id="S1"><Hypothesis id="H1">x</Hypothesis></Step>
 ```
 
@@ -117,7 +118,7 @@ to see which engine is in use:
 - `scholialang-package` — the installed pip package
 - `scholialang-vendored` — the bundled fallback
 
-To force the package path, `pip install scholialang>=0.4.0` and restart
+To force the package path, `pip install scholialang>=0.5.0` and restart
 Claude Code.
 
 ## Safety Model

@@ -1,4 +1,4 @@
-"""Scholia atom catalog — v0.1 shared contract.
+"""Scholia atom catalog — v0.5 shared contract.
 
 This module is the canonical set of types for the Scholia notation.
 It is pure: no I/O, no parsing logic, no validation logic, no network.
@@ -22,6 +22,7 @@ literal on every atom.
 """
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, ClassVar, Optional, Union
@@ -165,22 +166,48 @@ class Evidence(Atom):
     kind: ClassVar[str] = "Evidence"
 
 
+_FOR_GOAL_DEPRECATION_MSG = (
+    "Finding.for_goal is deprecated in Scholia v0.5; use for_hyp instead. "
+    "A Finding evaluates a Hypothesis, not a Goal. for_goal is preserved "
+    "for v0.4 compatibility and will be removed in v0.6."
+)
+
+
 @dataclass
 class Finding(Atom):
-    """§3b — a conclusion drawn from available evidence."""
+    """§3b — a conclusion drawn from available evidence.
 
+    v0.5 makes ``for_hyp`` the canonical reference attribute because a
+    Finding evaluates a Hypothesis. ``for_goal`` is retained as a
+    deprecated v0.4 compatibility alias.
+    """
+
+    for_hyp: Optional[str] = None
     for_goal: Optional[str] = None
     status: Optional[str] = None
     kind: ClassVar[str] = "Finding"
 
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name == "for_goal" and value is not None:
+            if not object.__getattribute__(self, "__dict__").get(
+                "_warned_for_goal", False
+            ):
+                warnings.warn(
+                    _FOR_GOAL_DEPRECATION_MSG,
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                object.__setattr__(self, "_warned_for_goal", True)
+        object.__setattr__(self, name, value)
 
-@dataclass
-class Concluding(Atom):
-    """§3b — a premise-backed final or checkpoint conclusion."""
-
-    for_goal: Optional[str] = None
-    status: Optional[str] = None
-    kind: ClassVar[str] = "Concluding"
+    @classmethod
+    def from_legacy(cls, data: dict[str, Any]) -> "Finding":
+        """Build a v0.5 Finding from v0.4-shaped attributes."""
+        kwargs = {k: v for k, v in data.items() if k != "for_goal"}
+        legacy_for_goal = data.get("for_goal")
+        if legacy_for_goal is not None and "for_hyp" not in kwargs:
+            kwargs["for_hyp"] = legacy_for_goal
+        return cls(**kwargs)
 
 
 @dataclass
@@ -217,6 +244,29 @@ class Retract(Atom):
     reason: Optional[str] = None
     replacement: Optional[str] = None
     kind: ClassVar[str] = "Retract"
+
+
+@dataclass
+class Concluding(Atom):
+    """§3b — chain-level epistemic close.
+
+    A ``<Concluding>`` asserts that cited Findings, Observations, or
+    Evidence together resolve a stated Goal into a closing proposition.
+    It is distinct from ``<Finding>`` (one hypothesis) and
+    ``<Deciding>`` (action commitment).
+    """
+
+    for_goal: Optional[str] = None
+    confidence: Optional[float] = None
+    criticality: Optional[str] = None
+    kind: ClassVar[str] = "Concluding"
+
+    def __post_init__(self) -> None:
+        if self.for_goal is None:
+            raise ValueError(
+                "Concluding requires for_goal — the closing claim must "
+                "name the Goal it resolves."
+            )
 
 
 # ── 3c — control atoms ───────────────────────────────────────────────
@@ -373,6 +423,7 @@ class Goal(Atom):
     related_constraints: list[str] = field(default_factory=list)
     deadline: Optional[str] = None
     failure_modes: list[str] = field(default_factory=list)
+    criticality: Optional[str] = None
     kind: ClassVar[str] = "Goal"
 
 
@@ -529,10 +580,10 @@ _ATOM_CLASSES: dict[str, type[Atom]] = {
     "Hypothesis": Hypothesis,
     "Evidence": Evidence,
     "Finding": Finding,
-    "Concluding": Concluding,
     "Contradiction": Contradiction,
     "Uncertainty": Uncertainty,
     "Retract": Retract,
+    "Concluding": Concluding,
     "Deciding": Deciding,
     "Alternative": Alternative,
     "Branch": Branch,
@@ -595,6 +646,17 @@ CANONICAL_OPERATORS: frozenset[str] = frozenset(_OPERATOR_VALUES)
 # its own constant so the detector + future spec-extension PRDs have a
 # single named handle to amend when a new atom kind is ratified.
 KNOWN_KINDS: frozenset[str] = frozenset(_ATOM_CLASSES.keys())
+
+
+# ── v0.5 — criticality ordering ──────────────────────────────────────
+
+CRITICALITY_RANK: dict[str, int] = {
+    "incidental": 0,
+    "bridge": 1,
+    "ledger": 2,
+    "verifier": 3,
+    "kernel": 4,
+}
 
 
 # Regex matching ``UPPERCASE_TOKEN:atom_id`` operator-target pairs in
@@ -663,8 +725,8 @@ KIND_SPECIFIC_FIELDS: dict[str, tuple[str, ...]] = {
     "Observation": ("timestamp", "location", "confidence"),
     "Action": ("timestamp",),
     "Evidence": ("for_ref", "polarity"),
-    "Finding": ("for_goal", "status"),
-    "Concluding": ("for_goal", "status"),
+    "Finding": ("for_hyp", "for_goal", "status"),
+    "Concluding": ("for_goal", "confidence", "criticality"),
     "Uncertainty": ("on", "confidence"),
     "Retract": ("target", "reason", "replacement"),
     "Deciding": ("options",),
@@ -685,6 +747,7 @@ KIND_SPECIFIC_FIELDS: dict[str, tuple[str, ...]] = {
         "related_constraints",
         "deadline",
         "failure_modes",
+        "criticality",
     ),
     "Confidence": ("on", "level", "basis"),
     "EventRef": ("instance", "run_id", "sequence", "for_ref", "wall_clock"),
@@ -769,7 +832,7 @@ def wire_name_for(kind: str, py_field: str) -> str:
 # constants are imported by parser/validator/tests so the canonical
 # set lives in one place. Bumping a set requires a spec doc update.
 
-SCHOLIA_VALIDATOR_VERSION: str = "0.3.1"
+SCHOLIA_VALIDATOR_VERSION: str = "0.5.0"
 
 V031_EDGE_TYPES: frozenset[str] = frozenset({
     "depends_on",

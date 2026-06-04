@@ -21,7 +21,8 @@ MAX_TEXT = 6000
 
 def _has_goal_concluding(atoms_mod):
     kinds = getattr(atoms_mod, "ATOM_KINDS", ())
-    return "Goal" in kinds and "Concluding" in kinds
+    version = getattr(atoms_mod, "SCHOLIA_VALIDATOR_VERSION", "")
+    return "Goal" in kinds and "Concluding" in kinds and str(version).startswith("0.5")
 
 
 def _load_scholia_engine():
@@ -1035,6 +1036,10 @@ def tool_catalog(_args):
         "relations": RELATIONS,
         "resources": list(RESOURCE_TEXT),
         "database_path": str(database_path()),
+        "scholia_atom_kinds_v05": sorted(getattr(SCHOLIA_ATOMS, "ATOM_KINDS", [])),
+        "scholia_canonical_operators_v05": sorted(getattr(SCHOLIA_ATOMS, "CANONICAL_OPERATORS", [])),
+        "scholia_criticality_rank": getattr(SCHOLIA_ATOMS, "CRITICALITY_RANK", {}),
+        # Back-compat aliases retained for existing clients.
         "scholia_atom_kinds_v04": sorted(getattr(SCHOLIA_ATOMS, "ATOM_KINDS", [])),
         "scholia_canonical_operators_v04": sorted(getattr(SCHOLIA_ATOMS, "CANONICAL_OPERATORS", [])),
         "scholia_v031_edge_types": sorted(getattr(SCHOLIA_ATOMS, "V031_EDGE_TYPES", [])),
@@ -1092,12 +1097,12 @@ def _lint_well_formed_tags(snippet):
 
 
 def _run_full_validator(snippet):
-    """Parse + validate via the scholialang grammar (8-rule check).
+    """Parse + validate via the scholialang grammar.
 
-    Returns a (ok, errors, parse_error, validator_version) tuple. On parse
-    failure ``errors`` is empty and ``parse_error`` carries the parser's
-    diagnostic; callers should surface that as a single well-formedness
-    violation so the lint output is uniform.
+    Returns a (ok, errors, warnings, parse_error, validator_version) tuple. On
+    parse failure ``errors`` and ``warnings`` are empty and ``parse_error``
+    carries the parser's diagnostic; callers should surface that as a single
+    well-formedness violation so the lint output is uniform.
     """
     try:
         trace = SCHOLIA_PARSER.parse(snippet)
@@ -1105,17 +1110,33 @@ def _run_full_validator(snippet):
         return (
             False,
             [],
+            [],
             str(exc),
             getattr(SCHOLIA_ATOMS, "SCHOLIA_VALIDATOR_VERSION", "unknown"),
         )
     result = SCHOLIA_VALIDATOR.validate(trace)
-    serialised = [
-        {"rule": err.rule, "atom_id": err.atom_id, "message": err.message}
+    errors = [
+        {
+            "rule": err.rule,
+            "atom_id": err.atom_id,
+            "message": err.message,
+            "severity": "error",
+        }
         for err in result.errors
+    ]
+    warnings = [
+        {
+            "rule": warning.rule,
+            "atom_id": warning.atom_id,
+            "message": warning.message,
+            "severity": "warning",
+        }
+        for warning in getattr(result, "warnings", [])
     ]
     return (
         result.ok,
-        serialised,
+        errors,
+        warnings,
         None,
         getattr(result, "scholia_validator_version", getattr(SCHOLIA_ATOMS, "SCHOLIA_VALIDATOR_VERSION", "unknown")),
     )
@@ -1140,13 +1161,22 @@ def tool_lint_snippet(args):
             "lint_engine": "tag-balance-only",
         }
         return content_result(json.dumps(result, indent=2), result, bool(errors))
-    ok, errors, parse_error, validator_version = _run_full_validator(snippet)
+    ok, errors, warnings, parse_error, validator_version = _run_full_validator(snippet)
     if parse_error is not None:
-        errors = [{"rule": "well_formed", "atom_id": "", "message": parse_error}]
+        errors = [
+            {
+                "rule": "well_formed",
+                "atom_id": "",
+                "message": parse_error,
+                "severity": "error",
+            }
+        ]
+        warnings = []
     result = {
         "ok": ok and not errors,
         "mode": "full",
         "errors": errors,
+        "warnings": warnings,
         "lint_engine": LINT_ENGINE,
         "validator_version": validator_version,
     }
@@ -1163,20 +1193,37 @@ def tool_lint_trace(args):
     branch on stable identifiers.
     """
     snippet = require_str(args, "snippet")
-    ok, errors, parse_error, validator_version = _run_full_validator(snippet)
+    ok, errors, warnings, parse_error, validator_version = _run_full_validator(snippet)
     if parse_error is not None:
-        errors = [{"rule": "well_formed", "atom_id": "", "message": parse_error}]
+        errors = [
+            {
+                "rule": "well_formed",
+                "atom_id": "",
+                "message": parse_error,
+                "severity": "error",
+            }
+        ]
+        warnings = []
         ok = False
     by_rule = {}
     for err in errors:
         by_rule.setdefault(err["rule"], []).append(err)
+    warnings_by_rule = {}
+    for warning in warnings:
+        warnings_by_rule.setdefault(warning["rule"], []).append(warning)
     rule_names = tuple(getattr(SCHOLIA_VALIDATOR, "RULE_NAMES", ()))
     summary_counts = {rule: len(by_rule.get(rule, [])) for rule in rule_names}
+    warning_counts = {rule: len(warnings_by_rule.get(rule, [])) for rule in rule_names}
     result = {
         "ok": ok and not errors,
         "total_errors": len(errors),
+        "total_warnings": len(warnings),
+        "errors": errors,
+        "warnings": warnings,
         "errors_by_rule": by_rule,
+        "warnings_by_rule": warnings_by_rule,
         "counts_by_rule": summary_counts,
+        "warning_counts_by_rule": warning_counts,
         "rules": list(rule_names),
         "lint_engine": LINT_ENGINE,
         "validator_version": validator_version,
@@ -2168,7 +2215,7 @@ def list_tools():
         "scholia_trace_export": "Compatibility alias for scholia_dag_export.",
         "scholia_catalog": "List Scholialang atoms, operators, relations, and resources.",
         "scholia_lookup": "Lookup a Scholialang atom, operator, or relation.",
-        "scholia_lint_snippet": "Validate a Scholia snippet against the full v0.4 grammar (closed-set atoms, reference completeness, decision/action/hypothesis closure). Pass mode='tag_balance' for the legacy tag-only check.",
+        "scholia_lint_snippet": "Validate a Scholia snippet against the full v0.5 grammar (closed-set atoms, reference completeness, Concluding closure rules, and warning checks). Pass mode='tag_balance' for the legacy tag-only check.",
         "scholia_lint_trace": "Validate a Scholia trace and return per-rule structured errors plus counts. Use for CI gates and dashboard rendering.",
     }
     return [
