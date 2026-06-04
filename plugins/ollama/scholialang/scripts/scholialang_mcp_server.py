@@ -2028,37 +2028,66 @@ def handle_message(message):
         return rpc_error(message_id, -32603, "Internal error", {"detail": str(exc)})
 
 
-def read_framed_message():
-    headers = {}
-    while True:
-        line = sys.stdin.buffer.readline()
-        if line == b"":
-            return None
-        if line in (b"\r\n", b"\n"):
-            break
-        key, _, value = line.decode("ascii", "replace").partition(":")
-        headers[key.lower()] = value.strip()
-    length = int(headers.get("content-length", "0"))
-    if length <= 0:
+FRAMING_NEWLINE = "newline"
+FRAMING_HEADER = "content-length"
+
+
+def read_message(stream=None):
+    """Read one JSON-RPC message and report its framing.
+
+    The MCP stdio transport is newline-delimited JSON-RPC: one JSON object per
+    line, no embedded newlines. The repo's LSP path instead uses LSP-style
+    ``Content-Length`` headers. Auto-detect from the first line so the same
+    server serves MCP hosts (Claude Code, Codex, Ollama) and LSP clients.
+
+    Returns ``(message, framing)`` or ``None`` at end of input.
+    """
+    stream = stream if stream is not None else sys.stdin.buffer
+    first = stream.readline()
+    if first == b"":
         return None
-    body = sys.stdin.buffer.read(length)
-    return json.loads(body.decode("utf-8"))
+    # Tolerate stray blank lines between newline-framed messages.
+    while first in (b"\r\n", b"\n"):
+        first = stream.readline()
+        if first == b"":
+            return None
+    if first.lstrip().lower().startswith(b"content-length:"):
+        headers = {}
+        line = first
+        while line not in (b"\r\n", b"\n"):
+            key, _, value = line.decode("ascii", "replace").partition(":")
+            headers[key.lower()] = value.strip()
+            line = stream.readline()
+            if line == b"":
+                break
+        length = int(headers.get("content-length", "0"))
+        if length <= 0:
+            return None
+        body = stream.read(length)
+        return json.loads(body.decode("utf-8")), FRAMING_HEADER
+    return json.loads(first.decode("utf-8")), FRAMING_NEWLINE
 
 
-def send_framed_message(message):
-    body = json.dumps(message, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    sys.stdout.buffer.write(f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body)
-    sys.stdout.buffer.flush()
+def send_message(message, framing=FRAMING_NEWLINE, stream=None):
+    stream = stream if stream is not None else sys.stdout.buffer
+    if framing == FRAMING_HEADER:
+        body = json.dumps(message, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        stream.write(f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body)
+    else:
+        body = json.dumps(message, separators=(",", ":")).encode("utf-8")
+        stream.write(body + b"\n")
+    stream.flush()
 
 
 def main():
     while True:
-        message = read_framed_message()
-        if message is None:
+        result = read_message()
+        if result is None:
             break
+        message, framing = result
         response = handle_message(message)
         if response is not None:
-            send_framed_message(response)
+            send_message(response, framing)
 
 
 if __name__ == "__main__":

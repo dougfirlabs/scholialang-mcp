@@ -1,4 +1,5 @@
 import importlib.util
+import io
 import json
 import os
 import sqlite3
@@ -494,6 +495,48 @@ class ScholialangPluginManifestTests(unittest.TestCase):
             codex_server.read_text(),
             "Ollama plugin server drifted from the Codex plugin server.",
         )
+
+
+class FramingTests(unittest.TestCase):
+    """The MCP stdio transport is newline-delimited JSON-RPC (one JSON object
+    per line, no embedded newlines). The server must speak it for Claude Code /
+    Codex / Ollama hosts, while staying compatible with the LSP-style
+    Content-Length framing the repo's LSP path uses."""
+
+    def test_reads_newline_delimited_request(self):
+        request = {"jsonrpc": "2.0", "id": 7, "method": "tools/list"}
+        stream = io.BytesIO((json.dumps(request) + "\n").encode("utf-8"))
+        result = server.read_message(stream)
+        self.assertIsNotNone(result)
+        message, framing = result
+        self.assertEqual(framing, server.FRAMING_NEWLINE)
+        self.assertEqual(message["id"], 7)
+
+    def test_writes_newline_delimited_response(self):
+        out = io.BytesIO()
+        server.send_message(
+            {"jsonrpc": "2.0", "id": 7, "result": {"ok": True}},
+            server.FRAMING_NEWLINE,
+            out,
+        )
+        raw = out.getvalue()
+        self.assertNotIn(b"Content-Length", raw)
+        self.assertTrue(raw.endswith(b"\n"))
+        self.assertNotIn(b"\n", raw[:-1])  # exactly one line, no embedded newline
+        self.assertEqual(json.loads(raw.decode("utf-8"))["id"], 7)
+
+    def test_content_length_framing_still_supported(self):
+        body = json.dumps({"jsonrpc": "2.0", "id": 8, "method": "tools/list"}).encode("utf-8")
+        framed = ("Content-Length: %d\r\n\r\n" % len(body)).encode("ascii") + body
+        message, framing = server.read_message(io.BytesIO(framed))
+        self.assertEqual(framing, server.FRAMING_HEADER)
+        self.assertEqual(message["id"], 8)
+        out = io.BytesIO()
+        server.send_message({"jsonrpc": "2.0", "id": 8, "result": {}}, framing, out)
+        self.assertIn(b"Content-Length:", out.getvalue())
+
+    def test_eof_returns_none(self):
+        self.assertIsNone(server.read_message(io.BytesIO(b"")))
 
 
 if __name__ == "__main__":
