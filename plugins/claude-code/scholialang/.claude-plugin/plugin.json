@@ -20,7 +20,6 @@
   ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
-  "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Scholialang",
     "shortDescription": "Local structured-reasoning DAG + validator for Claude Code.",
