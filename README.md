@@ -7,7 +7,7 @@
 - provider stubs for Claude, Codex, Ollama, and OpenAI host adapters
 - **three release-ready plugins** for the major coding harnesses, each
   with the same stdio MCP server, the same SQLite-backed local DAG,
-  the same full v0.4 grammar validator, and shared storage:
+  the same full v0.5 grammar validator, and shared storage:
   - `plugins/codex/scholialang/` — Codex plugin
   - `plugins/claude-code/scholialang/` — Claude Code plugin
   - `plugins/ollama/scholialang/` — Ollama / local-model recipes for
@@ -15,7 +15,7 @@
 
 The repo is intentionally separate from `scholialang`, which contains the
 language model, parser, validator, and serializers. This package depends on
-`scholialang>=0.4.0` and tracks `scholialang-spec` v0.4.0.
+`scholialang>=0.5.0` and tracks `scholialang-spec` v0.5.0.
 
 ## Install
 
@@ -57,7 +57,7 @@ Tools:
 Artifacts are read from a generic `.scholia-atlas/` directory when present.
 Missing artifacts return structured `not_generated_yet` responses so host
 agents can fall back to ordinary file reads. Regeneration is host-specific in
-v0.4 and returns `regenerate_unavailable` unless a host adapter enables it.
+v0.5 and returns `regenerate_unavailable` unless a host adapter enables it.
 
 ### Codex Atlas MCP Snippet
 
@@ -94,7 +94,7 @@ PYTHONPATH=src python3 -m scholialang_mcp codex-trace-config --repo-root /path/t
 
 Three release-ready plugin trees ship with this repo, one per major
 coding harness. Each plugin bundles the same stdio MCP server, the same
-local SQLite DAG store, the same full v0.4 grammar validator, and the
+local SQLite DAG store, the same full v0.5 grammar validator, and the
 same Codex rollout importer. Traces written in one harness are visible
 from the other two (shared `~/.scholialang/scholialang.sqlite3`).
 
@@ -109,15 +109,17 @@ Each plugin's tool surface is identical:
 - `scholia_dag_*` — local SQLite DAG traces
 - `scholia_trace_*` — compatibility aliases
 - `scholia_catalog`, `scholia_lookup` — reference lookups across the
-  full v0.4 closed-set vocabulary (31 atom kinds, 11 canonical
-  operators, v0.3.1 edge/effect/ref types, v0.4-B edge types)
-- `scholia_lint_snippet` — full v0.4 grammar validation (closed-set
+  full v0.5 closed-set vocabulary (32 atom kinds, 11 canonical
+  operators, v0.3.1 edge/effect/ref types, v0.4-B edge types, and
+  the v0.5 criticality ladder)
+- `scholia_lint_snippet` — full v0.5 grammar validation (closed-set
   atoms, reference completeness, decision closure, action recording,
   hypothesis evaluation, retract consistency, constraint respect, goal
-  declaration, operator vocabulary, location/edge shape). Pass
-  `mode='tag_balance'` for the legacy tag-only check.
-- `scholia_lint_trace` — per-rule structured error output for CI gates
-  and dashboards
+  declaration, operator vocabulary, location/edge shape, Concluding
+  closure errors, and warning checks). Pass `mode='tag_balance'` for
+  the legacy tag-only check.
+- `scholia_lint_trace` — per-rule structured error and warning output
+  for CI gates and dashboards
 - `scholia_codex_import_thread` — import Codex rollout JSONL as an
   event-sourced exhaust DAG
 

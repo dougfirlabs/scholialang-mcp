@@ -96,8 +96,9 @@ class ScholialangDagTests(unittest.TestCase):
             {
                 "snippet": (
                     '<Goal id="Goal_01" priority="required">ship the fix</Goal>'
-                    '<Concluding id="Concluding_01" for_goal="Goal_01" status="met">'
-                    'REFER:Goal_01 done'
+                    '<Observation id="Obs_01">ship checks passed</Observation>'
+                    '<Concluding id="Concluding_01" for_goal="Goal_01">'
+                    'REFER:Obs_01 done'
                     '</Concluding>'
                 )
             }
@@ -345,7 +346,7 @@ class ScholialangDagTests(unittest.TestCase):
 
 
 class ScholialangValidatorTests(unittest.TestCase):
-    """Coverage for the full v0.4 grammar validator surface.
+    """Coverage for the full v0.5 grammar validator surface.
 
     These tests assert behaviour, not the internal engine path. The lint
     surface should give the same answers whether driven by the installed
@@ -364,6 +365,7 @@ class ScholialangValidatorTests(unittest.TestCase):
         result = json.loads(server.tool_lint_snippet({"snippet": snippet})["content"][0]["text"])
         self.assertTrue(result["ok"], result)
         self.assertEqual(result["mode"], "full")
+        self.assertEqual(result["warnings"], [])
 
     def test_lint_open_hypothesis_violates_rule(self):
         snippet = '<Step id="S1"><Goal id="G1">x</Goal><Hypothesis id="H1">y</Hypothesis></Step>'
@@ -399,16 +401,39 @@ class ScholialangValidatorTests(unittest.TestCase):
         result = json.loads(server.tool_lint_trace({"snippet": snippet})["content"][0]["text"])
         self.assertFalse(result["ok"])
         self.assertIn("errors_by_rule", result)
+        self.assertIn("warnings_by_rule", result)
         self.assertIn("counts_by_rule", result)
+        self.assertIn("warning_counts_by_rule", result)
         self.assertIn("rules", result)
         self.assertIn("hypothesis_evaluated", result["rules"])
         self.assertIn("well_formed", result["rules"])
         self.assertGreater(result["counts_by_rule"]["hypothesis_evaluated"], 0)
 
-    def test_catalog_exposes_v04_closed_sets(self):
+    def test_lint_concluding_warning_is_non_fatal(self):
+        snippet = (
+            '<Step id="S1">'
+            '<Goal id="G_01" priority="required">g</Goal>'
+            '<Hypothesis id="H_01">h</Hypothesis>'
+            '<Evidence id="E_01" for="H_01" polarity="supports">e</Evidence>'
+            '<Finding id="F_01" for_hyp="H_01" status="met">f</Finding>'
+            '<Concluding id="C_01" for_goal="G_01">REFER:F_01 says we should ship.</Concluding>'
+            '</Step>'
+        )
+        result = json.loads(server.tool_lint_snippet({"snippet": snippet})["content"][0]["text"])
+        self.assertTrue(result["ok"], result)
+        warning_rules = {warning["rule"] for warning in result["warnings"]}
+        self.assertIn("no_action_in_concluding", warning_rules)
+
+    def test_catalog_exposes_v05_closed_sets(self):
         result = json.loads(server.tool_catalog({})["content"][0]["text"])
+        self.assertIn("scholia_atom_kinds_v05", result)
+        self.assertEqual(len(result["scholia_atom_kinds_v05"]), 32)
+        self.assertIn("Concluding", result["scholia_atom_kinds_v05"])
+        self.assertIn("scholia_canonical_operators_v05", result)
+        self.assertIn("scholia_criticality_rank", result)
+        self.assertEqual(result["scholia_validator_version"], "0.5.0")
+        # Back-compat aliases remain available for older clients.
         self.assertIn("scholia_atom_kinds_v04", result)
-        self.assertGreaterEqual(len(result["scholia_atom_kinds_v04"]), 9)
         self.assertIn("scholia_canonical_operators_v04", result)
         self.assertIn(result["lint_engine"], {"scholialang-package", "scholialang-vendored"})
 

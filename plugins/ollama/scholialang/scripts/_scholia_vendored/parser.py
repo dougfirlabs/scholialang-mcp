@@ -40,6 +40,7 @@ from .atoms import (
     Atom,
     Alternative,
     Branch,
+    Concluding,
     Deciding,
     Finding,
     Goal,
@@ -370,6 +371,8 @@ _FLOAT_ATTRS = {"dollars"}
 def _coerce_attr(kind: str, key: str, value: str):
     if key in _INT_ATTRS:
         return _parse_int_attr(kind, key, value)
+    if kind == "Concluding" and key == "confidence":
+        return _parse_float_attr(kind, key, value)
     if key in _FLOAT_ATTRS:
         return _parse_float_attr(kind, key, value)
     return value
@@ -390,7 +393,14 @@ def _apply_attrs(atom: Atom, attrs: dict[str, str]) -> None:
     ``KIND_SPECIFIC_FIELD_ALIASES`` in ``atoms.py``.
     """
     for wire_key, wire_val in attrs.items():
-        py_key = field_name_for(atom.kind, wire_key)
+        if (
+            atom.kind == "Finding"
+            and wire_key == "for_goal"
+            and "for_hyp" not in attrs
+        ):
+            py_key = "for_hyp"
+        else:
+            py_key = field_name_for(atom.kind, wire_key)
         if py_key == "kind":
             # Guard against accidentally shadowing the ClassVar
             # discriminator on any atom kind we haven't aliased yet.
@@ -420,6 +430,8 @@ def _validate_attrs(kind: str, attrs: dict[str, str]) -> None:
         raise ScholiaParseError(
             f"<{kind}> wall_clock must be ISO-8601; got {attrs['wall_clock']!r}."
         )
+    if kind == "Concluding" and not attrs.get("for_goal"):
+        raise ScholiaParseError("<Concluding> requires for_goal.")
     _validate_v031_attrs(kind, attrs)
     # v0.3.1 — strict closed-set rejection of unknown wire attributes.
     # PRD V031-01 acceptance criterion #3: ``<Observation foo='bar'>``
@@ -499,6 +511,31 @@ def _validate_v031_attrs(kind: str, attrs: dict[str, str]) -> None:
                 f"<Meta> criticality must be one of "
                 f"{sorted(V031_META_CRITICALITIES)}; got {criticality!r}."
             )
+    elif kind in {"Goal", "Concluding"}:
+        criticality = attrs.get("criticality")
+        if (
+            criticality is not None
+            and criticality not in V031_META_CRITICALITIES
+        ):
+            raise ScholiaParseError(
+                f"<{kind}> criticality must be one of "
+                f"{sorted(V031_META_CRITICALITIES)}; got {criticality!r}."
+            )
+        if kind == "Concluding":
+            confidence = attrs.get("confidence")
+            if confidence is not None:
+                try:
+                    value = float(confidence)
+                except ValueError as exc:
+                    raise ScholiaParseError(
+                        "<Concluding> confidence must be a float in [0.0, 1.0]; "
+                        f"got {confidence!r}."
+                    ) from exc
+                if not 0.0 <= value <= 1.0:
+                    raise ScholiaParseError(
+                        "<Concluding> confidence must be in [0.0, 1.0]; "
+                        f"got {value}."
+                    )
 
 
 def _build_pseudo_atom(kind: str) -> Atom:
@@ -521,9 +558,24 @@ def _build_atom(elem: Element, *, parent_kind: str | None = None) -> Atom:
         raise ScholiaParseError("<Alternative> is only valid inside <Deciding>.")
     _validate_attrs(kind, dict(elem.attrib))
 
-    atom: Atom = cls()  # every atom dataclass has all-default fields
-    _apply_attrs(atom, dict(elem.attrib))
-    atom.id = elem.attrib.get("id")
+    if cls is Concluding:
+        try:
+            atom = Concluding(
+                for_goal=elem.attrib.get("for_goal"),
+                confidence=(
+                    _parse_float_attr(kind, "confidence", elem.attrib["confidence"])
+                    if "confidence" in elem.attrib
+                    else None
+                ),
+                criticality=elem.attrib.get("criticality"),
+            )
+        except ValueError as exc:
+            raise ScholiaParseError(str(exc)) from exc
+        atom.id = elem.attrib.get("id")
+    else:
+        atom: Atom = cls()  # every atom dataclass has all-default fields
+        _apply_attrs(atom, dict(elem.attrib))
+        atom.id = elem.attrib.get("id")
     if isinstance(atom, Storing) and atom.value and not atom.name:
         atom.name = atom.value
     atom.content = _text_of(elem)

@@ -20,7 +20,7 @@ from typing import Any, BinaryIO, Optional
 from urllib.parse import unquote, urlparse
 from urllib.request import pathname2url
 
-SERVER_VERSION = "0.4.0"
+SERVER_VERSION = "0.5.0"
 
 ATTR_RE = re.compile(r"""\b(?P<name>location|target)\s*=\s*(?P<quote>['"])(?P<value>.*?)(?P=quote)""")
 
@@ -300,4 +300,3 @@ def main(argv: Optional[list[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

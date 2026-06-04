@@ -1,4 +1,4 @@
-"""Scholia validator — the eight rules from NOTATION_REFERENCE.md §9.
+"""Scholia validator — the v0.5 rules from the canonical spec.
 
 Each rule is its own pure function for unit-testability. They all
 take the trace + a pre-built reference index (id → atom) and return
@@ -20,11 +20,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Any, Callable, Optional
 
 from .atoms import (
     ATOM_KINDS,
     CANONICAL_OPERATORS,
+    CRITICALITY_RANK,
     PSEUDO_ATOM_KINDS,
     SCHOLIA_VALIDATOR_VERSION,
     V031_EDGE_TYPES,
@@ -35,8 +36,9 @@ from .atoms import (
     V04B_EDGE_TYPES,
     Action,
     Atom,
-    Concluding,
+    Confidence,
     Constraint,
+    Concluding,
     Deciding,
     Edge,
     Effect,
@@ -56,8 +58,6 @@ from .atoms import (
     parse_operators_from_content,
 )
 
-CONCLUSION_TYPES = (Finding, Concluding)
-
 
 RULE_WELL_FORMED = "well_formed"
 RULE_REFERENCE_COMPLETE = "reference_complete"
@@ -70,6 +70,12 @@ RULE_GOAL_DECLARED = "goal_declared"
 RULE_UNKNOWN_OPERATOR = "unknown_operator"
 RULE_LOCATION_EDGE_SHAPE = "location_edge_shape"
 RULE_V031_OPTIONAL_FIELDS = "v031_optional_fields"
+RULE_FOR_GOAL_RESOLVES = "for_goal_resolves"
+RULE_REFER_AT_LEAST_ONE = "refer_at_least_one"
+RULE_CRITICALITY_NON_DECREASING = "criticality_non_decreasing"
+RULE_NO_ACTION_IN_CONCLUDING = "no_action_in_concluding"
+RULE_SINGLE_ACTIVE_CONCLUDING_PER_GOAL = "single_active_concluding_per_goal"
+RULE_MIN_CONFIDENCE_CEILING = "min_confidence_ceiling"
 
 RULE_NAMES: tuple[str, ...] = (
     RULE_WELL_FORMED,
@@ -83,6 +89,18 @@ RULE_NAMES: tuple[str, ...] = (
     RULE_UNKNOWN_OPERATOR,
     RULE_LOCATION_EDGE_SHAPE,
     RULE_V031_OPTIONAL_FIELDS,
+    RULE_FOR_GOAL_RESOLVES,
+    RULE_REFER_AT_LEAST_ONE,
+    RULE_CRITICALITY_NON_DECREASING,
+    RULE_NO_ACTION_IN_CONCLUDING,
+    RULE_SINGLE_ACTIVE_CONCLUDING_PER_GOAL,
+    RULE_MIN_CONFIDENCE_CEILING,
+)
+
+WARNING_RULE_NAMES: tuple[str, ...] = (
+    RULE_NO_ACTION_IN_CONCLUDING,
+    RULE_SINGLE_ACTIVE_CONCLUDING_PER_GOAL,
+    RULE_MIN_CONFIDENCE_CEILING,
 )
 
 
@@ -94,6 +112,15 @@ class ValidationError:
     offending atom (empty when the rule applies to a Step or to the
     trace as a whole). ``message`` is a one-line human string.
     """
+
+    rule: str
+    atom_id: str
+    message: str
+
+
+@dataclass(frozen=True)
+class ValidationWarning:
+    """One non-fatal validator warning."""
 
     rule: str
     atom_id: str
@@ -119,11 +146,15 @@ class ValidationResult:
     ok: bool
     errors: list[ValidationError] = field(default_factory=list)
     errors_by_rule: dict[str, list[ValidationError]] = field(default_factory=dict)
+    warnings: list[ValidationWarning] = field(default_factory=list)
+    warnings_by_rule: dict[str, list[ValidationWarning]] = field(default_factory=dict)
     scholia_validator_version: str = SCHOLIA_VALIDATOR_VERSION
 
     def summary(self) -> str:
         """One-line human-readable summary of the validation outcome."""
         if self.ok:
+            if self.warnings:
+                return f"Scholia trace: valid with {len(self.warnings)} warning(s)."
             return "Scholia trace: valid."
         return (
             f"Scholia trace: {len(self.errors)} violation(s) across "
@@ -175,6 +206,101 @@ def _iter_operator_refs(atom: Atom):
         if ":" in token:
             op, target = token.split(":", 1)
             yield op, target
+
+
+_REFER_RE: re.Pattern[str] = re.compile(
+    r"\bREFER\s*:\s*([A-Za-z][A-Za-z0-9_]*)"
+)
+
+_ACTION_MODAL_RE: re.Pattern[str] = re.compile(
+    r"\b(should|will|recommend|choose|propose|recommends?|proposes?|chooses?)\s+\w+",
+    re.IGNORECASE,
+)
+
+
+def _parse_float(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _refer_targets(atom: Atom) -> list[str]:
+    return _REFER_RE.findall(atom.content or "")
+
+
+def _atom_criticality(atom: Atom) -> Optional[str]:
+    direct = getattr(atom, "criticality", None)
+    if isinstance(direct, str) and direct:
+        return direct
+    for child in atom.children:
+        if isinstance(child, Meta) and child.criticality:
+            return child.criticality
+    return None
+
+
+def _atom_confidence(atom: Atom, all_atoms: list[Atom]) -> Optional[float]:
+    direct = getattr(atom, "confidence", None)
+    parsed = _parse_float(direct)
+    if parsed is not None:
+        return parsed
+    if not atom.id:
+        return None
+    for other in all_atoms:
+        if isinstance(other, Uncertainty) and other.on == atom.id:
+            value = _parse_float(other.confidence)
+            if value is not None:
+                return value
+        if isinstance(other, Confidence) and other.on == atom.id:
+            value = _parse_float(other.level)
+            if value is not None:
+                return value
+    return None
+
+
+def _retracted_ids(all_atoms: list[Atom]) -> set[str]:
+    return {
+        atom.target
+        for atom in all_atoms
+        if isinstance(atom, Retract) and atom.target
+    }
+
+
+def _effective_concluding_criticality(
+    concluding: Concluding,
+    index: dict[str, Atom],
+) -> Optional[str]:
+    declared = _atom_criticality(concluding)
+    if declared and declared in CRITICALITY_RANK:
+        return declared
+
+    ranks: list[int] = []
+    for target in _refer_targets(concluding):
+        atom = index.get(target)
+        if not isinstance(atom, (Finding, Observation)):
+            continue
+        crit = _atom_criticality(atom)
+        if crit and crit in CRITICALITY_RANK:
+            ranks.append(CRITICALITY_RANK[crit])
+
+    if not ranks:
+        return None
+    max_rank = max(ranks)
+    for name, rank in CRITICALITY_RANK.items():
+        if rank == max_rank:
+            return name
+    return None
+
+
+def _has_retract_for(target_id: str, all_atoms: list[Atom]) -> bool:
+    return any(
+        isinstance(atom, Retract) and atom.target == target_id
+        for atom in all_atoms
+    )
 
 
 # ── Rule 1 — well-formedness ─────────────────────────────────────────
@@ -247,7 +373,16 @@ def check_reference_complete(
         if isinstance(atom, (Edge, Ref)):
             continue
         # Structured reference attrs on specific atoms.
-        for attr in ("to", "next", "for_ref", "for_goal", "target", "on", "of"):
+        for attr in (
+            "to",
+            "next",
+            "for_ref",
+            "for_hyp",
+            "for_goal",
+            "target",
+            "on",
+            "of",
+        ):
             value = getattr(atom, attr, None)
             if isinstance(value, str) and value and not _resolves(value):
                 if attr == "of" and isinstance(atom, Review):
@@ -359,13 +494,13 @@ def check_unknown_operator(
 def check_decision_closed(
     trace: list[Step], _index: dict[str, Atom]
 ) -> list[ValidationError]:
-    """Rule 3 — every ``<Deciding>`` produces a conclusion atom."""
+    """Rule 3 — every ``<Deciding>`` produces a ``<Finding>``."""
     errors: list[ValidationError] = []
     for atom in _walk_atoms(trace):
         if not isinstance(atom, Deciding):
             continue
         if not any(
-            isinstance(descendant, CONCLUSION_TYPES)
+            isinstance(descendant, Finding)
             for child in atom.children
             for descendant in _descend(child)
         ) and "decision =" not in atom.content:
@@ -374,7 +509,7 @@ def check_decision_closed(
                     rule=RULE_DECISION_CLOSED,
                     atom_id=atom.id or "",
                     message=(
-                        "Deciding block has no child Finding or Concluding — branch "
+                        "Deciding block has no child Finding — branch "
                         "choice not recorded."
                     ),
                 )
@@ -388,10 +523,10 @@ def check_decision_closed(
 def check_action_recorded(
     trace: list[Step], _index: dict[str, Atom]
 ) -> list[ValidationError]:
-    """Rule 4 — every ``<Action>`` is followed by or contains a conclusion.
+    """Rule 4 — every ``<Action>`` is followed by or contains a Finding.
 
-    The §8 composition rule says an Action must produce a conclusion. We
-    accept either a direct child conclusion or a sibling conclusion that
+    The §8 composition rule says an Action must produce a Finding. We
+    accept either a direct child Finding or a sibling Finding that
     appears later in the same Step — agents often write the Finding
     as a peer atom rather than nesting it.
     """
@@ -401,9 +536,9 @@ def check_action_recorded(
         for i, atom in enumerate(step.atoms):
             if not isinstance(atom, Action):
                 continue
-            has_nested = any(isinstance(c, CONCLUSION_TYPES) for c in atom.children)
+            has_nested = any(isinstance(c, Finding) for c in atom.children)
             has_sibling = any(
-                isinstance(sib, CONCLUSION_TYPES) for sib in step.atoms[i + 1 :]
+                isinstance(sib, Finding) for sib in step.atoms[i + 1 :]
             )
             if not (has_nested or has_sibling):
                 errors.append(
@@ -411,7 +546,7 @@ def check_action_recorded(
                         rule=RULE_ACTION_RECORDED,
                         atom_id=atom.id or "",
                         message=(
-                            "Action has no recording Finding or Concluding (neither "
+                            "Action has no recording Finding (neither "
                             "nested nor sibling)."
                         ),
                     )
@@ -476,7 +611,7 @@ def check_hypothesis_evaluated(
 def check_retract_consistent(
     trace: list[Step], index: dict[str, Atom]
 ) -> list[ValidationError]:
-    """Rule 6 — every Retract names an existing conclusion id."""
+    """Rule 6 — every Retract names an existing close/downgrade target."""
     errors: list[ValidationError] = []
     for atom in _walk_atoms(trace):
         if not isinstance(atom, Retract):
@@ -503,14 +638,15 @@ def check_retract_consistent(
                     ),
                 )
             )
-        elif not isinstance(referenced, CONCLUSION_TYPES):
+        elif not isinstance(referenced, (Finding, Concluding, Goal)):
             errors.append(
                 ValidationError(
                     rule=RULE_RETRACT_CONSISTENT,
                     atom_id=atom.id or "",
                     message=(
-                        f"Retract target '{target}' is a "
-                        f"{referenced.kind}, not a Finding or Concluding."
+                        f"Retract target '{target}' resolves to a "
+                        f"<{referenced.kind}>; legal v0.5 targets are "
+                        "Finding, Concluding, or Goal."
                     ),
                 )
             )
@@ -607,15 +743,20 @@ _GOAL_STATUSES = {"met", "unmet", "partially_met", "met_late"}
 def check_goal_declared(
     trace: list[Step], _index: dict[str, Atom]
 ) -> list[ValidationError]:
-    """Rule 8 — every required Goal has a status-declaring conclusion."""
+    """Rule 8 — every required Goal has a status-declaring Finding."""
     if any(atom.kind == "Meta:research-mode" for atom in _walk_atoms(trace)):
         return []
 
     errors: list[ValidationError] = []
-    findings_by_goal: dict[str, list[Atom]] = {}
+    findings_by_goal: dict[str, list[Finding]] = {}
+    concludings_by_goal: dict[str, list[Concluding]] = {}
     for atom in _walk_atoms(trace):
-        if isinstance(atom, CONCLUSION_TYPES) and getattr(atom, "for_goal", None):
-            findings_by_goal.setdefault(atom.for_goal, []).append(atom)
+        if isinstance(atom, Finding):
+            target = atom.for_goal or atom.for_hyp
+            if target:
+                findings_by_goal.setdefault(target, []).append(atom)
+        elif isinstance(atom, Concluding) and atom.for_goal:
+            concludings_by_goal.setdefault(atom.for_goal, []).append(atom)
 
     for atom in _walk_atoms(trace):
         if not isinstance(atom, Goal):
@@ -637,15 +778,16 @@ def check_goal_declared(
             for finding in findings_by_goal.get(goal_id, [])
             if finding.status in _GOAL_STATUSES
         ]
-        if status_findings:
+        if status_findings or concludings_by_goal.get(goal_id):
             continue
         errors.append(
             ValidationError(
                 rule=RULE_GOAL_DECLARED,
                 atom_id=goal_id,
                 message=(
-                    f"Required Goal '{goal_id}' has no Finding or Concluding with "
-                    "for_goal and status in met/unmet/partially_met."
+                    f"Required Goal '{goal_id}' has no Finding with "
+                    "for_goal/for_hyp status in met/unmet/partially_met "
+                    "and no Concluding for_goal close."
                 ),
             )
         )
@@ -760,8 +902,38 @@ def check_v031_optional_fields(
                             f"{sorted(V031_META_CRITICALITIES)}; got "
                             f"{atom.criticality!r}."
                         ),
+                        )
+                    )
+        elif isinstance(atom, (Goal, Concluding)):
+            criticality = getattr(atom, "criticality", None)
+            if (
+                criticality is not None
+                and criticality not in V031_META_CRITICALITIES
+            ):
+                errors.append(
+                    ValidationError(
+                        rule=RULE_V031_OPTIONAL_FIELDS,
+                        atom_id=atom.id or "",
+                        message=(
+                            f"<{atom.kind}> criticality must be one of "
+                            f"{sorted(V031_META_CRITICALITIES)}; got "
+                            f"{criticality!r}."
+                        ),
                     )
                 )
+            if isinstance(atom, Concluding) and atom.confidence is not None:
+                value = _parse_float(atom.confidence)
+                if value is None or not 0.0 <= value <= 1.0:
+                    errors.append(
+                        ValidationError(
+                            rule=RULE_V031_OPTIONAL_FIELDS,
+                            atom_id=atom.id or "",
+                            message=(
+                                "<Concluding> confidence must be a float "
+                                f"in [0.0, 1.0]; got {atom.confidence!r}."
+                            ),
+                        )
+                    )
     return errors
 
 
@@ -821,10 +993,218 @@ def check_location_edge_shape(
     return errors
 
 
+# ── v0.5 Concluding rules ────────────────────────────────────────────
+
+
+def _concludings(trace: list[Step]) -> tuple[list[Atom], list[Concluding]]:
+    all_atoms = list(_walk_atoms(trace))
+    return all_atoms, [a for a in all_atoms if isinstance(a, Concluding)]
+
+
+def check_for_goal_resolves(
+    trace: list[Step], index: dict[str, Atom]
+) -> list[ValidationError]:
+    """v0.5 hard-fail — every Concluding closes an in-trace Goal."""
+    _all_atoms, concludings = _concludings(trace)
+    errors: list[ValidationError] = []
+    for atom in concludings:
+        target = atom.for_goal
+        if not target:
+            errors.append(
+                ValidationError(
+                    rule=RULE_FOR_GOAL_RESOLVES,
+                    atom_id=atom.id or "",
+                    message="Concluding has no for_goal target.",
+                )
+            )
+            continue
+        referenced = index.get(target)
+        if referenced is None:
+            errors.append(
+                ValidationError(
+                    rule=RULE_FOR_GOAL_RESOLVES,
+                    atom_id=atom.id or "",
+                    message=(
+                        f"Concluding.for_goal='{target}' does not resolve "
+                        "to any declared id in this trace."
+                    ),
+                )
+            )
+        elif not isinstance(referenced, Goal):
+            errors.append(
+                ValidationError(
+                    rule=RULE_FOR_GOAL_RESOLVES,
+                    atom_id=atom.id or "",
+                    message=(
+                        f"Concluding.for_goal='{target}' resolves to a "
+                        f"<{referenced.kind}>, not a <Goal>."
+                    ),
+                )
+            )
+    return errors
+
+
+def check_refer_at_least_one(
+    trace: list[Step], index: dict[str, Atom]
+) -> list[ValidationError]:
+    """v0.5 hard-fail — Concluding must cite supporting atoms."""
+    _all_atoms, concludings = _concludings(trace)
+    errors: list[ValidationError] = []
+    for atom in concludings:
+        valid_targets = [
+            target
+            for target in _refer_targets(atom)
+            if isinstance(index.get(target), (Finding, Observation, Evidence))
+        ]
+        if not valid_targets:
+            errors.append(
+                ValidationError(
+                    rule=RULE_REFER_AT_LEAST_ONE,
+                    atom_id=atom.id or "",
+                    message=(
+                        "Concluding body has no REFER: pointing to a "
+                        "Finding, Observation, or Evidence atom."
+                    ),
+                )
+            )
+    return errors
+
+
+def check_criticality_non_decreasing(
+    trace: list[Step], index: dict[str, Atom]
+) -> list[ValidationError]:
+    """v0.5 hard-fail — Concluding cannot silently downgrade Goal risk."""
+    all_atoms, concludings = _concludings(trace)
+    errors: list[ValidationError] = []
+    for atom in concludings:
+        if not atom.for_goal:
+            continue
+        goal = index.get(atom.for_goal)
+        if not isinstance(goal, Goal):
+            continue
+        goal_crit = _atom_criticality(goal)
+        if not goal_crit or goal_crit not in CRITICALITY_RANK:
+            continue
+        concl_crit = _effective_concluding_criticality(atom, index)
+        if not concl_crit or concl_crit not in CRITICALITY_RANK:
+            continue
+        goal_rank = CRITICALITY_RANK[goal_crit]
+        concl_rank = CRITICALITY_RANK[concl_crit]
+        if concl_rank >= goal_rank:
+            continue
+        if _has_retract_for(atom.for_goal, all_atoms):
+            continue
+        errors.append(
+            ValidationError(
+                rule=RULE_CRITICALITY_NON_DECREASING,
+                atom_id=atom.id or "",
+                message=(
+                    f"Concluding criticality '{concl_crit}' is lower than "
+                    f"Goal '{atom.for_goal}' criticality '{goal_crit}'. "
+                    f"Authorize the downgrade with <Retract target='{atom.for_goal}'/>."
+                ),
+            )
+        )
+    return errors
+
+
+def check_no_action_in_concluding(
+    trace: list[Step], _index: dict[str, Atom]
+) -> list[ValidationWarning]:
+    """v0.5 warning — Concluding states belief, not action commitment."""
+    _all_atoms, concludings = _concludings(trace)
+    warnings: list[ValidationWarning] = []
+    for atom in concludings:
+        match = _ACTION_MODAL_RE.search(atom.content or "")
+        if match:
+            warnings.append(
+                ValidationWarning(
+                    rule=RULE_NO_ACTION_IN_CONCLUDING,
+                    atom_id=atom.id or "",
+                    message=(
+                        f"Concluding body contains action-modal phrase "
+                        f"{match.group(0)!r}; route action commitment "
+                        "through <Deciding>."
+                    ),
+                )
+            )
+    return warnings
+
+
+def check_single_active_concluding_per_goal(
+    trace: list[Step], _index: dict[str, Atom]
+) -> list[ValidationWarning]:
+    """v0.5 warning — a Goal should have one active Concluding."""
+    all_atoms, concludings = _concludings(trace)
+    retracted = _retracted_ids(all_atoms)
+    active_by_goal: dict[str, list[Concluding]] = {}
+    for atom in concludings:
+        if not atom.for_goal:
+            continue
+        if atom.id and atom.id in retracted:
+            continue
+        active_by_goal.setdefault(atom.for_goal, []).append(atom)
+
+    warnings: list[ValidationWarning] = []
+    for goal_id, group in active_by_goal.items():
+        if len(group) <= 1:
+            continue
+        for atom in group:
+            warnings.append(
+                ValidationWarning(
+                    rule=RULE_SINGLE_ACTIVE_CONCLUDING_PER_GOAL,
+                    atom_id=atom.id or "",
+                    message=(
+                        f"Goal '{goal_id}' has {len(group)} active "
+                        "Concludings; retract superseded closes."
+                    ),
+                )
+            )
+    return warnings
+
+
+def check_min_confidence_ceiling(
+    trace: list[Step], index: dict[str, Atom]
+) -> list[ValidationWarning]:
+    """v0.5 warning — Concluding confidence should not exceed support."""
+    all_atoms, concludings = _concludings(trace)
+    warnings: list[ValidationWarning] = []
+    for atom in concludings:
+        if atom.confidence is None:
+            continue
+        cited_confidences: list[float] = []
+        for target in _refer_targets(atom):
+            cited = index.get(target)
+            if not isinstance(cited, (Finding, Evidence)):
+                continue
+            confidence = _atom_confidence(cited, all_atoms)
+            if confidence is not None:
+                cited_confidences.append(confidence)
+        if not cited_confidences:
+            continue
+        min_conf = min(cited_confidences)
+        if atom.confidence > min_conf:
+            warnings.append(
+                ValidationWarning(
+                    rule=RULE_MIN_CONFIDENCE_CEILING,
+                    atom_id=atom.id or "",
+                    message=(
+                        f"Concluding.confidence={atom.confidence} exceeds "
+                        f"the minimum confidence of cited Findings/Evidence "
+                        f"({min_conf})."
+                    ),
+                )
+            )
+    return warnings
+
+
 # ── Orchestration ────────────────────────────────────────────────────
 
 
-_RULES: tuple[tuple[str, Callable[[list[Step], dict[str, Atom]], list[ValidationError]]], ...] = (
+_RULES: tuple[
+    tuple[str, Callable[[list[Step], dict[str, Atom]], list[ValidationError]]],
+    ...,
+] = (
     (RULE_WELL_FORMED, check_well_formed),
     (RULE_REFERENCE_COMPLETE, check_reference_complete),
     (RULE_DECISION_CLOSED, check_decision_closed),
@@ -836,28 +1216,52 @@ _RULES: tuple[tuple[str, Callable[[list[Step], dict[str, Atom]], list[Validation
     (RULE_UNKNOWN_OPERATOR, check_unknown_operator),
     (RULE_LOCATION_EDGE_SHAPE, check_location_edge_shape),
     (RULE_V031_OPTIONAL_FIELDS, check_v031_optional_fields),
+    (RULE_FOR_GOAL_RESOLVES, check_for_goal_resolves),
+    (RULE_REFER_AT_LEAST_ONE, check_refer_at_least_one),
+    (RULE_CRITICALITY_NON_DECREASING, check_criticality_non_decreasing),
+)
+
+_WARNING_RULES: tuple[
+    tuple[str, Callable[[list[Step], dict[str, Atom]], list[ValidationWarning]]],
+    ...,
+] = (
+    (RULE_NO_ACTION_IN_CONCLUDING, check_no_action_in_concluding),
+    (
+        RULE_SINGLE_ACTIVE_CONCLUDING_PER_GOAL,
+        check_single_active_concluding_per_goal,
+    ),
+    (RULE_MIN_CONFIDENCE_CEILING, check_min_confidence_ceiling),
 )
 
 
 def validate(trace: list[Step]) -> ValidationResult:
-    """Run all ten rules against ``trace`` and return a ``ValidationResult``.
+    """Run all v0.5 rules against ``trace`` and return a ``ValidationResult``.
 
-    Rule 10 is the v0.3.1 primitive-hook closed-set check; it is a
-    defensive mirror of the parser-side rejection so AST-reconstituted
-    traces (JSON/YAML/in-test) get the same enforcement.
+    Warning rules are non-fatal: ``ok`` is true when there are no
+    errors, even if warnings are present.
     """
     index = _build_id_index(trace)
     errors: list[ValidationError] = []
+    warnings: list[ValidationWarning] = []
     errors_by_rule: dict[str, list[ValidationError]] = {
+        name: [] for name in RULE_NAMES
+    }
+    warnings_by_rule: dict[str, list[ValidationWarning]] = {
         name: [] for name in RULE_NAMES
     }
     for name, rule in _RULES:
         rule_errors = rule(trace, index)
         errors.extend(rule_errors)
         errors_by_rule[name] = rule_errors
+    for name, rule in _WARNING_RULES:
+        rule_warnings = rule(trace, index)
+        warnings.extend(rule_warnings)
+        warnings_by_rule[name] = rule_warnings
     return ValidationResult(
         ok=not errors,
         errors=errors,
         errors_by_rule=errors_by_rule,
+        warnings=warnings,
+        warnings_by_rule=warnings_by_rule,
         scholia_validator_version=SCHOLIA_VALIDATOR_VERSION,
     )
