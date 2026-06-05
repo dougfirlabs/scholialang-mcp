@@ -283,6 +283,76 @@ class ScholialangDagTests(unittest.TestCase):
             any(edge["relation"] == "derived_from" and edge.get("label") == "for_goal status=met" for edge in read["edges"])
         )
 
+    def test_codex_import_thread_prefers_explicit_rollout_thread_metadata(self):
+        rollout_path = Path(self.tempdir.name) / "target-rollout.jsonl"
+        latest_rollout_path = Path(self.tempdir.name) / "latest-rollout.jsonl"
+        rollout_path.write_text(
+            json.dumps(
+                {
+                    "timestamp": "2026-05-29T00:00:00.000Z",
+                    "type": "session_meta",
+                    "payload": {"id": "target_thread", "cwd": self.project_path},
+                }
+            )
+        )
+        latest_rollout_path.write_text("{}")
+
+        codex_home = Path(self.tempdir.name) / "codex-home"
+        codex_home.mkdir()
+        conn = sqlite3.connect(codex_home / "state_5.sqlite")
+        try:
+            conn.execute(
+                """
+                CREATE TABLE threads (
+                    id TEXT PRIMARY KEY,
+                    rollout_path TEXT NOT NULL,
+                    cwd TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    archived INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    updated_at_ms INTEGER NOT NULL
+                )
+                """
+            )
+            conn.executemany(
+                """
+                INSERT INTO threads
+                (id, rollout_path, cwd, title, archived, updated_at, updated_at_ms)
+                VALUES (?, ?, ?, ?, 0, ?, ?)
+                """,
+                [
+                    ("target_thread", str(rollout_path), self.project_path, "Target migration", 100, 100000),
+                    ("latest_thread", str(latest_rollout_path), self.project_path, "Latest unrelated", 200, 200000),
+                ],
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        result = server.tool_codex_import_thread(
+            {
+                "codex_home": str(codex_home),
+                "project_path": self.project_path,
+                "rollout_path": str(rollout_path),
+                "include_canonical_events": False,
+                "max_content_chars": 200,
+            }
+        )["structuredContent"]
+
+        self.assertEqual(result["thread_id"], "target_thread")
+        read = server.tool_dag_read(
+            {
+                "dag_id": result["dag_id"],
+                "project_path": self.project_path,
+                "include_nodes": True,
+                "limit": 5,
+            }
+        )["structuredContent"]
+        self.assertEqual(read["dag"]["title"], "Codex exhaust: Target migration")
+        content = "\n".join(node.get("content", "") for node in read["nodes"])
+        self.assertIn('"thread_id": "target_thread"', content)
+        self.assertNotIn("latest_thread", content)
+
     def test_codex_import_thread_normalizes_internal_agent_harness_cli_stream(self):
         rollout_path = Path(self.tempdir.name) / "codex-cli.jsonl"
         events = [

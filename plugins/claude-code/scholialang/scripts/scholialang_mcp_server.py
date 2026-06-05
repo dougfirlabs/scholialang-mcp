@@ -1305,6 +1305,29 @@ def load_codex_thread_row(home, thread_id=None, project_path=None):
         conn.close()
 
 
+def load_codex_thread_row_by_rollout_path(home, rollout_path):
+    state_path = home / "state_5.sqlite"
+    if not state_path.exists() or not rollout_path:
+        return None
+    path = Path(rollout_path).expanduser()
+    candidates = list(dict.fromkeys([str(rollout_path), str(path), str(path.resolve(strict=False))]))
+    placeholders = ",".join("?" for _ in candidates)
+    conn = sqlite3.connect(str(state_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        return conn.execute(
+            f"""
+            SELECT * FROM threads
+            WHERE rollout_path IN ({placeholders})
+            ORDER BY archived ASC, updated_at_ms DESC, updated_at DESC
+            LIMIT 1
+            """,
+            tuple(candidates),
+        ).fetchone()
+    finally:
+        conn.close()
+
+
 def codex_event_atom_kind(payload_type, payload):
     if payload_type in {"function_call", "tool_search_call", "custom_tool_call", "patch_apply_begin"}:
         return "Action"
@@ -1748,11 +1771,14 @@ def tool_codex_import_thread(args):
     home = codex_home(args)
     project_path = args.get("project_path")
     thread_id = args.get("thread_id")
-    thread_row = load_codex_thread_row(home, thread_id, project_path)
+    rollout_path = args.get("rollout_path")
+    if rollout_path and not thread_id:
+        thread_row = load_codex_thread_row_by_rollout_path(home, rollout_path)
+    else:
+        thread_row = load_codex_thread_row(home, thread_id, project_path)
     if thread_row is not None:
         thread_id = thread_row["id"]
 
-    rollout_path = args.get("rollout_path")
     if not rollout_path and thread_row is not None:
         rollout_path = thread_row["rollout_path"]
     if not rollout_path:
