@@ -1,7 +1,7 @@
 {
   "name": "scholialang",
-  "version": "0.3.2",
-  "description": "Local Scholialang tracing with default per-project auto-emit, structured-reasoning DAG, full v0.6 grammar validator, and Codex/Claude Code rollout import for Claude Code.",
+  "version": "0.3.3",
+  "description": "Local Scholialang tracing with default per-project auto-emit, structured-reasoning DAG, and full v0.6 grammar validator for Claude Code.",
   "author": {
     "name": "Doug Fir Labs",
     "url": "https://scholialang.org/"

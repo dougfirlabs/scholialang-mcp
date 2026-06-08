@@ -73,6 +73,40 @@ project-owned directory such as `scholia/traces/`. Raw full rollout or
 exhaust imports should stay local unless the repository is private and
 the trace has been reviewed for sensitive tool output.
 
+## Scholia Live (web viewer)
+
+An optional local web dashboard that shows this project's session DAG and
+streams new atoms live (Server-Sent Events). It is **off by default** and
+reuses the existing per-project SQLite store — no hosted service.
+
+Enable it with `SCHOLIA_LIVE` (in your Claude Code `settings.json` `env` block,
+or your shell):
+
+```text
+SCHOLIA_LIVE=1            # 1 / true / on / yes
+SCHOLIA_LIVE_PORT=8765    # optional; default 8765, falls back to the next free port
+```
+
+When enabled, the `SessionStart` hook launches a singleton stdlib HTTP server
+bound to `127.0.0.1` and prints its URL:
+
+```text
+Scholia Live viewer: http://127.0.0.1:8765/?project_path=<cwd>
+```
+
+Open that URL in a browser. The page includes a Settings panel (gear icon,
+bottom-right) that toggles per-project auto-emit (creating/removing
+`.scholia-off`) and shows the active storage and database paths. The server is
+read-only apart from that toggle.
+
+The server is a singleton recorded in
+`${SCHOLIALANG_HOME:-~/.scholialang}/live-server.json` and is shared across
+sessions (the SQLite DB is shared). Stop it with:
+
+```sh
+kill "$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.scholialang/live-server.json")))["pid"])')"
+```
+
 ## Install From This Repository
 
 Inside Claude Code:

@@ -8,10 +8,15 @@ server. Never fails the session: any error exits 0 with no injected context.
 """
 import json
 import os
+import socket
+import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 HOST = "claude-code"
+LIVE_ON_VALUES = {"1", "true", "on", "yes"}
+DEFAULT_LIVE_PORT = 8765
 
 
 def _emit_context(text):
@@ -26,6 +31,85 @@ def _emit_context(text):
                 }
             )
         )
+
+
+def _live_enabled():
+    flag = os.environ.get("SCHOLIA_LIVE")
+    return flag is not None and flag.strip().lower() in LIVE_ON_VALUES
+
+
+def _scholialang_home():
+    return Path(os.environ.get("SCHOLIALANG_HOME") or "~/.scholialang").expanduser()
+
+
+def _live_port_pref():
+    raw = os.environ.get("SCHOLIA_LIVE_PORT")
+    try:
+        return int(raw) if raw else DEFAULT_LIVE_PORT
+    except (TypeError, ValueError):
+        return DEFAULT_LIVE_PORT
+
+
+def _pid_alive(pid):
+    try:
+        os.kill(int(pid), 0)
+    except (OSError, TypeError, ValueError):
+        return False
+    return True
+
+
+def _free_port(preferred):
+    for port in range(preferred, preferred + 11):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.bind(("127.0.0.1", port))
+            return port
+        except OSError:
+            continue
+        finally:
+            sock.close()
+    return preferred
+
+
+def _maybe_launch_live(cwd):
+    """Start the Scholia Live dashboard as a singleton when SCHOLIA_LIVE is on.
+
+    Returns the viewer URL when live mode is enabled, else None. Reuses a running
+    server recorded in <home>/live-server.json when its pid is still alive.
+    """
+    if not _live_enabled():
+        return None
+    home = _scholialang_home()
+    state_path = home / "live-server.json"
+    try:
+        existing = json.loads(state_path.read_text())
+    except (OSError, ValueError):
+        existing = {}
+
+    if _pid_alive(existing.get("pid")):
+        port = int(existing.get("port", _live_port_pref()))
+    else:
+        script = Path(__file__).resolve().parent.parent / "scholialang_webview_server.py"
+        if not script.exists():
+            return None
+        port = _free_port(_live_port_pref())
+        home.mkdir(parents=True, exist_ok=True)
+        log = open(home / "live-server.log", "ab")  # noqa: SIM115 (inherited by child)
+        proc = subprocess.Popen(
+            [
+                sys.executable, str(script),
+                "--host", "127.0.0.1", "--port", str(port),
+                "--project-path", cwd, "--quiet",
+            ],
+            stdout=log, stderr=log, stdin=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        try:
+            state_path.write_text(json.dumps({"pid": proc.pid, "port": port}))
+        except OSError:
+            pass
+
+    return "http://127.0.0.1:{}/?project_path={}".format(port, quote(cwd))
 
 
 def main():
@@ -49,8 +133,17 @@ def main():
     )
     structured = result.get("structuredContent", {})
 
+    live_url = None
+    try:
+        live_url = _maybe_launch_live(cwd)
+    except Exception:
+        live_url = None
+
     if not structured.get("enabled", False):
-        # Opt-out active (SCHOLIA_AUTOEMIT / .scholia-off). Stay silent.
+        # Auto-emit opted out: stay silent about emission, but still surface the
+        # live viewer if SCHOLIA_LIVE enabled it.
+        if live_url:
+            _emit_context(f"Scholia Live viewer is running: {live_url}")
         return
 
     dag_id = structured.get("dag_id", "unknown")
@@ -67,6 +160,8 @@ def main():
         "secrets. To disable: `export SCHOLIA_AUTOEMIT=0` or add a `.scholia-off` file in the "
         "project root."
     )
+    if live_url:
+        context = f"{context}\nScholia Live viewer: {live_url}"
     _emit_context(context)
 
 
