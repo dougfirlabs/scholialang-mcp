@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scholialang-mcp"
-version = "0.5.0"
+version = "0.6.0"
 description = "MCP and LSP protocol tooling for Scholia"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [{name = "Doug Fir Labs"}]
 dependencies = [
-    "scholialang>=0.5.0",
+    "scholialang>=0.6.0",
 ]
 keywords = ["scholia", "scholialang", "mcp", "lsp", "agents"]
 

@@ -1,6 +1,6 @@
 {
   "name": "scholialang",
-  "version": "0.2.0+codex.20260604000000",
+  "version": "0.2.1+codex.20260608040137",
   "description": "Local Scholialang tracing with default per-project auto-emit and reference tools for Codex.",
   "author": {
     "name": "Doug Fir Labs",

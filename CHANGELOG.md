@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **Scholia v0.6 vendored substrate catchup.** Refreshed the bundled
+  `_scholia_vendored/{atoms,parser,validator}.py` from the published
+  `scholialang` v0.6 (relative imports), so `scholia_lint_snippet` /
+  `scholia_lint_trace` now run the v0.6 grammar with content-addressable
+  `canonical_id` well-formedness. `SCHOLIA_VALIDATOR_VERSION` reads
+  `0.6.0`; the vendored `compute_canonical_id` matches the scholialang v0.6
+  golden vectors byte-for-byte. Propagated byte-identically to the Codex and
+  Ollama plugin trees via `scripts/sync_plugins.sh`.
+- Fixed stale grammar-version copy (v0.4/v0.5 → v0.6) in plugin
+  descriptions, READMEs, the skill, and the `scholia_lint_snippet` tool
+  description. Plugin package versions stay on their own tracks
+  (marketplace `0.3.2`, Claude Code plugin `0.3.2`, Codex
+  `0.2.1+codex.<ts>`, `scholialang-mcp` package `0.6.0`), distinct from the
+  v0.6 grammar the plugins validate.
 - **Claude Code plugin 0.3.1:** remove the redundant `"hooks"` key from
   `plugin.json`. Claude Code auto-loads `hooks/hooks.json` by convention, so
   also declaring it in the manifest caused a "Duplicate hooks file detected"

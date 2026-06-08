@@ -15,7 +15,7 @@ from pathlib import Path
 PROTOCOL_VERSION = "2025-11-25"
 SUPPORTED_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26")
 SERVER_NAME = "scholialang"
-SERVER_VERSION = "0.3.0"
+SERVER_VERSION = "0.3.2"
 MAX_TEXT = 6000
 
 
@@ -2241,7 +2241,7 @@ def list_tools():
         "scholia_trace_export": "Compatibility alias for scholia_dag_export.",
         "scholia_catalog": "List Scholialang atoms, operators, relations, and resources.",
         "scholia_lookup": "Lookup a Scholialang atom, operator, or relation.",
-        "scholia_lint_snippet": "Validate a Scholia snippet against the full v0.5 grammar (closed-set atoms, reference completeness, Concluding closure rules, and warning checks). Pass mode='tag_balance' for the legacy tag-only check.",
+        "scholia_lint_snippet": "Validate a Scholia snippet against the full v0.6 grammar (closed-set atoms, canonical_id well-formedness, reference completeness, Concluding closure rules, and warning checks). Pass mode='tag_balance' for the legacy tag-only check.",
         "scholia_lint_trace": "Validate a Scholia trace and return per-rule structured errors plus counts. Use for CI gates and dashboard rendering.",
     }
     return [

@@ -48,6 +48,7 @@ from .atoms import (
     Step,
     Storing,
     atom_class_for_kind,
+    compute_canonical_id,
     field_name,
     field_name_for,
     wire_name_for,
@@ -603,6 +604,22 @@ def _build_atom(elem: Element, *, parent_kind: str | None = None) -> Atom:
         atom.constraints = (
             _extract_list_options(atom.content) or atom.constraints
         )
+
+    # v0.6 — stamp the content-addressable canonical_id now that content,
+    # structured attributes, and children are all populated. The hash is
+    # computed over {kind, content, attrs} (children excluded — see
+    # ``compute_canonical_id``), so it is stable even after Deciding
+    # short-form desugaring, which only adds children. A claimed
+    # canonical_id on the wire that does NOT match the recomputed hash is
+    # preserved verbatim so the validator's ``canonical_id_well_formed``
+    # rule can surface the tamper; otherwise the computed hash is stamped.
+    _claimed_cid = elem.attrib.get("canonical_id")
+    _computed_cid = compute_canonical_id(atom)
+    atom.canonical_id = (
+        _claimed_cid
+        if (_claimed_cid and _claimed_cid != _computed_cid)
+        else _computed_cid
+    )
     return atom
 
 

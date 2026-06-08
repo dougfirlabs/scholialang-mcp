@@ -1,4 +1,13 @@
-"""Scholia validator — the v0.5 rules from the canonical spec.
+"""Scholia validator — v0.2-v0.6 rules from the canonical spec.
+
+Covers the cumulative rule set: the v0.2-v0.4 structural/reference rules,
+the v0.5 Concluding-scoped rules (for_goal_resolves, refer_at_least_one,
+criticality_non_decreasing + the three warnings), and the v0.6
+content-addressable additions — ``canonical_id_well_formed`` (a universal
+recompute-and-compare hard-fail) and the canonical-id-aware
+``reference_complete`` rule fed by the 4-path :func:`resolve_refer`
+resolver. ``SCHOLIA_VALIDATOR_VERSION`` (tracked separately from the
+package version) reads ``0.6.0``.
 
 Each rule is its own pure function for unit-testability. They all
 take the trace + a pre-built reference index (id → atom) and return
@@ -26,6 +35,7 @@ from .atoms import (
     ATOM_KINDS,
     CANONICAL_OPERATORS,
     CRITICALITY_RANK,
+    compute_canonical_id,
     PSEUDO_ATOM_KINDS,
     SCHOLIA_VALIDATOR_VERSION,
     V031_EDGE_TYPES,
@@ -76,6 +86,8 @@ RULE_CRITICALITY_NON_DECREASING = "criticality_non_decreasing"
 RULE_NO_ACTION_IN_CONCLUDING = "no_action_in_concluding"
 RULE_SINGLE_ACTIVE_CONCLUDING_PER_GOAL = "single_active_concluding_per_goal"
 RULE_MIN_CONFIDENCE_CEILING = "min_confidence_ceiling"
+# v0.6 — content-addressable canonical_id integrity (hard-fail).
+RULE_CANONICAL_ID_WELL_FORMED = "canonical_id_well_formed"
 
 RULE_NAMES: tuple[str, ...] = (
     RULE_WELL_FORMED,
@@ -95,6 +107,7 @@ RULE_NAMES: tuple[str, ...] = (
     RULE_NO_ACTION_IN_CONCLUDING,
     RULE_SINGLE_ACTIVE_CONCLUDING_PER_GOAL,
     RULE_MIN_CONFIDENCE_CEILING,
+    RULE_CANONICAL_ID_WELL_FORMED,
 )
 
 WARNING_RULE_NAMES: tuple[str, ...] = (
@@ -350,9 +363,22 @@ def check_reference_complete(
     """Rule 2 — every ``REFER:id`` / attribute reference resolves."""
     errors: list[ValidationError] = []
     step_ids = _step_ids(trace)
+    # v0.6 — a REFER/attribute target may be a content-addressable
+    # canonical_id (``sha256:<hex>``) rather than a local id. Resolve
+    # those against the in-trace canonical_id index so v0.6 traces don't
+    # false-positive. (Inline ``REFER:sha256:<hex>`` operator-token
+    # extraction still splits on the second colon — that deeper
+    # operator-regex change is deferred, matching OpenTalon's own
+    # v0.6 Phase-3 boundary; attribute-form canonical_id refs resolve
+    # cleanly here.)
+    canonical_index = _build_canonical_id_index(trace)
 
     def _resolves(target: str) -> bool:
-        return target in index or target in step_ids
+        return (
+            target in index
+            or target in step_ids
+            or target in canonical_index
+        )
 
     for atom in _walk_atoms(trace):
         for op, target in _iter_operator_refs(atom):
@@ -430,6 +456,98 @@ def check_reference_complete(
                             ),
                         )
                     )
+    return errors
+
+
+# ── v0.6 — content-addressable canonical_id resolver + integrity rule ─
+
+
+def _build_canonical_id_index(trace: list[Step]) -> dict[str, Atom]:
+    """Map every populated ``canonical_id`` to its atom (depth-first).
+
+    First-write-wins on collision (two atoms hashing to the same
+    canonical_id are, by construction, structurally identical).
+    """
+    canonical_index: dict[str, Atom] = {}
+    for atom in _walk_atoms(trace):
+        if atom.canonical_id:
+            canonical_index.setdefault(atom.canonical_id, atom)
+    return canonical_index
+
+
+def resolve_refer(
+    trace: list[Step],
+    target: str,
+    *,
+    registry: Optional[Any] = None,
+    id_index: Optional[dict[str, Atom]] = None,
+    canonical_index: Optional[dict[str, Atom]] = None,
+) -> Optional[Any]:
+    """v0.6 REFER resolver — 4-path lookup. First non-None wins.
+
+    1. ``id_index[target]`` — local id match in this trace (v0.5 path).
+    2. ``canonical_index[target]`` — canonical_id match in this trace.
+    3. ``registry.get(target)`` — registry lookup by canonical_id when a
+       :class:`scholialang.registry.Registry` instance is supplied.
+    4. ``None`` — unresolved.
+
+    Returns the resolved atom-like object (``Atom`` from in-trace lookup,
+    ``dict`` from the registry) or ``None``. This is the lookup primitive;
+    callers wanting a rule violation message use the reference-complete
+    rule. The ``registry`` arg is duck-typed (anything with ``.get`` that
+    returns ``None`` on miss) so the validator stays decoupled from the
+    registry module.
+    """
+    if id_index is None:
+        id_index = _build_id_index(trace)
+    direct = id_index.get(target)
+    if direct is not None:
+        return direct
+
+    if canonical_index is None:
+        canonical_index = _build_canonical_id_index(trace)
+    in_trace = canonical_index.get(target)
+    if in_trace is not None:
+        return in_trace
+
+    if registry is not None:
+        atom_dict = registry.get(target)
+        if atom_dict is not None:
+            return atom_dict
+
+    return None
+
+
+def check_canonical_id_well_formed(
+    trace: list[Step], _index: dict[str, Atom]
+) -> list[ValidationError]:
+    """v0.6 — every atom carrying a ``canonical_id`` matches the recomputed hash.
+
+    When an atom's ``canonical_id`` is ``None`` the rule is vacuous
+    (back-compat with v0.5 atoms that never carried one). When it is set,
+    the rule recomputes the hash from the atom's structural content and
+    hard-fails on mismatch — the canonical signal of tamper or stale
+    storage.
+    """
+    errors: list[ValidationError] = []
+    for atom in _walk_atoms(trace):
+        if atom.canonical_id is None:
+            continue
+        recomputed = compute_canonical_id(atom)
+        if atom.canonical_id != recomputed:
+            errors.append(
+                ValidationError(
+                    rule=RULE_CANONICAL_ID_WELL_FORMED,
+                    atom_id=atom.id or "",
+                    message=(
+                        f"canonical_id mismatch: claimed='{atom.canonical_id}' "
+                        f"recomputed='{recomputed}'. The atom's content or attrs "
+                        "have been mutated relative to the declared canonical_id; "
+                        "re-emit with the recomputed value or treat the stored "
+                        "value as tampered."
+                    ),
+                )
+            )
     return errors
 
 
@@ -1219,6 +1337,7 @@ _RULES: tuple[
     (RULE_FOR_GOAL_RESOLVES, check_for_goal_resolves),
     (RULE_REFER_AT_LEAST_ONE, check_refer_at_least_one),
     (RULE_CRITICALITY_NON_DECREASING, check_criticality_non_decreasing),
+    (RULE_CANONICAL_ID_WELL_FORMED, check_canonical_id_well_formed),
 )
 
 _WARNING_RULES: tuple[

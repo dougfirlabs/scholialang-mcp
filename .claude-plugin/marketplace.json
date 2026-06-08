@@ -7,13 +7,13 @@
   },
   "metadata": {
     "description": "Scholialang protocol tooling for Claude Code.",
-    "version": "0.3.1"
+    "version": "0.3.2"
   },
   "plugins": [
     {
       "name": "scholialang",
       "source": "./plugins/claude-code/scholialang",
-      "description": "Local Scholialang tracing with default per-project auto-emit, structured-reasoning DAG, full v0.4 grammar validator, and Codex/Claude Code rollout import for Claude Code.",
+      "description": "Local Scholialang tracing with default per-project auto-emit, structured-reasoning DAG, full v0.6 grammar validator, and Codex/Claude Code rollout import for Claude Code.",
       "category": "Coding"
     }
   ]

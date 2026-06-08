@@ -1,7 +1,7 @@
 {
   "name": "scholialang",
-  "version": "0.3.1",
-  "description": "Local Scholialang tracing with default per-project auto-emit, structured-reasoning DAG, full v0.4 grammar validator, and Codex/Claude Code rollout import for Claude Code.",
+  "version": "0.3.2",
+  "description": "Local Scholialang tracing with default per-project auto-emit, structured-reasoning DAG, full v0.6 grammar validator, and Codex/Claude Code rollout import for Claude Code.",
   "author": {
     "name": "Doug Fir Labs",
     "url": "https://scholialang.org/"
@@ -23,7 +23,7 @@
   "interface": {
     "displayName": "Scholialang",
     "shortDescription": "Local structured-reasoning DAG + validator for Claude Code.",
-    "longDescription": "Scholialang lets Claude Code capture explicit reasoning as a local SQLite-backed DAG, lint snippets against the full v0.4 Scholia grammar, and query prior decisions for token-efficient recall across sessions.",
+    "longDescription": "Scholialang lets Claude Code capture explicit reasoning as a local SQLite-backed DAG, lint snippets against the full v0.6 Scholia grammar, and query prior decisions for token-efficient recall across sessions.",
     "developerName": "Doug Fir Labs",
     "category": "Coding",
     "capabilities": [
@@ -32,7 +32,7 @@
     ],
     "defaultPrompt": [
       "Start a Scholialang trace for this project.",
-      "Lint this Scholia snippet against the full v0.4 grammar.",
+      "Lint this Scholia snippet against the full v0.6 grammar.",
       "Summarize my recent Scholialang traces."
     ],
     "brandColor": "#24483F",

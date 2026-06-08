@@ -1,7 +1,7 @@
 # Scholialang Claude Code Plugin
 
 Local Claude Code plugin for explicit Scholialang traces, SQLite-backed DAG
-storage, full v0.5 grammar validation, and rollout exhaust imports.
+storage, full v0.6 grammar validation, and rollout exhaust imports.
 
 This plugin is intentionally local-first. The MCP server runs over stdio inside
 Claude Code, writes to a local SQLite database, and does not require a hosted
@@ -11,10 +11,10 @@ service, bearer token, webhook, or remote worker.
 
 - `scholia_dag_*` tools for project-aware Scholialang DAG traces.
 - `scholia_trace_*` compatibility aliases for trace-oriented callers.
-- `scholia_catalog`, `scholia_lookup` reference tools (full v0.5 closed-set
+- `scholia_catalog`, `scholia_lookup` reference tools (the v0.6 closed-set
   atom kinds, canonical operators, edge types, effect kinds, ref types, and
   criticality ladder).
-- `scholia_lint_snippet` — full v0.5 grammar validation (closed-set atoms,
+- `scholia_lint_snippet` — full v0.6 grammar validation (closed-set atoms,
   reference completeness, decision closure, action recording, hypothesis
   evaluation, retract consistency, constraint respect, goal declaration,
   operator vocabulary, location/edge shape, Concluding closure errors, and
@@ -100,7 +100,7 @@ frontier summary returns the final finding.
 For the validator surface:
 
 ```text
-Lint this Scholia snippet with the full v0.5 grammar:
+Lint this Scholia snippet with the full v0.6 grammar:
 <Step id="S1"><Hypothesis id="H1">x</Hypothesis></Step>
 ```
 
