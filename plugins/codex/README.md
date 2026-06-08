@@ -11,17 +11,32 @@ This directory contains Codex-specific integrations for `scholialang-mcp`.
 - SQLite-backed trace storage
 - Codex rollout exhaust import and SRML export tools
 
-Install from the repository root:
+Install from the public GitHub marketplace:
 
 ```sh
-codex plugin marketplace add "$(pwd)"
+codex plugin marketplace add https://github.com/dougfirlabs/scholialang-mcp.git
 codex plugin add scholialang@scholialang-mcp
-codex mcp add scholialang -- python3 "$(pwd)/plugins/codex/scholialang/scripts/scholialang_mcp_server.py"
+codex plugin list
 ```
 
-The plugin install provides the Codex skill and marketplace metadata. The direct
-`codex mcp add` registration exposes the `scholia_*` trace tools to new Codex
-threads without depending on plugin-provided MCP injection.
+The plugin install provides the Codex skill, marketplace metadata, and bundled
+MCP configuration. Start a new Codex thread after installing so the
+plugin-provided `scholia_*` tools load.
+
+Do not install the Python package first for normal Codex usage. The plugin
+launches its bundled stdio server directly; `python -m pip install
+scholialang-mcp` is only for the standalone atlas/LSP package or local package
+development.
+
+If the plugin metadata loads but the `scholia_*` tools do not appear, use the
+direct MCP registration as a troubleshooting fallback from a local checkout:
+
+```sh
+git clone https://github.com/dougfirlabs/scholialang-mcp.git
+cd scholialang-mcp
+codex mcp add scholialang \
+  -- python3 "$PWD/plugins/codex/scholialang/scripts/scholialang_mcp_server.py"
+```
 
 The server is local-first and stores trace data under `~/.scholialang` unless
 `SCHOLIALANG_HOME` is set before Codex launches.

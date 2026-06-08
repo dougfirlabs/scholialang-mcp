@@ -65,23 +65,39 @@ such as `scholia/traces/`. Raw full Codex exhaust imports should stay local
 unless the repository is private and the trace has been reviewed for sensitive
 tool output.
 
-## Install From This Repository
+## Install From GitHub
 
-From the repository root:
+Install the public marketplace and plugin:
 
 ```sh
-codex plugin marketplace add "$(pwd)"
+codex plugin marketplace add https://github.com/dougfirlabs/scholialang-mcp.git
 codex plugin add scholialang@scholialang-mcp
-codex mcp add scholialang -- python3 "$(pwd)/plugins/codex/scholialang/scripts/scholialang_mcp_server.py"
+codex plugin list
 ```
 
-The plugin install gives Codex the Scholialang skill and marketplace metadata.
-The direct `codex mcp add` registration is the reliable path for exposing the
-`scholia_*` trace tools in every new chat. Start a new Codex thread after
-installing; already-open threads may keep an older loaded tool set.
+The plugin install gives Codex the Scholialang skill, marketplace metadata, and
+bundled MCP configuration. Start a new Codex thread after installing;
+already-open threads may keep an older loaded tool set.
 
-To print the equivalent `~/.codex/config.toml` block instead of running
-`codex mcp add`, use this from the repository root:
+The Codex plugin is the recommended install path for Codex users. It does not
+need a prior `pip install` or a curl installer; use `python -m pip install
+scholialang-mcp` only for the standalone atlas/LSP package or package
+development.
+
+### Manual MCP Fallback
+
+If a Codex thread loads the plugin but does not expose working `scholia_*`
+tools, clone this repository and register the bundled server directly:
+
+```sh
+git clone https://github.com/dougfirlabs/scholialang-mcp.git
+cd scholialang-mcp
+codex mcp add scholialang \
+  -- python3 "$PWD/plugins/codex/scholialang/scripts/scholialang_mcp_server.py"
+```
+
+To print the equivalent `~/.codex/config.toml` fallback block, use this from a
+local repository checkout:
 
 ```sh
 PYTHONPATH=src python3 -m scholialang_mcp codex-trace-config --repo-root "$(pwd)"

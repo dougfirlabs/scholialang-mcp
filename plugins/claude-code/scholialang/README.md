@@ -107,17 +107,32 @@ sessions (the SQLite DB is shared). Stop it with:
 kill "$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.scholialang/live-server.json")))["pid"])')"
 ```
 
-## Install From This Repository
+## Install From GitHub
 
-Inside Claude Code:
+Install the public marketplace and plugin:
 
-```text
-/plugin marketplace add /path/to/scholialang-mcp
-/plugin install scholialang@scholialang-mcp
+```sh
+claude plugin marketplace add https://github.com/dougfirlabs/scholialang-mcp.git --scope user
+claude plugin install scholialang@scholialang-mcp --scope user
 ```
 
-Restart Claude Code (or open a new session) after installing — plugin skills
-and MCP tools load at session start.
+Use `--scope project` or `--scope local` instead when you want the marketplace
+and plugin tied to one repository. Restart Claude Code (or open a new session)
+after installing — plugin skills and MCP tools load at session start.
+
+The Claude Code plugin is the recommended install path for Claude Code users.
+It bundles the stdio MCP server, so it does not need a prior `pip install` or a
+curl installer. Use `python -m pip install scholialang-mcp` only for the
+standalone atlas/LSP package or package development.
+
+Inside an existing Claude Code session, run:
+
+```text
+/reload-plugins
+/mcp
+```
+
+Expected: `scholialang` appears in `/mcp` with the other connected servers.
 
 ## Smoke Test
 

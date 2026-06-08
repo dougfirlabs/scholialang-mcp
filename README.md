@@ -19,8 +19,31 @@ language model, parser, validator, and serializers. This package depends on
 
 ## Install
 
+For agent hosts, install the host plugin first. The plugins bundle the stdio MCP
+server and vendored validator snapshot, so normal Codex, Claude Code, and
+Ollama-backed usage does not require a Python package install or a curl
+installer.
+
+Install the Codex plugin directly from the public GitHub marketplace:
+
 ```sh
-pip install scholialang-mcp
+codex plugin marketplace add https://github.com/dougfirlabs/scholialang-mcp.git
+codex plugin add scholialang@scholialang-mcp
+codex plugin list
+```
+
+Install the Claude Code plugin from the same marketplace:
+
+```sh
+claude plugin marketplace add https://github.com/dougfirlabs/scholialang-mcp.git --scope user
+claude plugin install scholialang@scholialang-mcp --scope user
+```
+
+Install the Python package only when you want the standalone atlas MCP server,
+the LSP server, or local package development:
+
+```sh
+python -m pip install scholialang-mcp
 ```
 
 For local development:
@@ -28,7 +51,7 @@ For local development:
 ```sh
 python -m venv .venv
 . .venv/bin/activate
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 pytest
 ```
 
@@ -70,19 +93,23 @@ python -m scholialang_mcp codex-config --repo-root /path/to/repo
 The command does not edit user config; it prints the `[mcp_servers]` section so
 installers and host-specific packages can apply it with explicit user consent.
 
-### Codex Trace MCP Snippet
+### Codex Trace MCP Fallback
 
 The trace/DAG tools used by the Codex plugin (`scholia_dag_start`,
 `scholia_dag_add_atom`, `scholia_codex_import_thread`, and related tools) are
 served by the bundled Codex plugin server, not by the atlas lookup server above.
-For reliable availability in every new Codex chat, register that server as a
-direct global MCP server:
+Normally, install the Codex plugin from the GitHub marketplace. If a Codex
+thread loads the plugin metadata but does not expose working `scholia_*` tools,
+clone the repo and register the bundled server as a direct MCP fallback:
 
 ```sh
-codex mcp add scholialang -- python3 /path/to/scholialang-mcp/plugins/codex/scholialang/scripts/scholialang_mcp_server.py
+git clone https://github.com/dougfirlabs/scholialang-mcp.git
+cd scholialang-mcp
+codex mcp add scholialang \
+  -- python3 "$PWD/plugins/codex/scholialang/scripts/scholialang_mcp_server.py"
 ```
 
-Or print the equivalent `~/.codex/config.toml` snippet:
+Or print the equivalent `~/.codex/config.toml` fallback snippet:
 
 ```sh
 python -m scholialang_mcp codex-trace-config --repo-root /path/to/scholialang-mcp
@@ -100,8 +127,8 @@ from the other two (shared `~/.scholialang/scholialang.sqlite3`).
 
 | Harness | Tree | Install |
 | --- | --- | --- |
-| Codex | `plugins/codex/scholialang/` | `codex plugin marketplace add "$(pwd)"`, `codex plugin add scholialang@scholialang-mcp`, then `codex mcp add scholialang -- python3 "$(pwd)/plugins/codex/scholialang/scripts/scholialang_mcp_server.py"` |
-| Claude Code | `plugins/claude-code/scholialang/` | `/plugin marketplace add /path/to/scholialang-mcp` then `/plugin install scholialang@scholialang-mcp` inside Claude Code |
+| Codex | `plugins/codex/scholialang/` | `codex plugin marketplace add https://github.com/dougfirlabs/scholialang-mcp.git`, then `codex plugin add scholialang@scholialang-mcp` |
+| Claude Code | `plugins/claude-code/scholialang/` | `claude plugin marketplace add https://github.com/dougfirlabs/scholialang-mcp.git --scope user`, then `claude plugin install scholialang@scholialang-mcp --scope user` |
 | Ollama (Continue / Cline / open-webui / generic stdio) | `plugins/ollama/scholialang/` | Drop a snippet from `recipes/` into your harness config |
 
 Each plugin's tool surface is identical:
