@@ -1,7 +1,15 @@
-"""Scholia atom catalog — v0.5 shared contract.
+"""Scholia atom catalog — v0.6 shared contract.
 
 This module is the canonical set of types for the Scholia notation.
 It is pure: no I/O, no parsing logic, no validation logic, no network.
+
+v0.6 adds content-addressable ``canonical_id`` — a SHA-256 hash of the
+atom's structural identity (``{kind, content, attrs}``, provenance
+excluded). The catalog stays the v0.5 closed set (32 kinds); only the
+base ``Atom`` grows a ``canonical_id`` field plus the
+``compute_canonical_id`` hasher. The hash is defined to be byte-identical
+across Scholia implementations so the same structural atom emitted from
+different sessions/hosts addresses to the same id.
 
 Spec source: ``docs/notation/NOTATION_REFERENCE.md`` §3 (atoms),
 §4 (operators), §5 (primitives), §6 (Step container). Any change here
@@ -22,8 +30,11 @@ literal on every atom.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import warnings
-from dataclasses import dataclass, field
+import xml.etree.ElementTree as ET
+from dataclasses import dataclass, field, fields
 from enum import Enum
 from typing import Any, ClassVar, Optional, Union
 
@@ -92,12 +103,18 @@ class Atom:
     Subclasses override ``kind`` via ``ClassVar`` and may add
     kind-specific fields (e.g. ``Evidence.polarity``). The serializer
     uses ``kind`` as the discriminator when emitting JSON/YAML.
+
+    v0.6 adds ``canonical_id`` — a content-addressable SHA-256 hash of
+    the atom's structural identity. The parser populates it lazily;
+    ``Atom`` construction does not (so hand-built atoms stay cheap and
+    the hash is computed once, at parse time, by ``compute_canonical_id``).
     """
 
     id: Optional[str] = None
     content: str = ""
     children: list["Atom"] = field(default_factory=list)
     operators: list[str] = field(default_factory=list)
+    canonical_id: Optional[str] = None
     kind: ClassVar[str] = "Atom"
 
 
@@ -659,6 +676,118 @@ CRITICALITY_RANK: dict[str, int] = {
 }
 
 
+# ── v0.6 — content-addressable canonical IDs ─────────────────────────
+#
+# Ported byte-for-byte from the scholialang v0.6 reference so that the
+# same structural atom hashes to the same canonical_id across every
+# Scholia implementation (standalone package, the bundled MCP validator,
+# and OpenTalon's vendored copy). The cross-impl identity is load-bearing
+# for the DAG registry — two emits of the same atom from different
+# sessions MUST address to the same node. Do not "improve" this hasher
+# without bumping every implementation in lockstep.
+
+
+class CanonicalIdMismatch(ValueError):
+    """Raised when a claimed canonical_id does not match the recomputed hash.
+
+    Carries ``atom_id`` (the local id, may be ``None``), ``claimed`` (the
+    canonical_id on the wire), and ``computed`` (the hash recomputed from
+    the parsed atom's structural content). The validator's
+    ``canonical_id_well_formed`` rule surfaces this as a structured
+    violation; strict-mode parsers may re-raise directly.
+    """
+
+    def __init__(
+        self,
+        atom_id: Optional[str],
+        claimed: str,
+        computed: str,
+    ) -> None:
+        self.atom_id = atom_id
+        self.claimed = claimed
+        self.computed = computed
+        super().__init__(
+            f"canonical_id mismatch on atom id={atom_id!r}: "
+            f"claimed={claimed!r} computed={computed!r}"
+        )
+
+
+# Provenance / non-identity fields excluded from the canonical_id hash.
+# Reason: timestamp / wall_clock / run_id / sequence / instance carry
+# session-level metadata; two emits of the same structural atom from
+# different sessions must produce the same canonical_id.
+_PROVENANCE_FIELDS: frozenset[str] = frozenset({
+    "timestamp",
+    "wall_clock",
+    "run_id",
+    "sequence",
+    "instance",
+})
+
+# Base-Atom bookkeeping fields — never part of the content hash.
+# ``id`` is local-scope; ``canonical_id`` is the output we're computing;
+# ``children`` are hashed independently (v0.7 Merkle-DAG extension would
+# fold them in); ``operators`` are derived from content text.
+_NON_HASH_FIELDS: frozenset[str] = frozenset({
+    "id",
+    "canonical_id",
+    "content",
+    "children",
+    "operators",
+    "kind",
+})
+
+
+def _hash_value(value: Any) -> Any:
+    """Coerce a field value to a JSON-serializable shape for hashing."""
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, (list, tuple)):
+        return [_hash_value(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _hash_value(v) for k, v in value.items()}
+    return value
+
+
+def compute_canonical_id(atom: "Atom") -> str:
+    """Compute the content-addressable canonical_id for ``atom``.
+
+    Hash input is the canonical-JSON serialization of
+    ``{"kind", "content", "attrs"}`` where:
+
+    - ``content`` is the body text with leading/trailing whitespace
+      stripped.
+    - ``attrs`` is a sorted dict of the atom's kind-specific fields,
+      excluding provenance (``timestamp``, ``run_id``, ``wall_clock``,
+      ``sequence``, ``instance``) and the base bookkeeping fields
+      (``id``, ``canonical_id``, ``children``, ``operators``).
+    - Empty / ``None`` attrs are dropped so absence and explicit-None
+      hash identically.
+
+    Output: ``"sha256:" + first 12 hex chars`` of the SHA-256 digest
+    of the canonical JSON. Multihash-compatible prefix.
+    """
+    attrs: dict[str, Any] = {}
+    for f in fields(atom):
+        if f.name in _NON_HASH_FIELDS or f.name in _PROVENANCE_FIELDS:
+            continue
+        value = getattr(atom, f.name, None)
+        if value is None:
+            continue
+        if isinstance(value, list) and not value:
+            continue
+        attrs[f.name] = _hash_value(value)
+
+    payload = {
+        "kind": atom.kind,
+        "content": (atom.content or "").strip(),
+        "attrs": attrs,
+    }
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+    return f"sha256:{digest[:12]}"
+
+
 # Regex matching ``UPPERCASE_TOKEN:atom_id`` operator-target pairs in
 # free-form atom content. Token is ASCII uppercase + underscore, length
 # ≥ 2 to avoid matching single-letter abbreviations. Atom id is the
@@ -832,7 +961,7 @@ def wire_name_for(kind: str, py_field: str) -> str:
 # constants are imported by parser/validator/tests so the canonical
 # set lives in one place. Bumping a set requires a spec doc update.
 
-SCHOLIA_VALIDATOR_VERSION: str = "0.5.0"
+SCHOLIA_VALIDATOR_VERSION: str = "0.6.0"
 
 V031_EDGE_TYPES: frozenset[str] = frozenset({
     "depends_on",
@@ -883,6 +1012,49 @@ def is_valid_edge_type(value: str | None) -> bool:
     if not value or not isinstance(value, str):
         return False
     return value in V031_EDGE_TYPES
+
+
+# ── v0.6 — minimal single-atom XML serialization ─────────────────────
+#
+# The full trace serializers (JSON/YAML) live in :mod:`scholialang.serializer`
+# and the human Markdown renderer in :mod:`scholialang.renderer`. This is a
+# small single-atom → XML helper that emits the v0.6 ``canonical_id``
+# attribute; the canonical-prelude renderer (:mod:`scholialang.prelude`)
+# consumes it for its ``inline`` transcript mode. It mirrors the wire shape
+# the parser accepts, so ``parse_atom(atom_to_xml(a))`` round-trips.
+
+
+def _atom_to_element(atom: "Atom") -> "ET.Element":
+    elem = ET.Element(atom.kind)
+    if atom.id is not None:
+        elem.set("id", atom.id)
+    if atom.canonical_id is not None:
+        elem.set("canonical_id", atom.canonical_id)
+    for fname in KIND_SPECIFIC_FIELDS.get(atom.kind, ()):
+        value = getattr(atom, fname, None)
+        if value is None:
+            continue
+        if isinstance(value, list):
+            if not value:
+                continue
+            elem.set(wire_name_for(atom.kind, fname), ",".join(str(v) for v in value))
+        else:
+            elem.set(wire_name_for(atom.kind, fname), str(value))
+    if atom.content:
+        elem.text = atom.content
+    for child in atom.children:
+        elem.append(_atom_to_element(child))
+    return elem
+
+
+def atom_to_xml(atom: "Atom") -> str:
+    """Serialize a single atom (and its children) to an XML string.
+
+    Emits the v0.6 ``canonical_id`` attribute when present. Used by the
+    canonical-prelude renderer's ``inline`` mode; full-trace serialization
+    lives in :mod:`scholialang.serializer`.
+    """
+    return ET.tostring(_atom_to_element(atom), encoding="unicode")
 
 
 # Convenience type alias for a trace — an ordered list of Steps.

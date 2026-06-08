@@ -550,7 +550,7 @@ class AutoEmitSessionTests(unittest.TestCase):
 
 
 class ScholialangValidatorTests(unittest.TestCase):
-    """Coverage for the full v0.5 grammar validator surface.
+    """Coverage for the full v0.6 grammar validator surface.
 
     These tests assert behaviour, not the internal engine path. The lint
     surface should give the same answers whether driven by the installed
@@ -635,7 +635,7 @@ class ScholialangValidatorTests(unittest.TestCase):
         self.assertIn("Concluding", result["scholia_atom_kinds_v05"])
         self.assertIn("scholia_canonical_operators_v05", result)
         self.assertIn("scholia_criticality_rank", result)
-        self.assertEqual(result["scholia_validator_version"], "0.5.0")
+        self.assertEqual(result["scholia_validator_version"], "0.6.0")
         # Back-compat aliases remain available for older clients.
         self.assertIn("scholia_atom_kinds_v04", result)
         self.assertIn("scholia_canonical_operators_v04", result)
