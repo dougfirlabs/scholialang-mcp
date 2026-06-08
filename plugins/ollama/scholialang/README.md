@@ -49,6 +49,10 @@ Mistral, Gemma, or anything else served by Ollama all work.
 4. Open a new harness session — MCP servers load at session start.
 5. Ask the model: *"Start a Scholialang trace for this project."*
 
+There is no curl installer for this tree. Use the recipe snippets to wire the
+bundled stdio server into your harness; install the Python package only when
+you want the standalone atlas/LSP package or are developing the package itself.
+
 For default, per-project **auto-emit** (no need to ask each session), paste
 `recipes/autoemit-system-prompt.md` into your harness's system prompt. The model
 then opens/resumes a session trace via the idempotent `scholia_dag_ensure_session`
