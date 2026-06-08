@@ -57,7 +57,7 @@ Tools:
 Artifacts are read from a generic `.scholia-atlas/` directory when present.
 Missing artifacts return structured `not_generated_yet` responses so host
 agents can fall back to ordinary file reads. Regeneration is host-specific in
-v0.5 and returns `regenerate_unavailable` unless a host adapter enables it.
+v0.6 and returns `regenerate_unavailable` unless a host adapter enables it.
 
 ### Codex Atlas MCP Snippet
 
@@ -178,7 +178,7 @@ Run the LSP server:
 python -m scholialang_mcp.lsp --workspace-root /path/to/repo
 ```
 
-MVP v0.4 scope:
+MVP v0.6 LSP scope:
 
 - Hover over `location="path:start:end"` attributes and show the referenced
   source span.
@@ -187,8 +187,10 @@ MVP v0.4 scope:
 - Definition resolution order: workspace-relative file path,
   `path.py::symbol` path prefix, then Scholia atom id in the current document
   when that atom has a `location` attribute.
+- Version alignment with the v0.6 language/runtime stack; full v0.6 grammar
+  validation is exposed through the MCP lint tools rather than the LSP MVP.
 
-Deferred past v0.4:
+Deferred past the v0.6 LSP MVP:
 
 - completions
 - diagnostics as you type

@@ -1,8 +1,9 @@
 """Minimum-viable Scholia LSP server.
 
-Scope for v0.4:
+Scope for the v0.6 LSP MVP:
 * hover over location="path:start:end"
 * definition for target="..." on Edge and Ref atoms
+* grammar validation remains an MCP lint-tool concern
 
 The implementation hand-rolls the small stdio JSON-RPC transport needed for
 the MVP. It deliberately avoids editor-specific behavior.
@@ -20,7 +21,7 @@ from typing import Any, BinaryIO, Optional
 from urllib.parse import unquote, urlparse
 from urllib.request import pathname2url
 
-SERVER_VERSION = "0.5.0"
+SERVER_VERSION = "0.6.0"
 
 ATTR_RE = re.compile(r"""\b(?P<name>location|target)\s*=\s*(?P<quote>['"])(?P<value>.*?)(?P=quote)""")
 
