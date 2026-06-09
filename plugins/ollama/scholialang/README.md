@@ -79,8 +79,8 @@ active:
 - `scholialang-package` — installed pip package
 - `scholialang-vendored` — bundled snapshot
 
-To force the package path, `pip install scholialang>=0.5.0` in the
-environment the harness uses to spawn the MCP server.
+To force the package path, `python -m pip install "scholialang>=0.6.0"` in
+the environment the harness uses to spawn the MCP server.
 
 ## Storage
 

@@ -137,8 +137,8 @@ Each plugin's tool surface is identical:
 - `scholia_trace_*` — compatibility aliases
 - `scholia_catalog`, `scholia_lookup` — reference lookups across the
   v0.6 closed-set vocabulary (32 atom kinds, 11 canonical
-  operators, v0.3.1 edge/effect/ref types, v0.4-B edge types, and
-  the criticality ladder)
+  operators, v0.6 structural primitive closed sets for `Edge`, `Effect`,
+  `Ref`, and `Meta`, and the criticality ladder)
 - `scholia_lint_snippet` — full v0.6 grammar validation (closed-set
   atoms, reference completeness, decision closure, action recording,
   hypothesis evaluation, retract consistency, constraint respect, goal
