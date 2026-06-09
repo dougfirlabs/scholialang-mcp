@@ -430,7 +430,8 @@ WEBVIEW_HTML = """<!doctype html>
       background: var(--field-bg);
     }
 
-    .view-toggle-button {
+    .view-toggle-button,
+    .order-toggle-button {
       min-width: 0;
       min-height: 30px;
       border: 0;
@@ -445,16 +446,19 @@ WEBVIEW_HTML = """<!doctype html>
       transition-timing-function: ease;
     }
 
-    .view-toggle-button:hover:not(:disabled) {
+    .view-toggle-button:hover:not(:disabled),
+    .order-toggle-button:hover:not(:disabled) {
       color: var(--text);
       background: var(--hover-bg);
     }
 
-    .view-toggle-button:active:not(:disabled) {
+    .view-toggle-button:active:not(:disabled),
+    .order-toggle-button:active:not(:disabled) {
       transform: scale(0.96);
     }
 
-    .view-toggle-button.active {
+    .view-toggle-button.active,
+    .order-toggle-button.active {
       color: var(--text);
       background: var(--active-bg);
       box-shadow: inset 0 0 0 1px var(--active-border);
@@ -495,6 +499,7 @@ WEBVIEW_HTML = """<!doctype html>
 
     .button:focus-visible,
     .view-toggle-button:focus-visible,
+    .order-toggle-button:focus-visible,
     select:focus-visible,
     .dag-item:focus-visible {
       outline: none;
@@ -1303,7 +1308,8 @@ WEBVIEW_HTML = """<!doctype html>
         height: 44px;
       }
 
-      .view-toggle-button {
+      .view-toggle-button,
+      .order-toggle-button {
         min-height: 38px;
         font-size: 11px;
       }
@@ -1467,6 +1473,10 @@ WEBVIEW_HTML = """<!doctype html>
           <button type="button" class="view-toggle-button" data-view-mode="checkpoint">Checkpoint</button>
           <button type="button" class="view-toggle-button" data-view-mode="exhaust">Exhaust</button>
         </div>
+        <div id="orderToggle" class="view-toggle" role="group" aria-label="Atom feed order">
+          <button type="button" class="order-toggle-button" data-feed-order="newest" title="Newest atoms at the top">Newest first</button>
+          <button type="button" class="order-toggle-button" data-feed-order="oldest" title="Chronological; new atoms appear at the bottom">Oldest first</button>
+        </div>
         <select id="themeSelect" aria-label="Theme">
           <option value="dark">Dark</option>
           <option value="light">Light</option>
@@ -1535,6 +1545,7 @@ WEBVIEW_HTML = """<!doctype html>
 
   <script>
     const STORAGE_THEME_KEY = "scholialang.webview.theme";
+    const STORAGE_FEED_ORDER_KEY = "scholialang.webview.feedOrder";
     const CATEGORY_ORDER = ["reasoning", "evidence", "control", "reference", "social", "meta"];
     const TRACE_REGION_IDS = ["feed", "frontier", "graph", "astConnections", "summary"];
     const CATEGORY_LABELS = {
@@ -1589,9 +1600,16 @@ WEBVIEW_HTML = """<!doctype html>
     };
     const searchParams = new URLSearchParams(location.search);
     const initialTheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+    let initialFeedOrder = "newest";
+    try {
+      if (localStorage.getItem(STORAGE_FEED_ORDER_KEY) === "oldest") initialFeedOrder = "oldest";
+    } catch (_) {
+      // Local storage can be disabled; fall back to the default order.
+    }
     const state = {
       dagId: searchParams.get("dag_id") || null,
       eventSource: null,
+      feedOrder: initialFeedOrder,
       hasRenderedSnapshot: false,
       incomingTimer: null,
       newNodeIds: new Set(),
@@ -1671,6 +1689,26 @@ WEBVIEW_HTML = """<!doctype html>
         // Local storage can be disabled; the visible control still updates.
       }
       if (state.snapshot) renderGraph(state.snapshot.nodes || [], state.snapshot.edges || []);
+    }
+
+    function applyFeedOrder(order) {
+      const nextOrder = order === "oldest" ? "oldest" : "newest";
+      state.feedOrder = nextOrder;
+      document.querySelectorAll("#orderToggle .order-toggle-button").forEach((button) => {
+        const isActive = button.dataset.feedOrder === nextOrder;
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+      try {
+        localStorage.setItem(STORAGE_FEED_ORDER_KEY, nextOrder);
+      } catch (_) {
+        // Local storage can be disabled; the visible control still updates.
+      }
+      if (state.snapshot) {
+        renderAtoms(state.snapshot.nodes || []);
+        const feed = $("feed");
+        if (feed) feed.scrollTop = 0;
+      }
     }
 
     function params(extra = {}) {
@@ -1824,7 +1862,7 @@ WEBVIEW_HTML = """<!doctype html>
     function renderTraceViewToggle(snapshot) {
       const views = (snapshot && snapshot.trace_views) || {};
       const active = views.active || "checkpoint";
-      document.querySelectorAll(".view-toggle-button").forEach((button) => {
+      document.querySelectorAll("#viewToggle .view-toggle-button").forEach((button) => {
         const mode = button.dataset.viewMode;
         const target = views[mode];
         const isActive = mode === active;
@@ -1968,7 +2006,8 @@ WEBVIEW_HTML = """<!doctype html>
         $("feed").innerHTML = '<div class="empty">Waiting for atoms.</div>';
         return;
       }
-      $("feed").innerHTML = nodes.slice().reverse().map((node, index) => {
+      const orderedNodes = state.feedOrder === "oldest" ? nodes.slice() : nodes.slice().reverse();
+      $("feed").innerHTML = orderedNodes.map((node, index) => {
         const category = categoryForKind(node.kind);
         const isNew = node.id && newNodeIds.has(node.id);
         const className = `atom${isNew ? " is-new" : ""}`;
@@ -2185,10 +2224,13 @@ WEBVIEW_HTML = """<!doctype html>
     applyTheme(state.theme);
 
     $("dagSelect").addEventListener("change", (event) => selectDag(event.target.value));
-    document.querySelectorAll(".view-toggle-button").forEach((button) => {
+    document.querySelectorAll("#viewToggle .view-toggle-button").forEach((button) => {
       button.addEventListener("click", () => {
         if (!button.disabled && button.dataset.dagId) selectDag(button.dataset.dagId);
       });
+    });
+    document.querySelectorAll("#orderToggle .order-toggle-button").forEach((button) => {
+      button.addEventListener("click", () => applyFeedOrder(button.dataset.feedOrder));
     });
     $("themeSelect").addEventListener("change", (event) => applyTheme(event.target.value));
     $("refresh").addEventListener("click", () => {
@@ -2216,6 +2258,7 @@ WEBVIEW_HTML = """<!doctype html>
         });
     });
 
+    applyFeedOrder(state.feedOrder);
     renderLoadingShell();
     const initialToken = state.traceToken;
     const applyInitialSnapshot = (snapshot) => {
