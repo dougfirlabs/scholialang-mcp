@@ -77,6 +77,15 @@ Tools:
 - `get_tree()`
 - `regenerate(path)`
 
+## License
+
+The `scholialang-mcp` protocol tooling, plugins, and host integration code are
+dual-licensed under either MIT or Apache-2.0, at your option. See `LICENSE`,
+`LICENSE-MIT`, and `LICENSE-APACHE`.
+
+The normative Scholia specification prose lives in `scholialang-spec` and is
+licensed separately under CC-BY-4.0.
+
 Artifacts are read from a generic `.scholia-atlas/` directory when present.
 Missing artifacts return structured `not_generated_yet` responses so host
 agents can fall back to ordinary file reads. Regeneration is host-specific in
