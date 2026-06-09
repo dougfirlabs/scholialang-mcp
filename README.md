@@ -1,3 +1,15 @@
+<p align="center">
+  <img src="assets/scholialang-banner.png" alt="Scholialang" width="100%" />
+</p>
+
+<p align="center">
+  <a href="https://scholialang.org">Website</a> ·
+  <a href="https://github.com/dougfirlabs/scholialang-spec">Spec</a> ·
+  <strong>MCP</strong> ·
+  <a href="https://github.com/dougfirlabs/scholialang">Python</a> ·
+  <a href="https://github.com/dougfirlabs">Doug Fir Labs</a>
+</p>
+
 # scholialang-mcp
 
 `scholialang-mcp` provides protocol tooling for Scholia:
