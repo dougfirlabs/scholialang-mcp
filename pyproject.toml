@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,8 @@ version = "0.6.0"
 description = "MCP and LSP protocol tooling for Scholia"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
+license = "MIT OR Apache-2.0"
+license-files = ["LICENSE-MIT", "LICENSE-APACHE"]
 authors = [{name = "Doug Fir Labs"}]
 dependencies = [
     "scholialang>=0.6.0",
