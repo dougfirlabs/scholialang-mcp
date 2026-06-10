@@ -724,6 +724,13 @@ class ScholialangPluginManifestTests(unittest.TestCase):
             "Ollama plugin server drifted from the Codex plugin server.",
         )
 
+    def test_installed_v06_scholialang_engine_is_accepted(self):
+        class Atoms:
+            ATOM_KINDS = ("Goal", "Concluding")
+            SCHOLIA_VALIDATOR_VERSION = "0.6.0"
+
+        self.assertTrue(server._has_goal_concluding(Atoms))
+
 
 class FramingTests(unittest.TestCase):
     """The MCP stdio transport is newline-delimited JSON-RPC (one JSON object

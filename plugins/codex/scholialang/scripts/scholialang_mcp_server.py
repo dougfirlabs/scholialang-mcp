@@ -15,14 +15,14 @@ from pathlib import Path
 PROTOCOL_VERSION = "2025-11-25"
 SUPPORTED_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26")
 SERVER_NAME = "scholialang"
-SERVER_VERSION = "0.3.2"
+SERVER_VERSION = "0.6.0"
 MAX_TEXT = 6000
 
 
 def _has_goal_concluding(atoms_mod):
     kinds = getattr(atoms_mod, "ATOM_KINDS", ())
     version = getattr(atoms_mod, "SCHOLIA_VALIDATOR_VERSION", "")
-    return "Goal" in kinds and "Concluding" in kinds and str(version).startswith("0.5")
+    return "Goal" in kinds and "Concluding" in kinds and str(version).startswith(("0.5", "0.6"))
 
 
 def _load_scholia_engine():
