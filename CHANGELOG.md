@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Canonical Scholia positioning** (#22). README opening, plugin
+  manifest descriptions (Claude Code + Codex), marketplace metadata,
+  `pyproject.toml` description, and the GitHub repo description now use
+  the canonical framing: Scholia helps agentic systems preserve
+  reasoning state, use tools without quality loss, and reduce context
+  cost across long-horizon work. MCP/plugin surfaces emphasize the
+  integration story (MCP, LSP, Codex/Claude Code/Ollama host recipes,
+  local DAG access). Copy-only; no tool or version changes.
 - **Scholia v0.6 vendored substrate catchup.** Refreshed the bundled
   `_scholia_vendored/{atoms,parser,validator}.py` from the published
   `scholialang` v0.6 (relative imports), so `scholia_lint_snippet` /

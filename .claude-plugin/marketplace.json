@@ -6,14 +6,14 @@
     "url": "https://scholialang.org/"
   },
   "metadata": {
-    "description": "Scholialang protocol tooling for Claude Code.",
+    "description": "Scholia tooling for Claude Code — preserve reasoning state, use tools without quality loss, and reduce context cost across long-horizon work.",
     "version": "0.3.2"
   },
   "plugins": [
     {
       "name": "scholialang",
       "source": "./plugins/claude-code/scholialang",
-      "description": "Local Scholialang tracing with default per-project auto-emit, structured-reasoning DAG, full v0.6 grammar validator, and Codex/Claude Code rollout import for Claude Code.",
+      "description": "Preserve reasoning state across long-horizon work in Claude Code: local per-project auto-emit tracing, a structured-reasoning DAG, the full v0.6 grammar validator, and Codex/Claude Code rollout import.",
       "category": "Coding"
     }
   ]
