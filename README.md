@@ -12,7 +12,13 @@
 
 # scholialang-mcp
 
-`scholialang-mcp` provides protocol tooling for Scholia:
+Scholia helps agentic systems preserve reasoning state, use tools without
+quality loss, and reduce context cost across long-horizon work.
+`scholialang-mcp` is the integration surface for that: an MCP server, an LSP
+server, host recipes for Codex, Claude Code, and Ollama, and local DAG access
+to captured traces.
+
+This repo provides:
 
 - an MCP server exposing Scholia atlas lookup tools over stdio
 - an MVP LSP server for editor navigation in `.scholia` traces
