@@ -1,0 +1,31 @@
+name: hygiene
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  leak-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Authoritative leak guard: fail if any internal-only token appears in
+      # the published surfaces. Keep this pattern in lockstep with
+      # FORBIDDEN_REGEX in tests/test_public_hygiene.py. Public identity
+      # (Doug Fir Labs / dougfirlabs / scholialang) is intentionally allowed.
+      - name: Scan for internal references
+        run: |
+          if grep -R -n -i -E 'opentalon|\bT42\b|\bT6x7\b|proofdag|MS-?Co-?Pilot' \
+              --exclude-dir=.git \
+              --exclude-dir=.github \
+              --exclude-dir=.ralph \
+              --exclude-dir=.opentalon \
+              --exclude-dir=__pycache__ \
+              --exclude-dir=.pytest_cache \
+              --exclude-dir=dist \
+              --exclude-dir=build \
+              .; then
+            echo "::error::Internal references found in published surfaces."
+            exit 1
+          fi
+          echo "No internal references found."

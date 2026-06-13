@@ -7,7 +7,7 @@ content-addressable additions — ``canonical_id_well_formed`` (a universal
 recompute-and-compare hard-fail) and the canonical-id-aware
 ``reference_complete`` rule fed by the 4-path :func:`resolve_refer`
 resolver. ``SCHOLIA_VALIDATOR_VERSION`` (tracked separately from the
-package version) reads ``0.6.0``.
+package version) reads ``0.6.1``.
 
 Each rule is its own pure function for unit-testability. They all
 take the trace + a pre-built reference index (id → atom) and return
@@ -368,8 +368,9 @@ def check_reference_complete(
     # those against the in-trace canonical_id index so v0.6 traces don't
     # false-positive. (Inline ``REFER:sha256:<hex>`` operator-token
     # extraction still splits on the second colon — that deeper
-    # operator-regex change is deferred, matching OpenTalon's own
-    # v0.6 Phase-3 boundary; attribute-form canonical_id refs resolve
+    # operator-regex change is deferred, matching the reference
+    # implementation's own v0.6 Phase-3 boundary; attribute-form
+    # canonical_id refs resolve
     # cleanly here.)
     canonical_index = _build_canonical_id_index(trace)
 
@@ -857,6 +858,13 @@ def _extract_forbidden_verbs(constraint_text: str) -> list[str]:
 
 _GOAL_STATUSES = {"met", "unmet", "partially_met", "met_late"}
 
+# v0.6.1 — the closed enum for the OPTIONAL ``status`` attribute on a
+# <Concluding>. Narrower than ``_GOAL_STATUSES`` (no ``met_late``): the
+# ratified v0.6.1 spec scopes a Concluding's terminal disposition to
+# met/unmet/partially_met. Absence is valid (back-compat); presence of
+# any value outside this set is a hard validation error.
+_CONCLUDING_STATUSES = {"met", "unmet", "partially_met"}
+
 
 def check_goal_declared(
     trace: list[Step], _index: dict[str, Atom]
@@ -896,7 +904,18 @@ def check_goal_declared(
             for finding in findings_by_goal.get(goal_id, [])
             if finding.status in _GOAL_STATUSES
         ]
-        if status_findings or concludings_by_goal.get(goal_id):
+        # v0.6.1 — read Concluding.status when present. A Concluding closes
+        # a required Goal when it carries no status (v0.5/v0.6.0 back-compat)
+        # or a status in the ratified met/unmet/partially_met enum. An
+        # out-of-enum status is rejected separately by the optional-field
+        # rule, so it must not silently close the Goal here.
+        status_concludings = [
+            concluding
+            for concluding in concludings_by_goal.get(goal_id, [])
+            if concluding.status is None
+            or concluding.status in _CONCLUDING_STATUSES
+        ]
+        if status_findings or status_concludings:
             continue
         errors.append(
             ValidationError(
@@ -1049,6 +1068,22 @@ def check_v031_optional_fields(
                             message=(
                                 "<Concluding> confidence must be a float "
                                 f"in [0.0, 1.0]; got {atom.confidence!r}."
+                            ),
+                        )
+                    )
+            # v0.6.1 — OPTIONAL status enum on <Concluding>. Absent is the
+            # v0.5/v0.6.0 shape and validates trivially; present must be one
+            # of met/unmet/partially_met per the ratified v0.6.1 spec.
+            if isinstance(atom, Concluding) and atom.status is not None:
+                if atom.status not in _CONCLUDING_STATUSES:
+                    errors.append(
+                        ValidationError(
+                            rule=RULE_V031_OPTIONAL_FIELDS,
+                            atom_id=atom.id or "",
+                            message=(
+                                "<Concluding> status must be one of "
+                                f"{sorted(_CONCLUDING_STATUSES)}; got "
+                                f"{atom.status!r}."
                             ),
                         )
                     )
