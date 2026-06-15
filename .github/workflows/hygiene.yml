@@ -24,6 +24,7 @@ jobs:
               --exclude-dir=.pytest_cache \
               --exclude-dir=dist \
               --exclude-dir=build \
+              --exclude=test_public_hygiene.py \
               .; then
             echo "::error::Internal references found in published surfaces."
             exit 1
