@@ -569,6 +569,7 @@ def _build_atom(elem: Element, *, parent_kind: str | None = None) -> Atom:
                     else None
                 ),
                 criticality=elem.attrib.get("criticality"),
+                status=elem.attrib.get("status"),
             )
         except ValueError as exc:
             raise ScholiaParseError(str(exc)) from exc

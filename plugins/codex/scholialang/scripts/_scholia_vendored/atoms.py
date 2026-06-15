@@ -271,11 +271,18 @@ class Concluding(Atom):
     Evidence together resolve a stated Goal into a closing proposition.
     It is distinct from ``<Finding>`` (one hypothesis) and
     ``<Deciding>`` (action commitment).
+
+    v0.6.1 adds an OPTIONAL ``status`` attribute (enum
+    ``met|unmet|partially_met``) so a Concluding can record the
+    terminal disposition of the Goal it closes, mirroring
+    ``Finding.status``. ``status`` is absent on v0.5/v0.6.0 Concludings
+    and a status-less Concluding stays valid (back-compat).
     """
 
     for_goal: Optional[str] = None
     confidence: Optional[float] = None
     criticality: Optional[str] = None
+    status: Optional[str] = None
     kind: ClassVar[str] = "Concluding"
 
     def __post_init__(self) -> None:
@@ -650,7 +657,7 @@ PSEUDO_ATOM_KINDS: tuple[str, ...] = ("Meta:research-mode",)
 # ``unknown_operator`` (NOTATION_REFERENCE.md §9 rule 8).
 #
 # v0.4 (2026-05-11) operator-driven mass-promotion of the remaining 8
-# spec-listed operators ahead of the pre-MS-Co-Pilot benchmark window.
+# spec-listed operators ahead of a benchmark window.
 # Before this bump, AND/OR/XOR/FORALL/EXISTS/BEFORE/AFTER/EQUALS were
 # in the ``Operator`` enum + NOTATION_REFERENCE.md §4 but rejected by
 # the validator — agents that emitted them got an ``unknown_operator``
@@ -681,7 +688,7 @@ CRITICALITY_RANK: dict[str, int] = {
 # Ported byte-for-byte from the scholialang v0.6 reference so that the
 # same structural atom hashes to the same canonical_id across every
 # Scholia implementation (standalone package, the bundled MCP validator,
-# and OpenTalon's vendored copy). The cross-impl identity is load-bearing
+# and any downstream vendored copy). The cross-impl identity is load-bearing
 # for the DAG registry — two emits of the same atom from different
 # sessions MUST address to the same node. Do not "improve" this hasher
 # without bumping every implementation in lockstep.
@@ -855,7 +862,7 @@ KIND_SPECIFIC_FIELDS: dict[str, tuple[str, ...]] = {
     "Action": ("timestamp",),
     "Evidence": ("for_ref", "polarity"),
     "Finding": ("for_hyp", "for_goal", "status"),
-    "Concluding": ("for_goal", "confidence", "criticality"),
+    "Concluding": ("for_goal", "confidence", "criticality", "status"),
     "Uncertainty": ("on", "confidence"),
     "Retract": ("target", "reason", "replacement"),
     "Deciding": ("options",),
@@ -961,7 +968,7 @@ def wire_name_for(kind: str, py_field: str) -> str:
 # constants are imported by parser/validator/tests so the canonical
 # set lives in one place. Bumping a set requires a spec doc update.
 
-SCHOLIA_VALIDATOR_VERSION: str = "0.6.0"
+SCHOLIA_VALIDATOR_VERSION: str = "0.6.1"
 
 V031_EDGE_TYPES: frozenset[str] = frozenset({
     "depends_on",

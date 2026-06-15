@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Scholia v0.6.1 propagation — `status=` on `<Concluding>`.** Re-synced the
+  three bundled `_scholia_vendored/{atoms,parser,validator}.py` copies from the
+  status-bearing `scholialang` v0.6.1 source. The vendored parser now reads the
+  optional `status` attribute on `<Concluding>` and the vendored validator
+  enforces the closed `met|unmet|partially_met` enum (absent stays valid for
+  v0.5/v0.6.0 back-compat). `SCHOLIA_VALIDATOR_VERSION` now reads `0.6.1`.
+  Bumped the package `version` to `0.6.1` and the `scholialang` dependency pin
+  to `>=0.6.1`. Propagated byte-identically to all three plugin trees via
+  `scripts/sync_plugins.sh`. Added a public-hygiene leak guard
+  (`tests/test_public_hygiene.py` + `.github/workflows/hygiene.yml`) that fails
+  on internal-only references, with a planted-reference self-test.
 - **Scholia v0.6 vendored substrate catchup.** Refreshed the bundled
   `_scholia_vendored/{atoms,parser,validator}.py` from the published
   `scholialang` v0.6 (relative imports), so `scholia_lint_snippet` /
