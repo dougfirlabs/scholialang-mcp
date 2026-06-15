@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -44,6 +45,7 @@ WEBVIEW_HTML = """<!doctype html>
       }
     }());
   </script>
+  <script id="scholiaLiveConfig">window.__scholiaLiveConfig = __SCHOLIA_LIVE_CONFIG__;</script>
   <style>
     :root,
     :root[data-theme="dark"] {
@@ -412,6 +414,15 @@ WEBVIEW_HTML = """<!doctype html>
     .toolbar #dagSelect {
       min-width: 260px;
       max-width: min(560px, 55vw);
+    }
+
+    .toolbar #projectSelect {
+      min-width: 150px;
+      max-width: min(300px, 30vw);
+    }
+
+    #scopeToggle {
+      min-width: 196px;
     }
 
     .toolbar #themeSelect {
@@ -1301,6 +1312,15 @@ WEBVIEW_HTML = """<!doctype html>
         max-width: 100%;
       }
 
+      .toolbar #projectSelect {
+        grid-column: 1 / -1;
+        max-width: 100%;
+      }
+
+      #scopeToggle {
+        grid-column: 1 / -1;
+      }
+
       .view-toggle {
         grid-column: 1 / 3;
         width: 100%;
@@ -1468,6 +1488,11 @@ WEBVIEW_HTML = """<!doctype html>
     <header class="topbar">
       <div class="brand"><div class="mark" aria-hidden="true"></div><span>Scholialang Live</span></div>
       <div class="toolbar">
+        <div id="scopeToggle" class="view-toggle" role="group" aria-label="Project scope">
+          <button type="button" class="view-toggle-button" data-scope="project" title="Show only the current project">This project</button>
+          <button type="button" class="view-toggle-button" data-scope="all" title="Blend traces across all projects">All projects</button>
+        </div>
+        <select id="projectSelect" aria-label="Project"></select>
         <select id="dagSelect" aria-label="DAG"></select>
         <div id="viewToggle" class="view-toggle" role="group" aria-label="Trace view">
           <button type="button" class="view-toggle-button" data-view-mode="checkpoint">Checkpoint</button>
@@ -1546,6 +1571,11 @@ WEBVIEW_HTML = """<!doctype html>
   <script>
     const STORAGE_THEME_KEY = "scholialang.webview.theme";
     const STORAGE_FEED_ORDER_KEY = "scholialang.webview.feedOrder";
+    const STORAGE_SCOPE_KEY = "scholialang.webview.scope";
+    const VALID_SCOPES = ["project", "all"];
+    const DEFAULT_SCOPE = "project";
+    const PROJECT_POLL_MS = 5000;
+    const LIVE_CONFIG = (window && window.__scholiaLiveConfig) || {};
     const CATEGORY_ORDER = ["reasoning", "evidence", "control", "reference", "social", "meta"];
     const TRACE_REGION_IDS = ["feed", "frontier", "graph", "astConnections", "summary"];
     const CATEGORY_LABELS = {
@@ -1613,7 +1643,12 @@ WEBVIEW_HTML = """<!doctype html>
       hasRenderedSnapshot: false,
       incomingTimer: null,
       newNodeIds: new Set(),
+      scope: DEFAULT_SCOPE,
+      currentProjectPath: "",
       projectPath: searchParams.get("project_path") || "",
+      projects: [],
+      projectPollTimer: null,
+      recentWindowSecs: typeof LIVE_CONFIG.recent_window_secs === "number" ? LIVE_CONFIG.recent_window_secs : 300,
       seenNodeIds: new Set(),
       snapshot: null,
       snapshotController: null,
@@ -1624,6 +1659,20 @@ WEBVIEW_HTML = """<!doctype html>
       transitionTimer: null,
       streamToken: 0,
     };
+
+    // URL params are authoritative on load — this fixes the stale-localStorage
+    // "stuck project" bug. project_path in the URL is the *identity* of the
+    // current project; scope (project vs all) follows the documented precedence
+    // (URL ?scope= > saved UI choice > SCHOLIA_LIVE_SCOPE env > 'project').
+    (function initScope() {
+      const urlHasProject = searchParams.has("project_path");
+      const urlProject = searchParams.get("project_path");
+      state.currentProjectPath = urlHasProject && urlProject ? urlProject : "";
+      state.scope = resolveInitialScope(urlHasProject, urlProject);
+      state.projectPath = state.scope === "all"
+        ? state.currentProjectPath
+        : (urlHasProject && urlProject ? urlProject : state.currentProjectPath);
+    }());
     const $ = (id) => document.getElementById(id);
 
     function setBusy(isBusy) {
@@ -1713,11 +1762,181 @@ WEBVIEW_HTML = """<!doctype html>
 
     function params(extra = {}) {
       const value = new URLSearchParams();
-      if (state.projectPath) value.set("project_path", state.projectPath);
+      if (state.scope === "all") {
+        // Present-but-empty project_path => blended all-projects view server-side.
+        value.set("project_path", "");
+      } else if (state.projectPath) {
+        value.set("project_path", state.projectPath);
+      }
+      // scope=project with no concrete project: omit the param so the server
+      // falls back to its launch-dir default (byte-identical legacy behavior).
       for (const [key, item] of Object.entries(extra)) {
         if (item !== undefined && item !== null && item !== "") value.set(key, item);
       }
       return value.toString();
+    }
+
+    function normalizeScope(value) {
+      if (value === null || value === undefined) return null;
+      const normalized = String(value).trim().toLowerCase();
+      return VALID_SCOPES.indexOf(normalized) >= 0 ? normalized : null;
+    }
+
+    function readSavedScope() {
+      try {
+        return localStorage.getItem(STORAGE_SCOPE_KEY);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function saveScopeChoice(scope) {
+      try {
+        localStorage.setItem(STORAGE_SCOPE_KEY, scope);
+      } catch (_) {
+        // Local storage can be disabled; the in-memory scope still applies.
+      }
+    }
+
+    // Mirror of the backend resolve_scope() precedence, plus a convenience for
+    // hand-crafted URLs that encode "all" as a present-but-empty project_path.
+    function resolveInitialScope(urlHasProject, urlProject) {
+      const urlScope = normalizeScope(searchParams.get("scope"));
+      if (urlScope) return urlScope;
+      if (urlHasProject && urlProject === "") return "all";
+      const saved = normalizeScope(readSavedScope());
+      if (saved) return saved;
+      const envDefault = normalizeScope(LIVE_CONFIG.scope);
+      if (envDefault) return envDefault;
+      return DEFAULT_SCOPE;
+    }
+
+    function syncScopeUrl() {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set("scope", state.scope);
+        // Keep the active project in the URL so "This project" and reloads
+        // remember which project is current; in all-scope the scope param drives
+        // the blend while project_path remains the identity hint.
+        const identity = state.scope === "all" ? state.currentProjectPath : state.projectPath;
+        if (identity) {
+          url.searchParams.set("project_path", identity);
+        } else {
+          url.searchParams.delete("project_path");
+        }
+        url.searchParams.delete("dag_id");
+        history.replaceState({ scope: state.scope, projectPath: state.projectPath }, "", `${url.pathname}${url.search}${url.hash}`);
+      } catch (_) {
+        // History updates are progressive enhancement; scope switching still works.
+      }
+    }
+
+    function updateScopeControls() {
+      document.querySelectorAll("#scopeToggle .view-toggle-button").forEach((button) => {
+        const isActive = button.dataset.scope === state.scope;
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+      const select = $("projectSelect");
+      if (!select) return;
+      const target = state.scope === "all" ? (state.currentProjectPath || "") : (state.projectPath || "");
+      if (Array.from(select.options).some((option) => option.value === target)) {
+        select.value = target;
+      }
+    }
+
+    function renderProjectOptions() {
+      const select = $("projectSelect");
+      if (!select) return;
+      const projects = state.projects || [];
+      if (!projects.length) {
+        select.innerHTML = '<option value="">No projects yet</option>';
+        return;
+      }
+      select.innerHTML = projects.map((project) => {
+        const value = project.project_path || "";
+        const badge = project.live ? " ●" : "";
+        const label = `${project.project_name || "Global"} (${project.dag_count || 0})${badge}`;
+        return `<option value="${escapeText(value)}">${escapeText(label)}</option>`;
+      }).join("");
+      updateScopeControls();
+    }
+
+    function fetchProjects() {
+      return fetch("/api/projects", { cache: "no-store" })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => {
+          if (!data) return;
+          state.projects = data.projects || [];
+          if (typeof data.recent_window_secs === "number") state.recentWindowSecs = data.recent_window_secs;
+          renderProjectOptions();
+        })
+        .catch(() => {
+          // The projects index is best-effort; the trace view works without it.
+        });
+    }
+
+    function switchScopeProject(nextScope, nextProjectPath) {
+      state.scope = nextScope;
+      state.projectPath = nextProjectPath;
+      saveScopeChoice(nextScope);
+      const token = ++state.traceToken;
+      state.streamToken += 1;
+      resetSnapshotRetry();
+      if (state.eventSource) {
+        state.eventSource.close();
+        state.eventSource = null;
+      }
+      if (state.snapshotController) state.snapshotController.abort();
+      const controller = new AbortController();
+      state.snapshotController = controller;
+      // Clear the selected trace so the new scope renders its own default trace.
+      state.dagId = null;
+      resetSeenNodes();
+      updateScopeControls();
+      syncScopeUrl();
+      setBusy(true);
+      setTraceSwitching(true);
+      setStatus("Switching scope", "syncing");
+      const applySnapshot = (snapshot) => {
+        if (token !== state.traceToken) return;
+        render(snapshot);
+        setTraceSwitching(false);
+        runTraceEnterAnimation();
+        setBusy(false);
+        setStatus("Connecting stream", "syncing");
+        connectEvents();
+      };
+      fetchSnapshot(null, controller.signal)
+        .then(applySnapshot)
+        .catch((error) => handleSnapshotFailure(error, null, token, applySnapshot))
+        .finally(() => {
+          if (state.snapshotController === controller) state.snapshotController = null;
+        });
+    }
+
+    function setScope(scope) {
+      const next = normalizeScope(scope) || DEFAULT_SCOPE;
+      if (next === "all") {
+        if (state.scope === "all") return;
+        switchScopeProject("all", state.currentProjectPath);
+      } else {
+        // "This project" reverts to the current/launch project.
+        if (state.scope === "project" && state.projectPath === state.currentProjectPath) return;
+        switchScopeProject("project", state.currentProjectPath);
+      }
+    }
+
+    function selectProject(path) {
+      const value = path || "";
+      if (!value) {
+        // The global / None-path project cannot be scoped to via project_path;
+        // selecting it blends, the same as the all-projects view.
+        setScope("all");
+        return;
+      }
+      if (state.scope === "project" && state.projectPath === value) return;
+      switchScopeProject("project", value);
     }
 
     function syncDagUrl(dagId) {
@@ -2224,6 +2443,10 @@ WEBVIEW_HTML = """<!doctype html>
     applyTheme(state.theme);
 
     $("dagSelect").addEventListener("change", (event) => selectDag(event.target.value));
+    document.querySelectorAll("#scopeToggle .view-toggle-button").forEach((button) => {
+      button.addEventListener("click", () => setScope(button.dataset.scope));
+    });
+    $("projectSelect").addEventListener("change", (event) => selectProject(event.target.value));
     document.querySelectorAll("#viewToggle .view-toggle-button").forEach((button) => {
       button.addEventListener("click", () => {
         if (!button.disabled && button.dataset.dagId) selectDag(button.dataset.dagId);
@@ -2259,6 +2482,9 @@ WEBVIEW_HTML = """<!doctype html>
     });
 
     applyFeedOrder(state.feedOrder);
+    updateScopeControls();
+    fetchProjects();
+    state.projectPollTimer = window.setInterval(fetchProjects, PROJECT_POLL_MS);
     renderLoadingShell();
     const initialToken = state.traceToken;
     const applyInitialSnapshot = (snapshot) => {
@@ -2750,6 +2976,146 @@ def set_auto_emit(project_path, enabled):
     return read_settings_state(project_path)
 
 
+# --- Multi-project scope + projects index -------------------------------------
+
+DEFAULT_SCOPE = "project"
+VALID_SCOPES = ("project", "all")
+DEFAULT_RECENT_SECS = 300
+
+
+def resolve_project_path(query, default):
+    """Resolve the effective project_path scope from a parsed query dict.
+
+    Three cases, so /api/snapshot and /events follow the selected scope:
+      * key absent             -> the server's launch-dir default (unchanged)
+      * key present but empty   -> None (blended all-projects view)
+      * key present, non-empty  -> that single project path
+
+    Requires the query dict to preserve blank values
+    (parse_qs(..., keep_blank_values=True)); otherwise an empty param is dropped
+    and indistinguishable from an absent one.
+    """
+    if "project_path" not in query:
+        return default
+    values = query.get("project_path") or [""]
+    return values[0] or None
+
+
+def _normalize_scope(value):
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    return normalized if normalized in VALID_SCOPES else None
+
+
+def resolve_scope(url_scope=None, saved_scope=None, env_scope=None):
+    """Resolve the effective viewer scope by precedence.
+
+    URL ?scope= wins, then the saved UI choice (localStorage, supplied by the
+    frontend), then the SCHOLIA_LIVE_SCOPE env default, then the built-in
+    'project' default. Unrecognized values are ignored at their tier.
+    """
+    for candidate in (url_scope, saved_scope, env_scope):
+        normalized = _normalize_scope(candidate)
+        if normalized:
+            return normalized
+    return DEFAULT_SCOPE
+
+
+def env_default_scope():
+    return _normalize_scope(os.environ.get("SCHOLIA_LIVE_SCOPE")) or DEFAULT_SCOPE
+
+
+def recent_window_secs():
+    window = parse_int(os.environ.get("SCHOLIA_LIVE_RECENT_SECS"), DEFAULT_RECENT_SECS)
+    return window if window >= 0 else DEFAULT_RECENT_SECS
+
+
+def live_defaults():
+    """Server-side defaults the frontend reads to apply scope precedence."""
+    return {
+        "scope": env_default_scope(),
+        "recent_window_secs": recent_window_secs(),
+    }
+
+
+def _parse_iso8601(value):
+    if not value:
+        return None
+    text = str(value).strip().replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _is_recent(updated_at, now_dt, window_secs):
+    if now_dt is None:
+        return False
+    updated_dt = _parse_iso8601(updated_at)
+    if updated_dt is None:
+        return False
+    return (now_dt - updated_dt).total_seconds() <= window_secs
+
+
+def build_projects(dags, now, window_secs):
+    """Group cross-project DAGs into a projects index with a live flag.
+
+    `dags` is scholia.all_dags(None) output (every project's DAGs). `now` is an
+    ISO-8601 UTC timestamp (scholia.now()); `window_secs` is the recency window.
+    Returns a list of {project_key, project_name, project_path, dag_count,
+    last_updated, live} sorted by last_updated descending. `live` is True when the
+    project's newest *session* DAG (session_key set) updated within the window;
+    only session DAGs count toward liveness. The global/None-path project is
+    labeled 'Global'.
+    """
+    now_dt = _parse_iso8601(now)
+    groups = {}
+    order = []
+    for dag in dags:
+        key = dag.get("project_key")
+        if key not in groups:
+            path = dag.get("project_path")
+            name = dag.get("project_name") or ("Global" if not path else path)
+            groups[key] = {
+                "project_key": key,
+                "project_name": name or "Global",
+                "project_path": path,
+                "dag_count": 0,
+                "last_updated": None,
+                "_newest_session": None,
+            }
+            order.append(key)
+        bucket = groups[key]
+        bucket["dag_count"] += 1
+        updated = dag.get("updated_at")
+        if updated and (bucket["last_updated"] is None or updated > bucket["last_updated"]):
+            bucket["last_updated"] = updated
+        if dag.get("session_key") and updated and (
+            bucket["_newest_session"] is None or updated > bucket["_newest_session"]
+        ):
+            bucket["_newest_session"] = updated
+    projects = []
+    for key in order:
+        bucket = groups[key]
+        newest_session = bucket.pop("_newest_session")
+        bucket["live"] = _is_recent(newest_session, now_dt, window_secs)
+        projects.append(bucket)
+    projects.sort(key=lambda item: (item["last_updated"] or ""), reverse=True)
+    return projects
+
+
+def render_webview_html():
+    """Serve the webview HTML with server-side scope defaults injected."""
+    return WEBVIEW_HTML.replace(
+        "__SCHOLIA_LIVE_CONFIG__",
+        json.dumps(live_defaults(), separators=(",", ":"), sort_keys=True),
+    )
+
+
 class ScholialangWebviewHandler(BaseHTTPRequestHandler):
     server_version = "ScholialangWebview/0.1"
 
@@ -2766,10 +3132,10 @@ class ScholialangWebviewHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
-        query = parse_qs(parsed.query)
+        query = parse_qs(parsed.query, keep_blank_values=True)
         try:
             if parsed.path == "/":
-                self.send_html(WEBVIEW_HTML)
+                self.send_html(render_webview_html())
             elif parsed.path == "/health":
                 self.send_json(
                     {
@@ -2783,6 +3149,16 @@ class ScholialangWebviewHandler(BaseHTTPRequestHandler):
                 limit = parse_int(query_one(query, "limit"), 20)
                 dags = [enrich_dag_metadata(dag) for dag in scholia.all_dags(project_path)[:limit]]
                 self.send_json({"database_path": str(scholia.database_path()), "project_path": project_path, "dags": dags})
+            elif parsed.path == "/api/projects":
+                window = parse_int(query_one(query, "recent_secs"), recent_window_secs())
+                projects = build_projects(scholia.all_dags(None), scholia.now(), window)
+                self.send_json(
+                    {
+                        "projects": projects,
+                        "recent_window_secs": window,
+                        "database_path": str(scholia.database_path()),
+                    }
+                )
             elif parsed.path == "/api/snapshot":
                 self.send_json(self.snapshot(query))
             elif parsed.path == "/api/settings":
@@ -2825,7 +3201,7 @@ class ScholialangWebviewHandler(BaseHTTPRequestHandler):
         return data
 
     def project_path(self, query):
-        return query_one(query, "project_path", getattr(self.server, "project_path", None))
+        return resolve_project_path(query, getattr(self.server, "project_path", None))
 
     def snapshot(self, query):
         return load_snapshot(
