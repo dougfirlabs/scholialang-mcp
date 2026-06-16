@@ -366,7 +366,8 @@ WEBVIEW_HTML = """<!doctype html>
       display: flex;
       align-items: center;
       gap: 10px;
-      min-width: 230px;
+      min-width: 0;
+      flex: 0 0 auto;
       font-weight: 650;
       letter-spacing: 0;
     }
@@ -392,7 +393,9 @@ WEBVIEW_HTML = """<!doctype html>
     .toolbar {
       display: flex;
       align-items: center;
-      gap: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
+      row-gap: 8px;
       flex: 1;
       min-width: 0;
       max-width: 100%;
@@ -412,8 +415,8 @@ WEBVIEW_HTML = """<!doctype html>
     }
 
     .toolbar #dagSelect {
-      min-width: 260px;
-      max-width: min(560px, 55vw);
+      min-width: 190px;
+      max-width: min(260px, 26vw);
     }
 
     .toolbar #projectSelect {
@@ -422,18 +425,42 @@ WEBVIEW_HTML = """<!doctype html>
     }
 
     #scopeToggle {
-      min-width: 196px;
+      min-width: 76px;
     }
 
-    .toolbar #themeSelect {
-      min-width: 118px;
-      max-width: 132px;
+    .icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      min-width: 36px;
+      padding: 0;
     }
+
+    .button svg,
+    .view-toggle-button svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .view-toggle-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    /* Theme toggle: exactly ONE glyph visible, driven by the active theme.
+       Scoped to #themeToggle so it always wins over generic svg sizing rules. */
+    #themeToggle .icon-sun,
+    #themeToggle .icon-moon { display: none; }
+    :root[data-theme="light"] #themeToggle .icon-sun { display: block; }
+    :root[data-theme="dark"] #themeToggle .icon-moon { display: block; }
 
     .view-toggle {
       display: inline-grid;
       grid-template-columns: 1fr 1fr;
-      min-width: 210px;
+      min-width: 180px;
       height: 36px;
       padding: 2px;
       border: 1px solid var(--border);
@@ -1489,8 +1516,8 @@ WEBVIEW_HTML = """<!doctype html>
       <div class="brand"><div class="mark" aria-hidden="true"></div><span>Scholialang Live</span></div>
       <div class="toolbar">
         <div id="scopeToggle" class="view-toggle" role="group" aria-label="Project scope">
-          <button type="button" class="view-toggle-button" data-scope="project" title="Show only the current project">This project</button>
-          <button type="button" class="view-toggle-button" data-scope="all" title="Blend traces across all projects">All projects</button>
+          <button type="button" class="view-toggle-button" data-scope="project" aria-label="This project" title="This project — show only the current project"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg></button>
+          <button type="button" class="view-toggle-button" data-scope="all" aria-label="All projects" title="All projects — blend traces across all projects"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
         </div>
         <select id="projectSelect" aria-label="Project"></select>
         <select id="dagSelect" aria-label="DAG"></select>
@@ -1502,10 +1529,10 @@ WEBVIEW_HTML = """<!doctype html>
           <button type="button" class="order-toggle-button" data-feed-order="newest" title="Newest atoms at the top">Newest first</button>
           <button type="button" class="order-toggle-button" data-feed-order="oldest" title="Chronological; new atoms appear at the bottom">Oldest first</button>
         </div>
-        <select id="themeSelect" aria-label="Theme">
-          <option value="dark">Dark</option>
-          <option value="light">Light</option>
-        </select>
+        <button id="themeToggle" type="button" class="button icon-button" aria-label="Toggle theme" title="Toggle light / dark theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
         <button id="refresh" class="button" title="Refresh"><span class="button-label-full">Refresh</span><span class="button-label-short">Sync</span></button>
       </div>
       <div id="status" class="status" data-mode="loading" aria-live="polite">
@@ -1731,7 +1758,12 @@ WEBVIEW_HTML = """<!doctype html>
       const nextTheme = theme === "light" ? "light" : "dark";
       state.theme = nextTheme;
       document.documentElement.dataset.theme = nextTheme;
-      $("themeSelect").value = nextTheme;
+      const themeBtn = $("themeToggle");
+      if (themeBtn) {
+        const toLight = nextTheme === "dark";
+        themeBtn.setAttribute("aria-label", toLight ? "Switch to light theme" : "Switch to dark theme");
+        themeBtn.title = toLight ? "Dark theme — switch to light" : "Light theme — switch to dark";
+      }
       try {
         localStorage.setItem(STORAGE_THEME_KEY, nextTheme);
       } catch (_) {
@@ -2204,9 +2236,20 @@ WEBVIEW_HTML = """<!doctype html>
     function renderDagControls(snapshot) {
       const dags = snapshot.dags || [];
       $("dagCount").textContent = `${dags.length}`;
-      $("dagSelect").innerHTML = dags.map((dag) => (
-        `<option value="${escapeText(dag.dag_id)}" ${dag.dag_id === state.dagId ? "selected" : ""}>${escapeText(dag.title)} (${escapeText(dag.dag_id)})</option>`
-      )).join("");
+      $("dagSelect").innerHTML = dags.map((dag) => {
+        const full = dag.title || dag.dag_id;
+        const pn = dag.project_name || "";
+        // In single-project scope the project name is already shown in the
+        // project dropdown, so strip it from the label; keep it in All-projects
+        // mode for disambiguation. Drop the noisy (dag_id) suffix either way —
+        // the full title + id live in the hover tooltip and the DAGs panel.
+        let label = full;
+        if (state.scope !== "all" && pn && label.indexOf(pn) === 0) {
+          label = label.slice(pn.length).trim().replace(/^[–·:-]+/, "").trim() || full;
+        }
+        const selected = dag.dag_id === state.dagId ? "selected" : "";
+        return `<option value="${escapeText(dag.dag_id)}" title="${escapeText(full + " (" + dag.dag_id + ")")}" ${selected}>${escapeText(label)}</option>`;
+      }).join("");
       $("dagList").innerHTML = dags.map((dag) => `
         <button type="button" class="dag-item ${dag.dag_id === state.dagId ? "active" : ""}" data-dag-id="${escapeText(dag.dag_id)}"${dag.dag_id === state.dagId ? ' aria-current="true"' : ""}>
           <div class="dag-title">${escapeText(dag.title)}</div>
@@ -2455,7 +2498,7 @@ WEBVIEW_HTML = """<!doctype html>
     document.querySelectorAll("#orderToggle .order-toggle-button").forEach((button) => {
       button.addEventListener("click", () => applyFeedOrder(button.dataset.feedOrder));
     });
-    $("themeSelect").addEventListener("change", (event) => applyTheme(event.target.value));
+    $("themeToggle").addEventListener("click", () => applyTheme(state.theme === "dark" ? "light" : "dark"));
     $("refresh").addEventListener("click", () => {
       const token = ++state.traceToken;
       resetSnapshotRetry();
