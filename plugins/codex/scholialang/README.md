@@ -155,6 +155,57 @@ Use the raw exhaust DAG for audit/provenance. For human reading, generate a
 deduped semantic view or compact summary so repeated user/assistant surfaces do
 not look like repeated conversational turns.
 
+## Live Exhaust Capture (Checkpoint/Exhaust toggle)
+
+`scholia_codex_import_thread` (above) is a one-shot, run-it-by-hand importer.
+Alongside it, Codex sessions also stream a **live** exhaust trace automatically:
+a mechanical, event-by-event mirror of the Codex rollout JSONL that Codex already
+writes under `CODEX_HOME`. It is **on by default** (whenever auto-emit is on) and
+adds **zero LLM tokens** — capture is an out-of-band parse of the rollout file; it
+makes no model or network calls and never injects into the agent's context.
+
+Because Codex has no SessionStart/SessionEnd plugin hooks (unlike Claude Code),
+there is no per-session place to launch a tailer. Instead, the Codex plugin's
+MCP entrypoint (`codex_mcp_entry.py`, wired in `.mcp.json`) starts a single
+detached **watcher daemon** on server boot. The watcher discovers the active
+Codex rollouts under `CODEX_HOME` — via the Codex thread state DB
+(`state_5.sqlite`), falling back to an mtime scan of
+`CODEX_HOME/sessions/<YYYY>/<MM>/<DD>/rollout-*.jsonl` — and incrementally tails
+each one into a paired **exhaust** DAG. It is a singleton: a second Codex session
+reuses the running watcher (recorded in `<SCHOLIALANG_HOME>/codex-exhaust/watcher.json`)
+rather than starting a rival. The shared `scholialang_mcp_server.py` is left
+byte-identical across the claude-code/codex/ollama variants; the trigger lives
+only in the Codex entrypoint wrapper and the watcher.
+
+The exhaust DAG is tagged `exhaust` + `event-source` and titled
+`"<checkpoint title> — exhaust"`, keyed to the Codex session's checkpoint trace by
+the same `session_id` the skill tells Codex to use (`host: "codex"`, `session_id`
+= the Codex thread id). The Scholia Live viewer's existing **Checkpoint/Exhaust**
+toggle then pairs and switches between the two traces for that session — no viewer
+changes required.
+
+```text
+SCHOLIA_EXHAUST=0                 # 0 / false / off / no  — disable live exhaust only (on by default)
+SCHOLIA_EXHAUST_MAX_EVENTS=2000   # optional; cap on captured rollout events (default 2000)
+SCHOLIA_EXHAUST_ACTIVE_WINDOW_S   # optional; only tail rollouts modified within this many seconds (default 6h)
+```
+
+Capture rides on the shared auto-emit opt-out: `SCHOLIA_AUTOEMIT=0` or a
+`.scholia-off` marker in the project root disables it along with checkpoint
+emission. `SCHOLIA_EXHAUST=0` disables *only* live exhaust (keeping checkpoint).
+It honors `CODEX_HOME` and `SCHOLIALANG_HOME`. It is idempotent: each rollout line
+maps to a stable per-line atom id (`cxline_<line>`) and the watcher resumes from
+the last imported line, so a restart mid-session never duplicates atoms. The cap
+is enforced via `SCHOLIA_EXHAUST_MAX_EVENTS`, there are no DB schema changes, and
+**all capture failures are swallowed — live exhaust never breaks a Codex session.**
+
+**Alternative trigger (`notify`):** Codex's `notify` hook in `~/.codex/config.toml`
+can also drive capture, but it requires editing the user's global Codex config and
+only fires on turn-completion notifications, so the poll-daemon above is the
+default. To wire `notify` instead, point it at
+`scripts/codex_exhaust_watcher.py --once` so each notification runs a single
+discovery+capture pass.
+
 ## Safety Model
 
 Scholialang traces are user-facing artifacts, not hidden chain-of-thought.

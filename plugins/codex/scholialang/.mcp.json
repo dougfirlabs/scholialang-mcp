@@ -3,7 +3,7 @@
     "scholialang": {
       "command": "python3",
       "args": [
-        "./scripts/scholialang_mcp_server.py"
+        "./scripts/codex_mcp_entry.py"
       ],
       "cwd": "."
     }
