@@ -83,8 +83,10 @@ Enable it with `SCHOLIA_LIVE` (in your Claude Code `settings.json` `env` block,
 or your shell):
 
 ```text
-SCHOLIA_LIVE=1            # 1 / true / on / yes
-SCHOLIA_LIVE_PORT=8765    # optional; default 8765, falls back to the next free port
+SCHOLIA_LIVE=1               # 1 / true / on / yes
+SCHOLIA_LIVE_PORT=8765       # optional; default 8765, falls back to the next free port
+SCHOLIA_LIVE_SCOPE=project   # optional; "project" (default) or "all"
+SCHOLIA_LIVE_RECENT_SECS=300 # optional; recency window for the "live" badge (seconds)
 ```
 
 When enabled, the `SessionStart` hook launches a singleton stdlib HTTP server
@@ -98,6 +100,37 @@ Open that URL in a browser. The page includes a Settings panel (gear icon,
 bottom-right) that toggles per-project auto-emit (creating/removing
 `.scholia-off`) and shows the active storage and database paths. The server is
 read-only apart from that toggle.
+
+### Multi-Project Switcher and Scope Toggle
+
+The single shared server can show traces for any project that has traces, so one
+viewer covers every open Claude Code project. The header has a scope toggle and a
+project dropdown:
+
+- **This project** (default) — show only the current project's DAGs. The project
+  dropdown (entries read `name (dag_count)`, with a `●` badge on recently-active
+  projects) lets you jump to one other single project, still scoped to it.
+- **All projects** — blend DAGs across every project; the graph pane opens the
+  most-recent trace and the live stream follows all projects.
+
+Selecting a different project (or flipping the toggle) clears the current trace,
+refetches the snapshot, reconnects the live stream, and writes the `scope` /
+`project_path` into the URL. **URL params are authoritative on load**, so a
+reload (or a launcher-supplied `?project_path=<cwd>`) restores exactly that view
+— this fixes the stale-localStorage "stuck on one project" behavior.
+
+Two env vars tune the defaults:
+
+- `SCHOLIA_LIVE_SCOPE` — `project` (default) or `all`. Sets the scope a fresh tab
+  opens in. Effective scope follows the precedence
+  `?scope=` URL param > saved UI choice (localStorage) > `SCHOLIA_LIVE_SCOPE` >
+  built-in `project`.
+- `SCHOLIA_LIVE_RECENT_SECS` — recency window in seconds (default `300`) for the
+  `●` "live" badge. A project is live when its newest session DAG updated within
+  the window.
+
+A single-project user who sets neither env var nor any UI/URL choice sees the
+unchanged first-load behavior (their current project only).
 
 The server is a singleton recorded in
 `${SCHOLIALANG_HOME:-~/.scholialang}/live-server.json` and is shared across
