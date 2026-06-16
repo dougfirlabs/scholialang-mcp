@@ -1,0 +1,10 @@
+{"type":"summary","summary":"Live Claude Code exhaust capture design","leafUuid":"u0"}
+{"type":"user","sessionId":"s1","uuid":"u1","timestamp":"2026-06-16T17:00:00Z","cwd":"/repo","message":{"role":"user","content":"Implement the live exhaust tailer."}}
+{"type":"assistant","sessionId":"s1","uuid":"u2","requestId":"r1","message":{"role":"assistant","content":[{"type":"thinking","thinking":"I should read the codex importer first to mirror its shape."},{"type":"text","text":"Let me start by reading the importer."}]}}
+{"type":"assistant","sessionId":"s1","uuid":"u3","requestId":"r2","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Read","input":{"file_path":"/repo/server.py"}}]}}
+{"type":"user","sessionId":"s1","uuid":"u4","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"def tool_codex_import_thread(args): ..."}]}}
+{"type":"assistant","sessionId":"s1","uuid":"u5","message":{"role":"assistant","content":[{"type":"text","text":"The importer maps each rollout line to one atom."}]}}
+{"type":"attachment","sessionId":"s1","attachment":{"type":"file","path":"/repo/notes.md"}}
+{"type":"assistant","sessionId":"s1","uuid":"u6","message":{"role":"assistant","content":[{"type":"text","text":"export API_KEY=sk-do-not-capture-this-secret-0001"}]}}
+{"type":"last-prompt","sessionId":"s1","lastPrompt":"Implement the live exhaust tailer.","leafUuid":"u1"}
+{not valid json at all

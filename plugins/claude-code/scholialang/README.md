@@ -107,6 +107,37 @@ sessions (the SQLite DB is shared). Stop it with:
 kill "$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.scholialang/live-server.json")))["pid"])')"
 ```
 
+## Live exhaust capture (Checkpoint/Exhaust toggle)
+
+The auto-emitted session DAG is a **curated checkpoint** trace. Optionally, a
+per-session **exhaust** trace can be captured live: a mechanical, event-by-event
+mirror of the Claude Code transcript (`~/.claude/projects/<slug>/<session>.jsonl`).
+It is **off by default** and adds **zero LLM tokens** — capture is an out-of-band
+parse of the transcript Claude Code already writes; it makes no model or network
+calls and never injects into the agent's context.
+
+Enable it with `SCHOLIA_EXHAUST` (in your Claude Code `settings.json` `env` block,
+or your shell):
+
+```text
+SCHOLIA_EXHAUST=1               # 1 / true / on / yes  (off by default)
+SCHOLIA_EXHAUST_MAX_EVENTS=2000 # optional; cap on captured transcript events (default 2000)
+```
+
+When enabled, the `SessionStart` hook launches a detached background tailer that
+follows the session transcript and appends exhaust atoms to a paired exhaust DAG
+(tagged `exhaust` + `event-source` and titled `"<checkpoint title> — exhaust"`).
+The Scholia Live viewer's existing **Checkpoint/Exhaust** toggle then pairs and
+switches between the two traces for that session — no viewer changes required.
+`SessionEnd` stops the tailer.
+
+Capture honors the shared opt-out (`SCHOLIA_AUTOEMIT=0` or a `.scholia-off`
+marker) and `SCHOLIALANG_HOME`. It is idempotent: each transcript line maps to a
+stable per-line atom id, and the tailer resumes from the last imported line, so a
+restart mid-session never duplicates atoms. With `SCHOLIA_EXHAUST` unset, behavior
+is byte-identical to before (no exhaust DAG, no tailer). All capture failures exit
+0 — exhaust capture never breaks the session.
+
 ## Install From GitHub
 
 Install the public marketplace and plugin:
