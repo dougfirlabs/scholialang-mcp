@@ -83,7 +83,7 @@ class TailerSyncTests(unittest.TestCase):
 
 
 class ExhaustFlagTests(unittest.TestCase):
-    """SCHOLIA_EXHAUST gating in the SessionStart hook (mirrors SCHOLIA_LIVE)."""
+    """SCHOLIA_EXHAUST gating in the SessionStart hook (default ON; explicit off-switch)."""
 
     def setUp(self):
         self._saved = os.environ.get("SCHOLIA_EXHAUST")
@@ -95,19 +95,21 @@ class ExhaustFlagTests(unittest.TestCase):
         else:
             os.environ["SCHOLIA_EXHAUST"] = self._saved
 
-    def test_disabled_by_default(self):
-        self.assertFalse(start_hook._exhaust_enabled())
-        self.assertIsNone(start_hook._maybe_launch_exhaust("/tmp", "s", None))
+    def test_enabled_by_default(self):
+        # Default ON: exhaust runs whenever auto-emit is on (no flag needed).
+        self.assertTrue(start_hook._exhaust_enabled())
 
     def test_enabled_values(self):
-        for value in ("1", "true", "on", "YES", " On "):
+        for value in ("1", "true", "on", "YES", " On ", "", "whatever"):
             os.environ["SCHOLIA_EXHAUST"] = value
             self.assertTrue(start_hook._exhaust_enabled(), value)
 
     def test_disabled_values(self):
-        for value in ("0", "false", "off", "no", ""):
+        # Only an explicit off-switch disables exhaust; launch is then skipped.
+        for value in ("0", "false", "off", "no", " OFF "):
             os.environ["SCHOLIA_EXHAUST"] = value
             self.assertFalse(start_hook._exhaust_enabled(), value)
+        self.assertIsNone(start_hook._maybe_launch_exhaust("/tmp", "s", None))
 
 
 class SessionEndStopTests(unittest.TestCase):

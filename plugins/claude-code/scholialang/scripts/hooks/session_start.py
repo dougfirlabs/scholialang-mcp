@@ -39,8 +39,14 @@ def _live_enabled():
 
 
 def _exhaust_enabled():
+    # Default ON: live exhaust capture is mechanical and free (zero added LLM
+    # tokens), so it runs whenever auto-emit is on. The shared opt-out
+    # (SCHOLIA_AUTOEMIT=0 / .scholia-off) is enforced by the caller; an explicit
+    # SCHOLIA_EXHAUST in {0,false,off,no} force-disables just the exhaust tailer.
     flag = os.environ.get("SCHOLIA_EXHAUST")
-    return flag is not None and flag.strip().lower() in LIVE_ON_VALUES
+    if not flag:
+        return True
+    return flag.strip().lower() not in {"0", "false", "off", "no"}
 
 
 def _scholialang_home():
@@ -122,7 +128,7 @@ def _exhaust_state_path(session_id):
 
 
 def _maybe_launch_exhaust(cwd, session_id, transcript_path):
-    """Start the per-session exhaust tailer as a singleton when SCHOLIA_EXHAUST is on.
+    """Start the per-session exhaust tailer as a singleton (default on; SCHOLIA_EXHAUST=0 disables).
 
     Mechanical, out-of-band capture: the tailer parses the transcript Claude Code
     already writes and appends exhaust atoms to a paired exhaust DAG. Reuses a
@@ -194,8 +200,9 @@ def main():
     except Exception:
         live_url = None
 
-    # Opt-in live exhaust capture: only when auto-emit is on (so the shared
-    # opt-out suppresses it) and SCHOLIA_EXHAUST is enabled. Never breaks start.
+    # Live exhaust capture (default ON, free/mechanical): runs whenever auto-emit
+    # is on, so the shared opt-out suppresses it; SCHOLIA_EXHAUST=0 force-disables
+    # just exhaust. Never breaks start.
     if structured.get("enabled", False):
         try:
             _maybe_launch_exhaust(cwd, session_id, transcript_path)
