@@ -1,0 +1,11 @@
+{"timestamp": "2026-06-16T17:00:00.000Z", "type": "session_meta", "payload": {"id": "thread_codex_01", "cwd": "/repo/codex-project", "originator": "codex_cli", "cli_version": "0.x", "source": "cli"}}
+{"timestamp": "2026-06-16T17:00:01.000Z", "type": "event_msg", "payload": {"type": "task_started", "turn_id": "turn_01", "model_context_window": 200000}}
+{"timestamp": "2026-06-16T17:00:02.000Z", "type": "response_item", "payload": {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "Implement the live exhaust watcher."}]}}
+{"timestamp": "2026-06-16T17:00:03.000Z", "type": "response_item", "payload": {"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": "I'll reuse the existing Codex importer's per-line conversion."}]}}
+{"timestamp": "2026-06-16T17:00:04.000Z", "type": "response_item", "payload": {"type": "function_call", "name": "exec_command", "arguments": "{\"cmd\":\"ls scripts\"}", "call_id": "call_01"}}
+{"timestamp": "2026-06-16T17:00:05.000Z", "type": "response_item", "payload": {"type": "function_call_output", "call_id": "call_01", "output": "codex_exhaust.py\nscholialang_mcp_server.py\n"}}
+{"timestamp": "2026-06-16T17:00:06.000Z", "type": "response_item", "payload": {"type": "reasoning", "encrypted_content": "encrypted-private-thoughts-do-not-capture"}}
+{"timestamp": "2026-06-16T17:00:07.000Z", "type": "event_msg", "payload": {"type": "agent_message", "message": "The watcher tails rollouts into a paired exhaust DAG.", "phase": "final"}}
+{"timestamp": "2026-06-16T17:00:08.000Z", "type": "event_msg", "payload": {"type": "agent_message", "message": "export API_KEY=sk-do-not-capture-this-secret-0002", "phase": "final"}}
+{"timestamp": "2026-06-16T17:00:09.000Z", "type": "event_msg", "payload": {"type": "task_complete", "last_agent_message": "Live Codex exhaust capture implemented.", "duration_ms": 9000}}
+{not valid json at all
