@@ -7,10 +7,38 @@ is a safe no-op). Never fails the session.
 """
 import json
 import os
+import signal
 import sys
 from pathlib import Path
 
 HOST = "claude-code"
+
+
+def _scholialang_home():
+    return Path(os.environ.get("SCHOLIALANG_HOME") or "~/.scholialang").expanduser()
+
+
+def _stop_exhaust(home, session_id):
+    """Terminate this session's exhaust tailer (if any) and drop its state file.
+
+    Safe no-op when no exhaust capture ran (state file absent). Never raises.
+    """
+    path = Path(home) / "exhaust" / f"{session_id}.json"
+    try:
+        state = json.loads(path.read_text())
+    except (OSError, ValueError):
+        state = None
+    if state:
+        pid = state.get("pid")
+        try:
+            if pid and int(pid) != os.getpid():
+                os.kill(int(pid), signal.SIGTERM)
+        except (OSError, TypeError, ValueError):
+            pass
+    try:
+        path.unlink()
+    except OSError:
+        pass
 
 
 def main():
@@ -26,6 +54,12 @@ def main():
     cwd = payload.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
     session_id = payload.get("session_id") or os.environ.get("CLAUDE_SESSION_ID") or "default"
     reason = payload.get("reason") or "session end"
+
+    # Stop the live exhaust tailer for this session (no-op if it never ran).
+    try:
+        _stop_exhaust(_scholialang_home(), session_id)
+    except Exception:
+        pass
 
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     import scholialang_mcp_server as server  # noqa: E402

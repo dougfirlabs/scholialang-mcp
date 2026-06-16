@@ -38,6 +38,17 @@ def _live_enabled():
     return flag is not None and flag.strip().lower() in LIVE_ON_VALUES
 
 
+def _exhaust_enabled():
+    # Default ON: live exhaust capture is mechanical and free (zero added LLM
+    # tokens), so it runs whenever auto-emit is on. The shared opt-out
+    # (SCHOLIA_AUTOEMIT=0 / .scholia-off) is enforced by the caller; an explicit
+    # SCHOLIA_EXHAUST in {0,false,off,no} force-disables just the exhaust tailer.
+    flag = os.environ.get("SCHOLIA_EXHAUST")
+    if not flag:
+        return True
+    return flag.strip().lower() not in {"0", "false", "off", "no"}
+
+
 def _scholialang_home():
     return Path(os.environ.get("SCHOLIALANG_HOME") or "~/.scholialang").expanduser()
 
@@ -112,6 +123,55 @@ def _maybe_launch_live(cwd):
     return "http://127.0.0.1:{}/?project_path={}".format(port, quote(cwd))
 
 
+def _exhaust_state_path(session_id):
+    return _scholialang_home() / "exhaust" / f"{session_id}.json"
+
+
+def _maybe_launch_exhaust(cwd, session_id, transcript_path):
+    """Start the per-session exhaust tailer as a singleton (default on; SCHOLIA_EXHAUST=0 disables).
+
+    Mechanical, out-of-band capture: the tailer parses the transcript Claude Code
+    already writes and appends exhaust atoms to a paired exhaust DAG. Reuses a
+    running tailer recorded in <home>/exhaust/<session>.json when its pid is still
+    alive. Returns the resolved transcript path when launched, else None. Never
+    raises into the caller.
+    """
+    if not _exhaust_enabled():
+        return None
+    home = _scholialang_home()
+    state_path = _exhaust_state_path(session_id)
+    try:
+        existing = json.loads(state_path.read_text())
+    except (OSError, ValueError):
+        existing = {}
+    if _pid_alive(existing.get("pid")):
+        return existing.get("transcript")
+
+    script = Path(__file__).resolve().parent / "exhaust_tailer.py"
+    if not script.exists():
+        return None
+    if not transcript_path:
+        try:
+            import cc_exhaust  # scripts dir already on sys.path
+            transcript_path = str(cc_exhaust.transcript_path_for(cwd, session_id))
+        except Exception:
+            return None
+
+    home.mkdir(parents=True, exist_ok=True)
+    log = open(home / "exhaust.log", "ab")  # noqa: SIM115 (inherited by child)
+    subprocess.Popen(
+        [
+            sys.executable, str(script),
+            "--transcript", str(transcript_path),
+            "--project-path", cwd,
+            "--session-id", session_id,
+        ],
+        stdout=log, stderr=log, stdin=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    return str(transcript_path)
+
+
 def main():
     try:
         raw = sys.stdin.read()
@@ -124,6 +184,7 @@ def main():
 
     cwd = payload.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
     session_id = payload.get("session_id") or os.environ.get("CLAUDE_SESSION_ID") or "default"
+    transcript_path = payload.get("transcript_path")
 
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     import scholialang_mcp_server as server  # noqa: E402
@@ -138,6 +199,15 @@ def main():
         live_url = _maybe_launch_live(cwd)
     except Exception:
         live_url = None
+
+    # Live exhaust capture (default ON, free/mechanical): runs whenever auto-emit
+    # is on, so the shared opt-out suppresses it; SCHOLIA_EXHAUST=0 force-disables
+    # just exhaust. Never breaks start.
+    if structured.get("enabled", False):
+        try:
+            _maybe_launch_exhaust(cwd, session_id, transcript_path)
+        except Exception:
+            pass
 
     if not structured.get("enabled", False):
         # Auto-emit opted out: stay silent about emission, but still surface the
