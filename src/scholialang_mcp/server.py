@@ -248,7 +248,7 @@ class ScholiaMCPServer:
                 "status": "unsupported",
                 "error": "regenerate_unavailable",
                 "path": path,
-                "hint": "regeneration is host-adapter specific in scholialang-mcp v0.5",
+                "hint": "regeneration is host-adapter specific in scholialang-mcp v0.6.1",
             }
         return {"status": "accepted", "path": path}
 
