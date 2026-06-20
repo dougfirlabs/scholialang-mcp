@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.6.1
 
 - **Scholia v0.6.1 propagation — `status=` on `<Concluding>`.** Re-synced the
   three bundled `_scholia_vendored/{atoms,parser,validator}.py` copies from the
@@ -13,6 +13,24 @@
   `scripts/sync_plugins.sh`. Added a public-hygiene leak guard
   (`tests/test_public_hygiene.py` + `.github/workflows/hygiene.yml`) that fails
   on internal-only references, with a planted-reference self-test.
+- **Canonical Scholia positioning** (#22). README opening, plugin
+  manifest descriptions (Claude Code + Codex), marketplace metadata,
+  `pyproject.toml` description, and the GitHub repo description now use
+  the canonical framing: Scholia helps agentic systems preserve
+  reasoning state, use tools without quality loss, and reduce context
+  cost across long-horizon work. MCP/plugin surfaces emphasize the
+  integration story (MCP, LSP, Codex/Claude Code/Ollama host recipes,
+  local DAG access). Copy-only; no tool or version changes.
+- **Live Claude Code exhaust capture** (#26). Default-on capture of Claude Code
+  session exhaust into the SQLite-backed Scholialang store (opt-out via
+  `SCHOLIA_EXHAUST=0`).
+- **Live Codex exhaust capture** (#27). Default-on Codex rollout exhaust capture,
+  matching the Claude Code behaviour.
+- **Scholia Live: multi-project viewer** (#25). Web viewer gains a multi-project
+  switcher and scope toggle, plus an atom feed-order toggle (newest/oldest first).
+
+## v0.6.0
+
 - **Scholia v0.6 vendored substrate catchup.** Refreshed the bundled
   `_scholia_vendored/{atoms,parser,validator}.py` from the published
   `scholialang` v0.6 (relative imports), so `scholia_lint_snippet` /

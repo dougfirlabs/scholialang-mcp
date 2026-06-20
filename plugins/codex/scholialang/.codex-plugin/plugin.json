@@ -1,7 +1,7 @@
 {
   "name": "scholialang",
-  "version": "0.2.1+codex.20260608040137",
-  "description": "Local Scholialang tracing with default per-project auto-emit and reference tools for Codex.",
+  "version": "0.6.1",
+  "description": "Preserve reasoning state across long-horizon work in Codex: local per-project auto-emit tracing and reference tools.",
   "author": {
     "name": "Doug Fir Labs",
     "url": "https://scholialang.org/"
@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "Scholialang",
     "shortDescription": "Track explicit work traces locally.",
-    "longDescription": "Scholialang adds local MCP tools for project-aware trace capture, compact summaries, search, export, and reference lookup. It stores traces on your machine and helps Codex retrieve small summaries instead of repeatedly carrying full work history in context.",
+    "longDescription": "Scholia helps agentic systems preserve reasoning state, use tools without quality loss, and reduce context cost across long-horizon work. This plugin adds local MCP tools for project-aware trace capture, compact summaries, search, export, and reference lookup. It stores traces on your machine and helps Codex retrieve small summaries instead of repeatedly carrying full work history in context.",
     "developerName": "Doug Fir Labs",
     "category": "Coding",
     "capabilities": [
