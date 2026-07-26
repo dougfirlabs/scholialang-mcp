@@ -87,6 +87,7 @@ def main() -> int:
     for name, source_path in SOURCE_FILES.items():
         source = _git(source_repo, "show", f"{commit}:{source_path}")
         vendored = _rewrite_imports(name, source)
+        compile(vendored, f"{commit}:{source_path}", "exec")
         rendered[name] = vendored
         provenance_files[name] = {
             "source_path": source_path,
