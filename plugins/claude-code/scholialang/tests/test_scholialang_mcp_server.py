@@ -635,7 +635,7 @@ class ScholialangValidatorTests(unittest.TestCase):
         self.assertIn("Concluding", result["scholia_atom_kinds_v05"])
         self.assertIn("scholia_canonical_operators_v05", result)
         self.assertIn("scholia_criticality_rank", result)
-        self.assertEqual(result["scholia_validator_version"], "0.6.1")
+        self.assertEqual(result["scholia_validator_version"], "0.6.2")
         # Back-compat aliases remain available for older clients.
         self.assertIn("scholia_atom_kinds_v04", result)
         self.assertIn("scholia_canonical_operators_v04", result)
@@ -724,12 +724,18 @@ class ScholialangPluginManifestTests(unittest.TestCase):
             "Ollama plugin server drifted from the Codex plugin server.",
         )
 
-    def test_installed_v06_scholialang_engine_is_accepted(self):
+    def test_installed_validator_must_meet_release_floor(self):
         class Atoms:
             ATOM_KINDS = ("Goal", "Concluding")
-            SCHOLIA_VALIDATOR_VERSION = "0.6.0"
+            SCHOLIA_VALIDATOR_VERSION = "0.6.2"
 
         self.assertTrue(server._has_goal_concluding(Atoms))
+        Atoms.SCHOLIA_VALIDATOR_VERSION = "0.6.1"
+        self.assertFalse(server._has_goal_concluding(Atoms))
+        Atoms.SCHOLIA_VALIDATOR_VERSION = "0.7.0"
+        self.assertFalse(server._has_goal_concluding(Atoms))
+        Atoms.SCHOLIA_VALIDATOR_VERSION = "1.0.0"
+        self.assertFalse(server._has_goal_concluding(Atoms))
 
 
 class FramingTests(unittest.TestCase):

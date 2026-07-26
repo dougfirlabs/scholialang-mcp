@@ -25,7 +25,7 @@ VALID_MODES = (MODE_OFF, MODE_ENABLED)
 SERVER_NAME = "mcp__scholialang__atlas"
 MCP_PROTOCOL_VERSION = "2024-11-05"
 SUPPORTED_MCP_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
-SERVER_VERSION = "0.6.1"
+SERVER_VERSION = "0.6.2"
 
 REFUSAL_STATUS = "refused"
 REFUSAL_REASON = "disabled_by_mode"
@@ -248,7 +248,7 @@ class ScholiaMCPServer:
                 "status": "unsupported",
                 "error": "regenerate_unavailable",
                 "path": path,
-                "hint": "regeneration is host-adapter specific in scholialang-mcp v0.6.1",
+                "hint": "regeneration is host-adapter specific in scholialang-mcp v0.6.2",
             }
         return {"status": "accepted", "path": path}
 

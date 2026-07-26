@@ -33,7 +33,7 @@ This repo provides:
 
 The repo is intentionally separate from `scholialang`, which contains the
 language model, parser, validator, and serializers. This package depends on
-`scholialang>=0.6.0` and tracks `scholialang-spec` v0.6.0.
+`scholialang>=0.6.2,<0.7` and tracks `scholialang-spec` v0.6.2.
 
 ## Install
 

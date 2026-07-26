@@ -968,7 +968,7 @@ def wire_name_for(kind: str, py_field: str) -> str:
 # constants are imported by parser/validator/tests so the canonical
 # set lives in one place. Bumping a set requires a spec doc update.
 
-SCHOLIA_VALIDATOR_VERSION: str = "0.6.1"
+SCHOLIA_VALIDATOR_VERSION: str = "0.6.2"
 
 V031_EDGE_TYPES: frozenset[str] = frozenset({
     "depends_on",

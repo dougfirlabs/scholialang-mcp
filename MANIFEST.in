@@ -1,0 +1,3 @@
+# Plugin/Scholia Live release contracts run from the repository but remain
+# outside the PyPI source and wheel distributions.
+exclude tests/test_v062_vendor_contract.py

@@ -1,0 +1,16 @@
+{
+  "commit": "eb238069df1c907674f688a46fa23b8179263e1a",
+  "files": {
+    "README.md": {
+      "sha256": "dc8bb7cd069f8ffd279c5ad2189d5cb213775343368a0089459bcd54566d5785",
+      "source_path": "conformance/v0.6.2/README.md"
+    },
+    "action_recorded.json": {
+      "sha256": "61b5fb9db03c9f3999028d32b614129f28925b26d566d4a165d1a9ca061620b5",
+      "source_path": "conformance/v0.6.2/action_recorded.json"
+    }
+  },
+  "schema": 1,
+  "source": "https://github.com/dougfirlabs/scholialang-spec",
+  "spec_version": "0.6.2"
+}

@@ -15,14 +15,30 @@ from pathlib import Path
 PROTOCOL_VERSION = "2025-11-25"
 SUPPORTED_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26")
 SERVER_NAME = "scholialang"
-SERVER_VERSION = "0.6.1"
+SERVER_VERSION = "0.6.2"
+MIN_VALIDATOR_VERSION = (0, 6, 2)
 MAX_TEXT = 6000
+
+
+def _validator_version_tuple(value):
+    match = re.match(r"^(\d+)\.(\d+)\.(\d+)", str(value))
+    if not match:
+        return None
+    return tuple(int(part) for part in match.groups())
 
 
 def _has_goal_concluding(atoms_mod):
     kinds = getattr(atoms_mod, "ATOM_KINDS", ())
-    version = getattr(atoms_mod, "SCHOLIA_VALIDATOR_VERSION", "")
-    return "Goal" in kinds and "Concluding" in kinds and str(version).startswith(("0.5", "0.6"))
+    version = _validator_version_tuple(
+        getattr(atoms_mod, "SCHOLIA_VALIDATOR_VERSION", "")
+    )
+    return (
+        "Goal" in kinds
+        and "Concluding" in kinds
+        and version is not None
+        and version[:2] == MIN_VALIDATOR_VERSION[:2]
+        and version >= MIN_VALIDATOR_VERSION
+    )
 
 
 def _load_scholia_engine():
