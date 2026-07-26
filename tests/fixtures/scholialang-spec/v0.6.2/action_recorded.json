@@ -1,0 +1,184 @@
+{
+  "schema_version": "1.0",
+  "spec_version": "0.6.2",
+  "validator_version": "0.6.2",
+  "rule": "action_recorded",
+  "title": "Scholia v0.6.2 cross-step Action result closure",
+  "description": "Shared positive and negative fixtures for Rule 4. Each expectation applies specifically to action_recorded; adapters may also assert whole-trace validity when no other rule is intentionally exercised.",
+  "cases": [
+    {
+      "id": "v062-action-recorded-nested-finding",
+      "category": "positive",
+      "description": "A Finding recursively nested inside the Action records its result.",
+      "trace": "<Step id=\"S_01\">\n  <Action id=\"Act_01\">Applied the requested change.\n    <Finding id=\"F_01\">The nested result is recorded.</Finding>\n  </Action>\n</Step>",
+      "graph_edges": [],
+      "expects": {
+        "rule": "action_recorded",
+        "outcome": "pass",
+        "error_count": 0
+      }
+    },
+    {
+      "id": "v062-action-recorded-nested-concluding",
+      "category": "positive",
+      "description": "A goal-closing Concluding recursively nested inside the Action records its result.",
+      "trace": "<Step id=\"S_01\">\n  <Goal id=\"G_01\" scope=\"trace\" priority=\"required\">Apply and verify the requested change.</Goal>\n  <Observation id=\"Obs_01\">The verification command passed.</Observation>\n  <Action id=\"Act_01\">Applied the requested change.\n    <Concluding id=\"C_01\" for_goal=\"G_01\" status=\"met\">REFER:Obs_01 establishes completion.</Concluding>\n  </Action>\n</Step>",
+      "graph_edges": [],
+      "expects": {
+        "rule": "action_recorded",
+        "outcome": "pass",
+        "error_count": 0
+      }
+    },
+    {
+      "id": "v062-action-recorded-immediate-sibling-finding",
+      "category": "positive",
+      "description": "An immediate Finding sibling in the same Step preserves the legacy acceptance form.",
+      "trace": "<Step id=\"S_01\">\n  <Action id=\"Act_01\">Applied the requested change.</Action>\n  <Finding id=\"F_01\">The immediate result is recorded.</Finding>\n</Step>",
+      "graph_edges": [],
+      "expects": {
+        "rule": "action_recorded",
+        "outcome": "pass",
+        "error_count": 0
+      }
+    },
+    {
+      "id": "v062-action-recorded-immediate-sibling-concluding",
+      "category": "positive",
+      "description": "An immediate goal-closing Concluding sibling in the same Step records the Action.",
+      "trace": "<Step id=\"S_01\">\n  <Goal id=\"G_01\" scope=\"trace\" priority=\"required\">Apply and verify the requested change.</Goal>\n  <Observation id=\"Obs_01\">The verification command passed.</Observation>\n  <Action id=\"Act_01\">Applied the requested change.</Action>\n  <Concluding id=\"C_01\" for_goal=\"G_01\" status=\"met\">REFER:Obs_01 establishes completion.</Concluding>\n</Step>",
+      "graph_edges": [],
+      "expects": {
+        "rule": "action_recorded",
+        "outcome": "pass",
+        "error_count": 0
+      }
+    },
+    {
+      "id": "v062-action-recorded-direct-cross-step-finding",
+      "category": "positive",
+      "description": "A later cross-step Finding directly REFERs the Action after an intervening Observation.",
+      "trace": "<Step id=\"S_01\">\n  <Action id=\"Act_01\">Applied the requested change.</Action>\n</Step>\n<Step id=\"S_02\">\n  <Observation id=\"Obs_01\">The scoped test command completed.</Observation>\n</Step>\n<Step id=\"S_03\">\n  <Finding id=\"F_01\">The scoped tests passed. REFER:Act_01</Finding>\n</Step>",
+      "graph_edges": [],
+      "expects": {
+        "rule": "action_recorded",
+        "outcome": "pass",
+        "error_count": 0
+      }
+    },
+    {
+      "id": "v062-action-recorded-indirect-observation-chain",
+      "category": "positive",
+      "description": "A later Finding REFERs an Observation that directly REFERs the Action.",
+      "trace": "<Step id=\"S_01\">\n  <Action id=\"Act_01\">Applied the requested change.</Action>\n</Step>\n<Step id=\"S_02\">\n  <Observation id=\"Obs_01\">The scoped tests passed. REFER:Act_01</Observation>\n</Step>\n<Step id=\"S_03\">\n  <Finding id=\"F_01\">The action result is verified. REFER:Obs_01</Finding>\n</Step>",
+      "graph_edges": [],
+      "expects": {
+        "rule": "action_recorded",
+        "outcome": "pass",
+        "error_count": 0
+      }
+    },
+    {
+      "id": "v062-action-recorded-indirect-evidence-chain",
+      "category": "positive",
+      "description": "A later Finding REFERs Evidence that directly REFERs the Action.",
+      "trace": "<Step id=\"S_01\">\n  <Action id=\"Act_01\">Applied the requested change.</Action>\n</Step>\n<Step id=\"S_02\">\n  <Evidence id=\"E_01\" polarity=\"supports\">The verification command passed. REFER:Act_01</Evidence>\n</Step>\n<Step id=\"S_03\">\n  <Finding id=\"F_01\">The action result is verified. REFER:E_01</Finding>\n</Step>",
+      "graph_edges": [],
+      "expects": {
+        "rule": "action_recorded",
+        "outcome": "pass",
+        "error_count": 0
+      }
+    },
+    {
+      "id": "v062-action-recorded-goal-closing-concluding",
+      "category": "positive",
+      "description": "A later Concluding directly REFERs the Action and closes a declared Goal.",
+      "trace": "<Step id=\"S_01\">\n  <Goal id=\"G_01\" scope=\"trace\" priority=\"required\">Apply and verify the requested change.</Goal>\n  <Action id=\"Act_01\">Applied the requested change.</Action>\n</Step>\n<Step id=\"S_02\">\n  <Observation id=\"Obs_01\">The scoped tests passed.</Observation>\n</Step>\n<Step id=\"S_03\">\n  <Concluding id=\"C_01\" for_goal=\"G_01\" status=\"met\">REFER:Act_01 AND REFER:Obs_01 establish completion.</Concluding>\n</Step>",
+      "graph_edges": [],
+      "expects": {
+        "rule": "action_recorded",
+        "outcome": "pass",
+        "error_count": 0
+      }
+    },
+    {
+      "id": "v062-action-recorded-records-result-edge",
+      "category": "positive",
+      "description": "A generic records_result graph edge links a Finding source to the Action target.",
+      "trace": "<Step id=\"S_01\">\n  <Action id=\"Act_01\">Applied the requested change.</Action>\n</Step>\n<Step id=\"S_02\">\n  <Observation id=\"Obs_01\">The scoped test command completed.</Observation>\n</Step>\n<Step id=\"S_03\">\n  <Finding id=\"F_01\">The scoped tests passed.</Finding>\n</Step>",
+      "graph_edges": [
+        {
+          "source_id": "F_01",
+          "target_id": "Act_01",
+          "relation": "records_result"
+        }
+      ],
+      "expects": {
+        "rule": "action_recorded",
+        "outcome": "pass",
+        "error_count": 0
+      }
+    },
+    {
+      "id": "v062-action-recorded-unrelated-later-finding",
+      "category": "negative",
+      "description": "A later Finding that only REFERs unrelated material does not record the Action.",
+      "trace": "<Step id=\"S_01\">\n  <Action id=\"Act_01\">Applied the requested change.</Action>\n</Step>\n<Step id=\"S_02\">\n  <Observation id=\"Obs_unrelated\">The weather report was retrieved.</Observation>\n</Step>\n<Step id=\"S_03\">\n  <Finding id=\"F_01\">The unrelated lookup completed. REFER:Obs_unrelated</Finding>\n</Step>",
+      "graph_edges": [],
+      "expects": {
+        "rule": "action_recorded",
+        "outcome": "fail",
+        "error_count": 1,
+        "atom_ids": [
+          "Act_01"
+        ]
+      }
+    },
+    {
+      "id": "v062-action-recorded-order-only-later-finding",
+      "category": "negative",
+      "description": "A non-immediate later Finding without an explicit provenance link is insufficient, even when it follows the Action chronologically.",
+      "trace": "<Step id=\"S_01\">\n  <Action id=\"Act_01\">Applied the requested change.</Action>\n</Step>\n<Step id=\"S_02\">\n  <Observation id=\"Obs_01\">The scoped test command completed.</Observation>\n</Step>\n<Step id=\"S_03\">\n  <Finding id=\"F_01\">The scoped tests passed.</Finding>\n</Step>",
+      "graph_edges": [],
+      "expects": {
+        "rule": "action_recorded",
+        "outcome": "fail",
+        "error_count": 1,
+        "atom_ids": [
+          "Act_01"
+        ]
+      }
+    },
+    {
+      "id": "v062-action-recorded-next-step-order-only-finding",
+      "category": "negative",
+      "description": "An unlinked Finding at the start of the next Step is not an immediate same-Step sibling and does not record the Action.",
+      "trace": "<Step id=\"S_01\">\n  <Action id=\"Act_01\">Applied the requested change.</Action>\n</Step>\n<Step id=\"S_02\">\n  <Finding id=\"F_01\">The scoped tests passed.</Finding>\n</Step>",
+      "graph_edges": [],
+      "expects": {
+        "rule": "action_recorded",
+        "outcome": "fail",
+        "error_count": 1,
+        "atom_ids": [
+          "Act_01"
+        ]
+      }
+    },
+    {
+      "id": "v062-action-recorded-unclosed-action",
+      "category": "negative",
+      "description": "An Action with no recording result remains invalid.",
+      "trace": "<Step id=\"S_01\">\n  <Action id=\"Act_01\">Applied the requested change.</Action>\n</Step>",
+      "graph_edges": [],
+      "expects": {
+        "rule": "action_recorded",
+        "outcome": "fail",
+        "error_count": 1,
+        "atom_ids": [
+          "Act_01"
+        ]
+      }
+    }
+  ]
+}

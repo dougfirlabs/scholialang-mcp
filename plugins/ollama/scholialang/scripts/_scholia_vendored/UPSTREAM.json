@@ -1,0 +1,41 @@
+{
+  "commit": "ff58c2e17de8ec2b7e5536588b01b29e0c4cb60a",
+  "files": {
+    "atoms.py": {
+      "source_path": "src/scholialang/atoms.py",
+      "source_sha256": "31e23a73436b1a05f2d89897e9bb125867c5e6dfe60944ba7cd419669f993a84",
+      "vendored_sha256": "31e23a73436b1a05f2d89897e9bb125867c5e6dfe60944ba7cd419669f993a84"
+    },
+    "parser.py": {
+      "source_path": "src/scholialang/parser.py",
+      "source_sha256": "69ba81f85802c64a465c6b8e10e445ee30a66d1dc7efce21918b71a45a17db20",
+      "vendored_sha256": "e126c6a785958f586e724dbf86074903e75aef960ec99b04367ab07f1c199431"
+    },
+    "validator.py": {
+      "source_path": "src/scholialang/validator.py",
+      "source_sha256": "c43f552d1a65ff63280193e5afbb374260955b3012e97cd8f4a04b8814657c4b",
+      "vendored_sha256": "28d0ff1d4116f0d47a230223d9c8fb22bd05f6fccc4305285e577834d0775db6"
+    }
+  },
+  "import_rewrites": {
+    "parser.py": [
+      {
+        "from": "from scholialang.atoms import (",
+        "to": "from .atoms import ("
+      },
+      {
+        "from": "from scholialang import atoms as _atoms_module",
+        "to": "from . import atoms as _atoms_module"
+      }
+    ],
+    "validator.py": [
+      {
+        "from": "from scholialang.atoms import (",
+        "to": "from .atoms import ("
+      }
+    ]
+  },
+  "schema": 1,
+  "source": "https://github.com/dougfirlabs/scholialang",
+  "validator_version": "0.6.2"
+}

@@ -6,8 +6,9 @@ criticality_non_decreasing + the three warnings), and the v0.6
 content-addressable additions — ``canonical_id_well_formed`` (a universal
 recompute-and-compare hard-fail) and the canonical-id-aware
 ``reference_complete`` rule fed by the 4-path :func:`resolve_refer`
-resolver. ``SCHOLIA_VALIDATOR_VERSION`` (tracked separately from the
-package version) reads ``0.6.1``.
+resolver. v0.6.2 extends ``action_recorded`` to accept later, explicitly
+REFER-linked results across Step boundaries. ``SCHOLIA_VALIDATOR_VERSION``
+(tracked separately from the package version) reads ``0.6.2``.
 
 Each rule is its own pure function for unit-testability. They all
 take the trace + a pre-built reference index (id → atom) and return
@@ -116,6 +117,8 @@ WARNING_RULE_NAMES: tuple[str, ...] = (
     RULE_MIN_CONFIDENCE_CEILING,
 )
 
+CONCLUSION_TYPES = (Finding, Concluding)
+
 
 @dataclass(frozen=True)
 class ValidationError:
@@ -221,10 +224,6 @@ def _iter_operator_refs(atom: Atom):
             yield op, target
 
 
-_REFER_RE: re.Pattern[str] = re.compile(
-    r"\bREFER\s*:\s*([A-Za-z][A-Za-z0-9_]*)"
-)
-
 _ACTION_MODAL_RE: re.Pattern[str] = re.compile(
     r"\b(should|will|recommend|choose|propose|recommends?|proposes?|chooses?)\s+\w+",
     re.IGNORECASE,
@@ -242,8 +241,49 @@ def _parse_float(value: Any) -> Optional[float]:
         return None
 
 
-def _refer_targets(atom: Atom) -> list[str]:
-    return _REFER_RE.findall(atom.content or "")
+def _refer_targets(atom: Atom) -> set[str]:
+    """Return exact ``REFER:`` targets declared on ``atom``.
+
+    Parser-produced atoms populate ``operators``; hand-built tests and older
+    persisted traces may carry only inline content. Scan both representations
+    so semantic closure does not depend on which construction path was used.
+    """
+    targets = {
+        target
+        for op, target in _iter_operator_refs(atom)
+        if op == "REFER" and target
+    }
+    targets.update(
+        target
+        for op, target in parse_operators_from_content(atom.content)
+        if op == "REFER" and target
+    )
+    return targets
+
+
+def _graph_has_edge(
+    graph: Any,
+    *,
+    edge_type: str,
+    source_id: str | None = None,
+    target_id: str | None = None,
+) -> bool:
+    """Query the optional validator graph through its minimal protocol."""
+    if graph is None:
+        return False
+    has_edge = getattr(graph, "has_edge", None)
+    if not callable(has_edge):
+        return False
+    try:
+        return bool(
+            has_edge(
+                edge_type=edge_type,
+                source_id=source_id,
+                target_id=target_id,
+            )
+        )
+    except TypeError:
+        return False
 
 
 def _atom_criticality(atom: Atom) -> Optional[str]:
@@ -640,36 +680,81 @@ def check_decision_closed(
 
 
 def check_action_recorded(
-    trace: list[Step], _index: dict[str, Atom]
+    trace: list[Step], _index: dict[str, Atom], graph: Any = None
 ) -> list[ValidationError]:
-    """Rule 4 — every ``<Action>`` is followed by or contains a Finding.
+    """Rule 4 — every ``<Action>`` produces a recorded conclusion.
 
-    The §8 composition rule says an Action must produce a Finding. We
-    accept either a direct child Finding or a sibling Finding that
-    appears later in the same Step — agents often write the Finding
-    as a peer atom rather than nesting it.
+    The §8 composition rule accepts a nested Finding/Concluding, an immediate
+    same-Step sibling Finding/Concluding, or a later same-trace result that
+    explicitly links back. A later Finding may REFER the Action directly or
+    REFER an Observation/Evidence that itself REFERs the Action. A later
+    Concluding must REFER the Action directly and close a Goal. A
+    ``records_result`` graph edge targeting the Action is also sufficient when
+    callers provide a graph with a compatible ``has_edge`` method.
+    Chronological order alone is deliberately insufficient for non-immediate
+    siblings.
     """
     errors: list[ValidationError] = []
-    for step in trace:
-        # Build pre-order list of (index, atom) for siblings.
-        for i, atom in enumerate(step.atoms):
-            if not isinstance(atom, Action):
-                continue
-            has_nested = any(isinstance(c, Finding) for c in atom.children)
-            has_sibling = any(
-                isinstance(sib, Finding) for sib in step.atoms[i + 1 :]
-            )
-            if not (has_nested or has_sibling):
-                errors.append(
-                    ValidationError(
-                        rule=RULE_ACTION_RECORDED,
-                        atom_id=atom.id or "",
-                        message=(
-                            "Action has no recording Finding (neither "
-                            "nested nor sibling)."
-                        ),
-                    )
+    ordered_atoms = [
+        (step_index, atom_index, atom)
+        for step_index, step in enumerate(trace)
+        for atom_index, atom in enumerate(step.atoms)
+    ]
+    for i, (step_index, atom_index, atom) in enumerate(ordered_atoms):
+        if not isinstance(atom, Action):
+            continue
+        action_id = atom.id or ""
+        later_atoms = [entry[2] for entry in ordered_atoms[i + 1 :]]
+        has_nested = any(
+            isinstance(descendant, CONCLUSION_TYPES)
+            for child in atom.children
+            for descendant in _descend(child)
+        )
+        step_atoms = trace[step_index].atoms
+        has_immediate_sibling = (
+            atom_index + 1 < len(step_atoms)
+            and isinstance(step_atoms[atom_index + 1], CONCLUSION_TYPES)
+        )
+        direct_result_sources = {
+            sibling.id
+            for sibling in later_atoms
+            if isinstance(sibling, (Observation, Evidence))
+            and sibling.id
+            and action_id
+            and action_id in _refer_targets(sibling)
+        }
+        has_linked_result = False
+        if action_id:
+            if _graph_has_edge(
+                graph,
+                edge_type="records_result",
+                target_id=action_id,
+            ):
+                has_linked_result = True
+            for sibling in later_atoms:
+                if isinstance(sibling, Finding):
+                    refs = _refer_targets(sibling)
+                    if action_id in refs or refs.intersection(direct_result_sources):
+                        has_linked_result = True
+                        break
+                if (
+                    isinstance(sibling, Concluding)
+                    and sibling.for_goal
+                    and action_id in _refer_targets(sibling)
+                ):
+                    has_linked_result = True
+                    break
+        if not (has_nested or has_immediate_sibling or has_linked_result):
+            errors.append(
+                ValidationError(
+                    rule=RULE_ACTION_RECORDED,
+                    atom_id=action_id,
+                    message=(
+                        "Action has no recording Finding/Concluding (neither "
+                        "nested, immediate sibling, nor later linked result)."
+                    ),
                 )
+            )
     return errors
 
 
@@ -1388,11 +1473,14 @@ _WARNING_RULES: tuple[
 )
 
 
-def validate(trace: list[Step]) -> ValidationResult:
-    """Run all v0.5 rules against ``trace`` and return a ``ValidationResult``.
+def validate(trace: list[Step], *, graph: Any = None) -> ValidationResult:
+    """Run all rules against ``trace`` and return a ``ValidationResult``.
 
     Warning rules are non-fatal: ``ok`` is true when there are no
-    errors, even if warnings are present.
+    errors, even if warnings are present. ``graph`` is optional and
+    duck-typed; when it exposes ``has_edge(...)``, Rule 4 can recognize
+    a persisted ``records_result`` edge without coupling this package to
+    a particular graph implementation.
     """
     index = _build_id_index(trace)
     errors: list[ValidationError] = []
@@ -1404,7 +1492,10 @@ def validate(trace: list[Step]) -> ValidationResult:
         name: [] for name in RULE_NAMES
     }
     for name, rule in _RULES:
-        rule_errors = rule(trace, index)
+        if name == RULE_ACTION_RECORDED:
+            rule_errors = check_action_recorded(trace, index, graph)
+        else:
+            rule_errors = rule(trace, index)
         errors.extend(rule_errors)
         errors_by_rule[name] = rule_errors
     for name, rule in _WARNING_RULES:

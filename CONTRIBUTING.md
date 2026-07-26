@@ -27,6 +27,7 @@ public `scholialang` repository, then propagate it byte-identically:
 
 ```sh
 python scripts/vendor_scholialang.py ../scholialang <merged-commit-sha>
+python scripts/vendor_spec_conformance.py ../scholialang-spec <tagged-commit-sha>
 scripts/sync_plugins.sh
 PYTHONPATH=src pytest
 python -m build

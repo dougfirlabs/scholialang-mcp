@@ -36,7 +36,7 @@ def _has_goal_concluding(atoms_mod):
         "Goal" in kinds
         and "Concluding" in kinds
         and version is not None
-        and version[0] == MIN_VALIDATOR_VERSION[0]
+        and version[:2] == MIN_VALIDATOR_VERSION[:2]
         and version >= MIN_VALIDATOR_VERSION
     )
 

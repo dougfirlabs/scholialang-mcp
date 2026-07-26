@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.6.2
+
+- **Cross-step Action result closure.** Vendored the merged and tagged
+  `scholialang` v0.6.2 parser and validator into all three host plugins.
+  `action_recorded` now accepts nested results at any descendant depth,
+  immediate same-Step result siblings, explicitly linked later
+  Finding/Observation/Evidence chains, goal-closing Concludings, and optional
+  `records_result` graph edges. Unrelated, order-only, next-Step-unlinked, and
+  unclosed Actions remain invalid.
+- **Shared conformance contract.** Imported the exact tagged
+  `scholialang-spec` v0.6.2 13-case positive/negative corpus and run it directly
+  against the bundled validator. Commit-addressed vendor tools record source
+  and rendered hashes, while release tests enforce byte identity across the
+  Claude Code, Codex, and Ollama plugin copies.
+- **Release and runtime parity.** Bumped package, MCP/LSP servers, plugin
+  manifests, marketplace metadata, and validator reporting to `0.6.2`; fixed
+  the stale `scholialang_mcp.__version__` value. The Python dependency is
+  bounded to `scholialang>=0.6.2,<0.7`, and plugins reject an older installed
+  validator before falling back to their bundled v0.6.2 engine.
+- **Publication hardening.** PyPI publication now runs the complete test suite,
+  checks release-tag/version parity, builds both distributions, and validates
+  their metadata before trusted publishing. The PyPI wheel remains limited to
+  the MCP/LSP core; host plugins and Scholia Live remain separate marketplace
+  artifacts.
+
 ## v0.6.1
 
 - **Scholia v0.6.1 propagation — `status=` on `<Concluding>`.** Re-synced the

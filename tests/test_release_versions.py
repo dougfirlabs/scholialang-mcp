@@ -31,7 +31,7 @@ def _json(path: str) -> dict:
 def test_python_package_versions_and_dependency_are_aligned():
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
     assert metadata["version"] == RELEASE_VERSION
-    assert metadata["dependencies"] == [f"scholialang>={RELEASE_VERSION}"]
+    assert metadata["dependencies"] == [f"scholialang>={RELEASE_VERSION},<0.7"]
     assert scholialang_mcp.__version__ == RELEASE_VERSION
     assert _constant(ROOT / "src/scholialang_mcp/server.py", "SERVER_VERSION") == RELEASE_VERSION
     assert _constant(ROOT / "src/scholialang_mcp/lsp/server.py", "SERVER_VERSION") == RELEASE_VERSION
