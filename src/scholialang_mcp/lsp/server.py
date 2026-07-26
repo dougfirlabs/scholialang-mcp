@@ -21,7 +21,7 @@ from typing import Any, BinaryIO, Optional
 from urllib.parse import unquote, urlparse
 from urllib.request import pathname2url
 
-SERVER_VERSION = "0.6.1"
+SERVER_VERSION = "0.6.2"
 
 ATTR_RE = re.compile(r"""\b(?P<name>location|target)\s*=\s*(?P<quote>['"])(?P<value>.*?)(?P=quote)""")
 

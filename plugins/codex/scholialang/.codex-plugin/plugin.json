@@ -1,6 +1,6 @@
 {
   "name": "scholialang",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Preserve reasoning state across long-horizon work in Codex: local per-project auto-emit tracing and reference tools.",
   "author": {
     "name": "Doug Fir Labs",
