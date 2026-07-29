@@ -23,9 +23,29 @@ MODE_ENABLED = "enabled"
 VALID_MODES = (MODE_OFF, MODE_ENABLED)
 
 SERVER_NAME = "mcp__scholialang__atlas"
-MCP_PROTOCOL_VERSION = "2024-11-05"
-SUPPORTED_MCP_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
+# Preferred protocol version = the stable 2026-07-28 release. Older revisions
+# stay supported so the adapter is dual-version: pre-handshake-removal hosts
+# keep working via ``initialize`` while 2026-07-28 hosts use ``server/discover``
+# + per-request ``_meta`` version carriage.
+MCP_PROTOCOL_VERSION = "2026-07-28"
+SUPPORTED_MCP_PROTOCOL_VERSIONS = (
+    "2026-07-28",
+    "2025-11-25",
+    "2025-06-18",
+    "2025-03-26",
+    "2024-11-05",
+)
 SERVER_VERSION = "0.6.2"
+
+# MCP 2026-07-28 ``_meta`` keys (SEP-2575 / SEP-2322 / SEP-2549).
+META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion"
+META_SERVER_INFO = "io.modelcontextprotocol/serverInfo"
+# JSON-RPC error code for a version the server does not support (renumbered
+# -32004 -> -32022 in 2026-07-28's error-code allocation policy).
+UNSUPPORTED_PROTOCOL_VERSION = -32022
+# CacheableResult hint for the static tool catalog: it only changes on a server
+# upgrade, so a public 5-minute freshness window is safe and cuts re-polling.
+TOOLS_LIST_TTL_MS = 300_000
 
 REFUSAL_STATUS = "refused"
 REFUSAL_REASON = "disabled_by_mode"
@@ -325,7 +345,21 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
 ]
 
 
+def _server_info() -> dict[str, Any]:
+    return {"name": SERVER_NAME, "version": SERVER_VERSION}
+
+
 def _ok(request_id: Any, result: Any) -> dict[str, Any]:
+    # 2026-07-28: every result carries ``resultType`` (SEP-2322) and the
+    # server identifies itself in ``_meta`` (SEP-2575). Both are additive —
+    # earlier-protocol clients ignore the extra keys and, per spec, treat a
+    # missing ``resultType`` as ``"complete"`` — so this stays dual-version.
+    if isinstance(result, dict):
+        result = dict(result)
+        result.setdefault("resultType", "complete")
+        meta = dict(result.get("_meta") or {})
+        meta.setdefault(META_SERVER_INFO, _server_info())
+        result["_meta"] = meta
     return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
 
@@ -353,11 +387,35 @@ def _invoke_tool(server: ScholiaMCPServer, name: str, args: dict[str, Any]) -> d
     raise KeyError(name)
 
 
+def _requested_protocol_version(params: dict[str, Any]) -> Optional[str]:
+    """The protocol version a request declares, new (``_meta``) or old.
+
+    2026-07-28 hosts put the version in ``_meta`` (there is no ``initialize``
+    handshake to negotiate it); pre-2026 hosts put it in ``params`` on
+    ``initialize``. Reading both keeps one code path for both eras.
+    """
+    meta = params.get("_meta")
+    if isinstance(meta, dict) and meta.get(META_PROTOCOL_VERSION):
+        return str(meta.get(META_PROTOCOL_VERSION))
+    if params.get("protocolVersion"):
+        return str(params.get("protocolVersion"))
+    return None
+
+
 def _negotiated_protocol_version(params: dict[str, Any]) -> str:
-    requested = params.get("protocolVersion")
+    requested = _requested_protocol_version(params)
     if requested in SUPPORTED_MCP_PROTOCOL_VERSIONS:
         return str(requested)
     return MCP_PROTOCOL_VERSION
+
+
+def _discover_result() -> dict[str, Any]:
+    """``server/discover`` payload — advertised versions, capabilities, identity."""
+    return {
+        "protocolVersions": list(SUPPORTED_MCP_PROTOCOL_VERSIONS),
+        "capabilities": {"tools": {"listChanged": False}},
+        "serverInfo": _server_info(),
+    }
 
 
 def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Optional[dict[str, Any]]:
@@ -370,19 +428,48 @@ def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Option
     if not isinstance(params, dict):
         return _err(request_id, -32602, "params must be a JSON object")
 
+    # 2026-07-28: a request that explicitly declares an unsupported protocol
+    # version fails closed with UnsupportedProtocolVersion (SEP-2575). A
+    # request that declares nothing, or a supported version, proceeds — so
+    # legacy hosts are unaffected.
+    declared = _requested_protocol_version(params)
+    if declared is not None and declared not in SUPPORTED_MCP_PROTOCOL_VERSIONS:
+        return _err(
+            request_id,
+            UNSUPPORTED_PROTOCOL_VERSION,
+            f"unsupported protocol version: {declared}",
+        )
+
+    # 2026-07-28 MUST: advertise supported versions, capabilities, identity.
+    # Also serves as the STDIO backward-compatibility probe for new hosts.
+    if method == "server/discover":
+        return _ok(request_id, _discover_result())
+    # Legacy handshake — retained for pre-2026 hosts (dual-version). New hosts
+    # never send it; they call server/discover and carry version in _meta.
     if method == "initialize":
         return _ok(
             request_id,
             {
                 "protocolVersion": _negotiated_protocol_version(params),
                 "capabilities": {"tools": {"listChanged": False}},
-                "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
+                "serverInfo": _server_info(),
             },
         )
+    # ping was removed in 2026-07-28 but kept here as a no-op so pre-2026 hosts
+    # that still heartbeat do not break.
     if method == "ping":
         return _ok(request_id, {})
     if method == "tools/list":
-        return _ok(request_id, {"tools": list(TOOL_DEFINITIONS)})
+        # CacheableResult (SEP-2549): the tool catalog is static between server
+        # upgrades, so advertise a public freshness window.
+        return _ok(
+            request_id,
+            {
+                "tools": list(TOOL_DEFINITIONS),
+                "ttlMs": TOOLS_LIST_TTL_MS,
+                "cacheScope": "public",
+            },
+        )
     if method == "tools/call":
         tool_name = str(params.get("name", ""))
         tool_args = params.get("arguments") or {}
