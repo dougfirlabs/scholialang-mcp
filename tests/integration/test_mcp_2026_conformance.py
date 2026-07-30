@@ -85,8 +85,34 @@ def test_stateless_request_reads_version_from_meta_and_lists_cacheable() -> None
         assert isinstance(res["tools"], list) and res["tools"]
         assert res["resultType"] == "complete"
         assert isinstance(res["ttlMs"], int) and res["ttlMs"] > 0
-        assert res["cacheScope"] in ("public", "private")
+        # PRD mcp-2026-07-28-prd-01: cache scope is private — this server runs
+        # against one operator's project, nothing may hit a shared cache.
+        assert res["cacheScope"] == "private"
         assert META_SERVER_INFO in res["_meta"]
+    finally:
+        proc.terminate()
+
+
+def test_tools_list_ordering_is_deterministic() -> None:
+    proc = _server()
+    try:
+        first = _rpc(proc, {"jsonrpc": "2.0", "id": 20, "method": "tools/list", "params": {}})
+        second = _rpc(proc, {"jsonrpc": "2.0", "id": 21, "method": "tools/list", "params": {}})
+        names = [t["name"] for t in first["result"]["tools"]]
+        assert names == [t["name"] for t in second["result"]["tools"]]
+        assert len(names) == len(set(names))
+    finally:
+        proc.terminate()
+
+
+def test_unknown_method_is_not_dispatched_as_tool() -> None:
+    # 0.6.2 dispatched unknown JSON-RPC methods as direct tool invocations
+    # (audit p7). That undocumented surface is removed: tools are reachable
+    # only through tools/call.
+    proc = _server()
+    try:
+        r = _rpc(proc, {"jsonrpc": "2.0", "id": 22, "method": "get_tree", "params": {}})
+        assert r["error"]["code"] == -32601
     finally:
         proc.terminate()
 
@@ -104,6 +130,44 @@ def test_unsupported_version_fails_closed() -> None:
             },
         )
         assert r["error"]["code"] == UNSUPPORTED_PROTOCOL_VERSION
+    finally:
+        proc.terminate()
+
+
+def test_mixed_version_request_cannot_silently_mis_negotiate() -> None:
+    """An unsupported version anywhere in the request fails closed.
+
+    Legacy negotiation allowed a server to counter-offer its preferred
+    version; the PRD forbids that silent fallback. ``_meta`` (the 2026-07-28
+    carrier) takes precedence over legacy ``params.protocolVersion``, so a
+    request declaring an unsupported ``_meta`` version fails even when the
+    legacy field carries a supported one.
+    """
+    proc = _server()
+    try:
+        legacy_init = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 30,
+                "method": "initialize",
+                "params": {"protocolVersion": "2023-01-01", "capabilities": {}},
+            },
+        )
+        assert legacy_init["error"]["code"] == UNSUPPORTED_PROTOCOL_VERSION
+        mixed = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 31,
+                "method": "tools/list",
+                "params": {
+                    "_meta": {META_PROTOCOL_VERSION: "1999-01-01"},
+                    "protocolVersion": "2025-11-25",
+                },
+            },
+        )
+        assert mixed["error"]["code"] == UNSUPPORTED_PROTOCOL_VERSION
     finally:
         proc.terminate()
 

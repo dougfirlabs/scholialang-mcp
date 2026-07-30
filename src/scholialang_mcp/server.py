@@ -43,9 +43,15 @@ META_SERVER_INFO = "io.modelcontextprotocol/serverInfo"
 # JSON-RPC error code for a version the server does not support (renumbered
 # -32004 -> -32022 in 2026-07-28's error-code allocation policy).
 UNSUPPORTED_PROTOCOL_VERSION = -32022
-# CacheableResult hint for the static tool catalog: it only changes on a server
-# upgrade, so a public 5-minute freshness window is safe and cuts re-polling.
+# CacheableResult hints (SEP-2549). The tool catalog only changes on a server
+# upgrade, so a 5-minute freshness window is safe and cuts re-polling. Scope is
+# ``private``: this server runs locally against one operator's project, so
+# nothing it returns may be shared through a cross-client cache (PRD
+# mcp-2026-07-28-prd-01 requires the private scope verified; the catalog is
+# harmless today, but private is the uniform safe default for every result
+# this server can emit).
 TOOLS_LIST_TTL_MS = 300_000
+CACHE_SCOPE = "private"
 
 REFUSAL_STATUS = "refused"
 REFUSAL_REASON = "disabled_by_mode"
@@ -460,14 +466,15 @@ def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Option
     if method == "ping":
         return _ok(request_id, {})
     if method == "tools/list":
-        # CacheableResult (SEP-2549): the tool catalog is static between server
-        # upgrades, so advertise a public freshness window.
+        # CacheableResult (SEP-2549): static catalog, private scope (see
+        # CACHE_SCOPE). Definition order is the wire order — deterministic
+        # across calls and processes per the 2026-07-28 SHOULD.
         return _ok(
             request_id,
             {
                 "tools": list(TOOL_DEFINITIONS),
                 "ttlMs": TOOLS_LIST_TTL_MS,
-                "cacheScope": "public",
+                "cacheScope": CACHE_SCOPE,
             },
         )
     if method == "tools/call":
@@ -487,11 +494,10 @@ def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Option
             },
         )
 
-    try:
-        result = _invoke_tool(server, method, params)
-    except KeyError:
-        return _err(request_id, -32601, f"unknown method: {method}")
-    return _ok(request_id, result)
+    # Unknown JSON-RPC methods fail with -32601. 0.6.2 additionally dispatched
+    # unknown methods as direct tool invocations (audit p7); that undocumented
+    # surface is removed — tools are reachable only through ``tools/call``.
+    return _err(request_id, -32601, f"unknown method: {method}")
 
 
 def codex_config_snippet(repo_root: Path, *, python_bin: Optional[str] = None) -> str:
