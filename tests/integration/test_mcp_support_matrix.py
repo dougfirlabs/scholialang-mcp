@@ -22,7 +22,9 @@ FIXTURE = ROOT / "tests" / "fixtures" / "atlas" / "sample"
 PLUGIN_SERVER = ROOT / "plugins" / "claude-code" / "scholialang" / "scripts" / "scholialang_mcp_server.py"
 
 META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion"
+META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities"
 UNSUPPORTED_PROTOCOL_VERSION = -32022
+MODERN_VERSION = "2026-07-28"
 
 # The union of both servers' version tables; per-server support is probed, not
 # assumed, so a table drift in either server changes the generated matrix.
@@ -66,51 +68,96 @@ def _rpc(proc: "subprocess.Popen[str]", payload: dict[str, object]) -> dict[str,
     return json.loads(line)
 
 
+def _modern_meta(version: str = MODERN_VERSION) -> dict[str, object]:
+    return {
+        META_PROTOCOL_VERSION: version,
+        META_CLIENT_CAPABILITIES: {},
+    }
+
+
 def _probe_version(spawn, version: str) -> str:
-    """One matrix cell: legacy handshake + stateless request at ``version``."""
+    """Probe the lifecycle appropriate to the requested protocol era."""
     proc = spawn()
     try:
+        if version == MODERN_VERSION:
+            modern = _rpc(
+                proc,
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/list",
+                    "params": {"_meta": _modern_meta()},
+                },
+            )
+            removed = _rpc(
+                proc,
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "ping",
+                    "params": {"_meta": _modern_meta()},
+                },
+            )
+            assert "result" in modern
+            assert removed["error"]["code"] == -32601
+            return "modern stateless"
+
+        if version == UNSUPPORTED_PROBE_VERSION:
+            unsupported = _rpc(
+                proc,
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/list",
+                    "params": {"_meta": _modern_meta(version)},
+                },
+            )
+            assert unsupported["error"]["code"] == UNSUPPORTED_PROTOCOL_VERSION
+            assert unsupported["error"]["data"]["requested"] == version
+            return "rejected (-32022)"
+
         init = _rpc(
             proc,
             {
                 "jsonrpc": "2.0",
-                "id": 1,
+                "id": 4,
                 "method": "initialize",
                 "params": {"protocolVersion": version, "capabilities": {}},
             },
         )
-        stateless = _rpc(
+        legacy = _rpc(
             proc,
-            {
-                "jsonrpc": "2.0",
-                "id": 2,
-                "method": "tools/list",
-                "params": {"_meta": {META_PROTOCOL_VERSION: version}},
-            },
+            {"jsonrpc": "2.0", "id": 5, "method": "tools/list", "params": {}},
         )
     finally:
         proc.terminate()
     init_err = init.get("error")
-    stateless_err = stateless.get("error")
-    if init_err is None and stateless_err is None:
+    legacy_err = legacy.get("error")
+    if init_err is None and legacy_err is None:
         negotiated = init["result"]["protocolVersion"]
         assert negotiated == version, f"silent mis-negotiation: {version} -> {negotiated}"
-        return "supported"
-    # Fail-closed is the only acceptable rejection (no silent fallback).
-    for err in (init_err, stateless_err):
-        assert err is not None and err["code"] == UNSUPPORTED_PROTOCOL_VERSION, (
-            f"version {version} rejected with a non--32022 shape: {init} / {stateless}"
-        )
+        return "legacy handshake"
+    assert init_err is not None and init_err["code"] == UNSUPPORTED_PROTOCOL_VERSION, (
+        f"version {version} rejected with a non--32022 shape: {init}"
+    )
     return "rejected (-32022)"
 
 
 def _probe_discover(spawn) -> str:
     proc = spawn()
     try:
-        r = _rpc(proc, {"jsonrpc": "2.0", "id": 1, "method": "server/discover", "params": {}})
+        r = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "server/discover",
+                "params": {"_meta": _modern_meta()},
+            },
+        )
     finally:
         proc.terminate()
-    versions = r["result"]["protocolVersions"]
+    versions = r["result"]["supportedVersions"]
     return "yes: " + ", ".join(versions)
 
 
@@ -126,11 +173,11 @@ def _generate_matrix() -> str:
         "SCHOLIA_REGEN_SUPPORT_MATRIX=1 python -m pytest tests/integration/test_mcp_support_matrix.py",
         "```",
         "",
-        "Each *supported* cell means the server passed both a legacy",
-        "`initialize` handshake at that version and a stateless 2026-07-28",
-        "`_meta`-carried request at that version. Each *rejected* cell means",
-        "both probes failed closed with `-32022 UnsupportedProtocolVersion`",
-        "(never a silent fallback).",
+        "The 2026-07-28 cell passes a stateless `_meta`-carried request and",
+        "confirms removed lifecycle methods return `-32601 MethodNotFound`.",
+        "Pre-2026 cells pass the legacy `initialize` lifecycle at that version.",
+        "Rejected cells fail closed with `-32022 UnsupportedProtocolVersion`",
+        "and include the final-stable `supported` / `requested` error data.",
         "",
     ]
     header = ["protocol version"] + list(SERVERS)

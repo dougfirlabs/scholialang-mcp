@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.7.0
+
+- **Final-stable MCP 2026-07-28 adapter.** Added the stateless, per-request
+  protocol path alongside the existing legacy handshake path. Discovery now
+  returns `supportedVersions`, cache metadata, and server identity in result
+  `_meta`; modern requests require their protocol version and client
+  capabilities.
+- **Strict dual-era lifecycle.** Requests declaring MCP 2026-07-28 reject
+  removed `initialize`, `ping`, `logging/setLevel`, and resource subscription
+  methods with `-32601 MethodNotFound`. Pre-2026 clients retain their supported
+  `initialize` and `ping` behavior throughout the 0.7.x line.
+- **Auditable version failures.** Unsupported versions fail closed with the
+  final `-32022` error shape, including the requested version and the server's
+  supported-version list. The generated support matrix probes both wheel and
+  vendored-plugin servers over real stdio.
+- **Package and host parity.** Bumped the integration package, MCP/LSP server
+  identities, Claude Code and Codex plugin manifests, and marketplace metadata
+  to 0.7.0. The Scholia language, validator, conformance corpus, and dependency
+  remain intentionally pinned to the separately versioned 0.6.2 release.
+- **Release reliability.** The Python test matrix covers 3.11, 3.12, and 3.13;
+  Codex exhaust watcher tests no longer depend on ambient rollout state.
+
 ## v0.6.2
 
 - **Cross-step Action result closure.** Vendored the merged and tagged

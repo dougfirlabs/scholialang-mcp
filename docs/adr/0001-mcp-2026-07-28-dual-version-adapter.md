@@ -3,6 +3,8 @@
 - **Status**: accepted (PRD `mcp-2026-07-28-prd-01-dual-version-adapter`, story MCP01-S1)
 - **Date**: 2026-07-29
 - **Context**: PRD-00 compatibility audit (internal report, 2026-07-28) — v0.6.2 FAILs MCP 2026-07-28 core conformance on both server surfaces while legacy stdio lifecycles (2024-11-05 … 2025-11-25) are fully functional.
+- **Final-stable source**: upstream tag `2026-07-28`, commit
+  `5f5440bb26a62e2cf3440b92da5a667efa03b267`.
 
 ## Decision
 
@@ -47,17 +49,22 @@ named layer per surface; domain code never reads or writes protocol fields:
 
 Selection rules (identical on both surfaces):
 
-1. `server/discover` is always answered — it is the version-agnostic probe.
+1. `server/discover` is answered for a well-formed modern request and is the
+   stdio era probe. A probe missing the required modern `_meta` receives
+   `-32602`.
 2. A request carrying `_meta["io.modelcontextprotocol/protocolVersion"]`
    (2026-07-28 carriage) declares that version; `_meta` **takes precedence**
    over the legacy `params.protocolVersion` field when both are present.
-3. Any declared version outside the server's support table fails closed with
-   `-32022 UnsupportedProtocolVersion` — **including on `initialize`**. This
+3. Any declared version outside the selected era's support table fails closed
+   with final-stable `-32022 UnsupportedProtocolVersion`, including the
+   `supported` and `requested` error data. This
    deliberately drops the legacy counter-offer negotiation (spec-legal
    pre-2026) because the PRD hard constraint "unsupported protocol versions
    fail explicitly rather than silently falling back" outranks it. Old hosts
    requesting any version the server actually supports are unaffected.
-4. A request declaring nothing proceeds under the legacy default semantics.
+4. A request carrying modern `_meta` selects modern semantics. An `initialize`
+   request without modern `_meta` selects legacy semantics; 2026-07-28 cannot
+   be negotiated through that removed handshake.
 5. Every result carries `resultType` + `_meta` serverInfo; list/read results
    additionally carry `ttlMs` + `cacheScope: "private"` (local single-operator
    servers; nothing may enter a shared cache).
@@ -82,10 +89,10 @@ direct tool invocations (audit G5, probe p7) is gone; unknown methods return
 
 ## Versioning
 
-Source stays at `SERVER_VERSION = "0.6.2"` on this branch. Per PRD-00 §8 the
-remediation ships as **scholialang-mcp 0.7.0** — the bump, tag, and any
-publish are a separate operator-approved release action, not part of this
-PRD.
+The remediation ships as **scholialang-mcp 0.7.0**. Package, MCP/LSP server,
+plugin, and marketplace versions move together. The separately versioned
+Scholia language, validator, conformance fixtures, and Python dependency remain
+at **0.6.2**.
 
 ## Rollback
 

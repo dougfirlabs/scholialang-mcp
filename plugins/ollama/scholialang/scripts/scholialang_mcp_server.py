@@ -19,12 +19,14 @@ from pathlib import Path
 PROTOCOL_VERSION = "2026-07-28"
 SUPPORTED_PROTOCOL_VERSIONS = ("2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26")
 SERVER_NAME = "scholialang"
-SERVER_VERSION = "0.6.2"
+SERVER_VERSION = "0.7.0"
 
 # MCP 2026-07-28 ``_meta`` keys (SEP-2575 / SEP-2322) and the error code for a
 # version the server does not support (-32022 per the 2026-07-28 error-code
 # allocation policy).
 META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion"
+META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities"
+META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo"
 META_SERVER_INFO = "io.modelcontextprotocol/serverInfo"
 UNSUPPORTED_PROTOCOL_VERSION = -32022
 # CacheableResult hints (SEP-2549) for list/read results. Scope is ``private``:
@@ -2157,26 +2159,17 @@ def server_info():
     return {"name": SERVER_NAME, "title": "Scholialang", "version": SERVER_VERSION}
 
 
-def requested_protocol_version(params):
-    """The protocol version a request declares, new (``_meta``) or old.
-
-    2026-07-28 hosts put the version in ``_meta`` (there is no ``initialize``
-    handshake to negotiate it); pre-2026 hosts put it in ``params`` on
-    ``initialize``. Reading both keeps one code path for both eras.
-    """
+def modern_protocol_version(params):
+    """Return the per-request modern protocol version, if declared."""
     meta = params.get("_meta")
     if isinstance(meta, dict) and meta.get(META_PROTOCOL_VERSION):
         return str(meta.get(META_PROTOCOL_VERSION))
-    if params.get("protocolVersion"):
-        return str(params.get("protocolVersion"))
     return None
 
 
-def negotiated_protocol_version(params):
-    requested = requested_protocol_version(params)
-    if requested in SUPPORTED_PROTOCOL_VERSIONS:
-        return requested
-    return PROTOCOL_VERSION
+def legacy_protocol_version(params):
+    requested = params.get("protocolVersion")
+    return str(requested) if requested else None
 
 
 def tool_schema(name):
@@ -2332,15 +2325,17 @@ def dispatch(method, params):
     # Also serves as the STDIO backward-compatibility probe for new hosts.
     if method == "server/discover":
         return {
-            "protocolVersions": list(SUPPORTED_PROTOCOL_VERSIONS),
+            "supportedVersions": list(SUPPORTED_PROTOCOL_VERSIONS),
             "capabilities": {"tools": {}, "resources": {}},
-            "serverInfo": server_info(),
+            "instructions": "Use Scholialang DAG tools for explicit local SQLite work traces. Prefer summaries, frontier, search, and neighborhoods for token efficiency.",
+            "ttlMs": CACHEABLE_TTL_MS,
+            "cacheScope": CACHE_SCOPE,
         }
     # Legacy handshake — retained for pre-2026 hosts (dual-version). New hosts
     # never send it; they call server/discover and carry version in _meta.
     if method == "initialize":
         return {
-            "protocolVersion": negotiated_protocol_version(params),
+            "protocolVersion": legacy_protocol_version(params),
             "capabilities": {"tools": {}, "resources": {}},
             "serverInfo": server_info(),
             "instructions": "Use Scholialang DAG tools for explicit local SQLite work traces. Prefer summaries, frontier, search, and neighborhoods for token efficiency.",
@@ -2392,17 +2387,66 @@ def handle_message(message):
     params = message.get("params") or {}
     if not isinstance(params, dict):
         return rpc_error(message_id, -32602, "params must be a JSON object")
-    # 2026-07-28: a request that explicitly declares an unsupported protocol
-    # version fails closed with UnsupportedProtocolVersion. A request that
-    # declares nothing, or a supported version, proceeds — so legacy hosts are
-    # unaffected.
-    declared = requested_protocol_version(params)
-    if declared is not None and declared not in SUPPORTED_PROTOCOL_VERSIONS:
+    meta = params.get("_meta")
+    if meta is not None and not isinstance(meta, dict):
+        return rpc_error(message_id, -32602, "_meta must be a JSON object")
+    modern_version = modern_protocol_version(params)
+    if modern_version is not None and modern_version != PROTOCOL_VERSION:
         return rpc_error(
             message_id,
             UNSUPPORTED_PROTOCOL_VERSION,
-            f"unsupported protocol version: {declared}",
+            "Unsupported protocol version",
+            {
+                "supported": list(SUPPORTED_PROTOCOL_VERSIONS),
+                "requested": modern_version,
+            },
         )
+    if modern_version == PROTOCOL_VERSION:
+        capabilities = (meta or {}).get(META_CLIENT_CAPABILITIES)
+        if not isinstance(capabilities, dict):
+            return rpc_error(
+                message_id,
+                -32602,
+                f"missing or invalid required _meta field: {META_CLIENT_CAPABILITIES}",
+            )
+        client_info = (meta or {}).get(META_CLIENT_INFO)
+        if client_info is not None and (
+            not isinstance(client_info, dict)
+            or not isinstance(client_info.get("name"), str)
+            or not isinstance(client_info.get("version"), str)
+        ):
+            return rpc_error(
+                message_id,
+                -32602,
+                f"invalid optional _meta field: {META_CLIENT_INFO}",
+            )
+        if method in {
+            "initialize",
+            "ping",
+            "logging/setLevel",
+            "resources/subscribe",
+            "resources/unsubscribe",
+        }:
+            return rpc_error(message_id, -32601, f"Method not found: {method}")
+    if method == "server/discover" and modern_version != PROTOCOL_VERSION:
+        return rpc_error(
+            message_id,
+            -32602,
+            "server/discover requires 2026-07-28 per-request _meta",
+        )
+    if method == "initialize":
+        requested = legacy_protocol_version(params)
+        legacy_versions = tuple(
+            version for version in SUPPORTED_PROTOCOL_VERSIONS
+            if version != PROTOCOL_VERSION
+        )
+        if requested not in legacy_versions:
+            return rpc_error(
+                message_id,
+                UNSUPPORTED_PROTOCOL_VERSION,
+                "Unsupported protocol version",
+                {"supported": list(legacy_versions), "requested": requested or ""},
+            )
     try:
         return rpc_result(message_id, dispatch(method, params))
     except NotImplementedError:

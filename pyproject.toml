@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scholialang-mcp"
-version = "0.6.2"
+version = "0.7.0"
 description = "MCP, LSP, and host-plugin tooling for Scholia — preserve agent reasoning state and reduce context cost across long-horizon work"
 readme = "README.md"
 requires-python = ">=3.11"

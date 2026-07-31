@@ -35,10 +35,12 @@ SUPPORTED_MCP_PROTOCOL_VERSIONS = (
     "2025-03-26",
     "2024-11-05",
 )
-SERVER_VERSION = "0.6.2"
+SERVER_VERSION = "0.7.0"
 
 # MCP 2026-07-28 ``_meta`` keys (SEP-2575 / SEP-2322 / SEP-2549).
 META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion"
+META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities"
+META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo"
 META_SERVER_INFO = "io.modelcontextprotocol/serverInfo"
 # JSON-RPC error code for a version the server does not support (renumbered
 # -32004 -> -32022 in 2026-07-28's error-code allocation policy).
@@ -274,7 +276,7 @@ class ScholiaMCPServer:
                 "status": "unsupported",
                 "error": "regenerate_unavailable",
                 "path": path,
-                "hint": "regeneration is host-adapter specific in scholialang-mcp v0.6.2",
+                "hint": "regeneration is host-adapter specific in scholialang-mcp v0.7.0",
             }
         return {"status": "accepted", "path": path}
 
@@ -369,8 +371,16 @@ def _ok(request_id: Any, result: Any) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
 
-def _err(request_id: Any, code: int, message: str) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+def _err(
+    request_id: Any,
+    code: int,
+    message: str,
+    data: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    error: dict[str, Any] = {"code": code, "message": message}
+    if data is not None:
+        error["data"] = data
+    return {"jsonrpc": "2.0", "id": request_id, "error": error}
 
 
 def _invoke_tool(server: ScholiaMCPServer, name: str, args: dict[str, Any]) -> dict[str, Any]:
@@ -393,34 +403,43 @@ def _invoke_tool(server: ScholiaMCPServer, name: str, args: dict[str, Any]) -> d
     raise KeyError(name)
 
 
-def _requested_protocol_version(params: dict[str, Any]) -> Optional[str]:
-    """The protocol version a request declares, new (``_meta``) or old.
-
-    2026-07-28 hosts put the version in ``_meta`` (there is no ``initialize``
-    handshake to negotiate it); pre-2026 hosts put it in ``params`` on
-    ``initialize``. Reading both keeps one code path for both eras.
-    """
+def _modern_protocol_version(params: dict[str, Any]) -> Optional[str]:
+    """Return the per-request modern protocol version, if one is declared."""
     meta = params.get("_meta")
     if isinstance(meta, dict) and meta.get(META_PROTOCOL_VERSION):
         return str(meta.get(META_PROTOCOL_VERSION))
-    if params.get("protocolVersion"):
-        return str(params.get("protocolVersion"))
     return None
 
 
-def _negotiated_protocol_version(params: dict[str, Any]) -> str:
-    requested = _requested_protocol_version(params)
-    if requested in SUPPORTED_MCP_PROTOCOL_VERSIONS:
-        return str(requested)
-    return MCP_PROTOCOL_VERSION
+def _legacy_protocol_version(params: dict[str, Any]) -> Optional[str]:
+    requested = params.get("protocolVersion")
+    return str(requested) if requested else None
+
+
+def _unsupported_version(
+    request_id: Any,
+    requested: str,
+    *,
+    supported: tuple[str, ...] = SUPPORTED_MCP_PROTOCOL_VERSIONS,
+) -> dict[str, Any]:
+    return _err(
+        request_id,
+        UNSUPPORTED_PROTOCOL_VERSION,
+        "Unsupported protocol version",
+        {"supported": list(supported), "requested": requested},
+    )
 
 
 def _discover_result() -> dict[str, Any]:
-    """``server/discover`` payload — advertised versions, capabilities, identity."""
+    """Final-stable ``server/discover`` payload."""
     return {
-        "protocolVersions": list(SUPPORTED_MCP_PROTOCOL_VERSIONS),
+        "supportedVersions": list(SUPPORTED_MCP_PROTOCOL_VERSIONS),
         "capabilities": {"tools": {"listChanged": False}},
-        "serverInfo": _server_info(),
+        "instructions": (
+            "Use the Scholia atlas tools to inspect host-generated project summaries."
+        ),
+        "ttlMs": TOOLS_LIST_TTL_MS,
+        "cacheScope": CACHE_SCOPE,
     }
 
 
@@ -434,29 +453,70 @@ def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Option
     if not isinstance(params, dict):
         return _err(request_id, -32602, "params must be a JSON object")
 
-    # 2026-07-28: a request that explicitly declares an unsupported protocol
-    # version fails closed with UnsupportedProtocolVersion (SEP-2575). A
-    # request that declares nothing, or a supported version, proceeds — so
-    # legacy hosts are unaffected.
-    declared = _requested_protocol_version(params)
-    if declared is not None and declared not in SUPPORTED_MCP_PROTOCOL_VERSIONS:
-        return _err(
-            request_id,
-            UNSUPPORTED_PROTOCOL_VERSION,
-            f"unsupported protocol version: {declared}",
-        )
+    meta = params.get("_meta")
+    if meta is not None and not isinstance(meta, dict):
+        return _err(request_id, -32602, "_meta must be a JSON object")
+
+    modern_version = _modern_protocol_version(params)
+    if modern_version is not None:
+        if modern_version != MCP_PROTOCOL_VERSION:
+            return _unsupported_version(request_id, modern_version)
+        capabilities = (meta or {}).get(META_CLIENT_CAPABILITIES)
+        if not isinstance(capabilities, dict):
+            return _err(
+                request_id,
+                -32602,
+                f"missing or invalid required _meta field: {META_CLIENT_CAPABILITIES}",
+            )
+        client_info = (meta or {}).get(META_CLIENT_INFO)
+        if client_info is not None and (
+            not isinstance(client_info, dict)
+            or not isinstance(client_info.get("name"), str)
+            or not isinstance(client_info.get("version"), str)
+        ):
+            return _err(
+                request_id,
+                -32602,
+                f"invalid optional _meta field: {META_CLIENT_INFO}",
+            )
+        if method in {
+            "initialize",
+            "ping",
+            "logging/setLevel",
+            "resources/subscribe",
+            "resources/unsubscribe",
+        }:
+            return _err(request_id, -32601, f"Method not found: {method}")
 
     # 2026-07-28 MUST: advertise supported versions, capabilities, identity.
     # Also serves as the STDIO backward-compatibility probe for new hosts.
     if method == "server/discover":
+        if modern_version != MCP_PROTOCOL_VERSION:
+            return _err(
+                request_id,
+                -32602,
+                "server/discover requires 2026-07-28 per-request _meta",
+            )
         return _ok(request_id, _discover_result())
     # Legacy handshake — retained for pre-2026 hosts (dual-version). New hosts
     # never send it; they call server/discover and carry version in _meta.
     if method == "initialize":
+        requested = _legacy_protocol_version(params)
+        legacy_versions = tuple(
+            version
+            for version in SUPPORTED_MCP_PROTOCOL_VERSIONS
+            if version != MCP_PROTOCOL_VERSION
+        )
+        if requested not in legacy_versions:
+            return _unsupported_version(
+                request_id,
+                requested or "",
+                supported=legacy_versions,
+            )
         return _ok(
             request_id,
             {
-                "protocolVersion": _negotiated_protocol_version(params),
+                "protocolVersion": requested,
                 "capabilities": {"tools": {"listChanged": False}},
                 "serverInfo": _server_info(),
             },

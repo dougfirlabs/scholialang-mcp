@@ -22,6 +22,8 @@ GENERATED = (
 )
 
 META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion"
+META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities"
+META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo"
 META_SERVER_INFO = "io.modelcontextprotocol/serverInfo"
 UNSUPPORTED_PROTOCOL_VERSION = -32022
 
@@ -50,6 +52,13 @@ def _server(tmp_path: Path) -> "subprocess.Popen[str]":
     )
 
 
+def _modern_meta(version: str = "2026-07-28") -> dict[str, object]:
+    return {
+        META_PROTOCOL_VERSION: version,
+        META_CLIENT_CAPABILITIES: {},
+    }
+
+
 def test_plugin_copies_are_byte_identical_to_canonical() -> None:
     canonical = hashlib.sha256(CANONICAL.read_bytes()).hexdigest()
     for copy in GENERATED:
@@ -62,12 +71,22 @@ def test_plugin_copies_are_byte_identical_to_canonical() -> None:
 def test_server_discover_advertises_versions_and_identity(tmp_path: Path) -> None:
     proc = _server(tmp_path)
     try:
-        r = _rpc(proc, {"jsonrpc": "2.0", "id": 1, "method": "server/discover", "params": {}})
+        r = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "server/discover",
+                "params": {"_meta": _modern_meta()},
+            },
+        )
         res = r["result"]
-        assert res["protocolVersions"][0] == "2026-07-28"
-        assert res["serverInfo"]["name"] == "scholialang"
+        assert res["supportedVersions"][0] == "2026-07-28"
+        assert "serverInfo" not in res
         assert res["resultType"] == "complete"
-        assert META_SERVER_INFO in res["_meta"]
+        assert res["_meta"][META_SERVER_INFO]["name"] == "scholialang"
+        assert isinstance(res["ttlMs"], int) and res["ttlMs"] > 0
+        assert res["cacheScope"] == "private"
     finally:
         proc.terminate()
 
@@ -81,7 +100,7 @@ def test_stateless_list_read_results_are_cacheable_and_private(tmp_path: Path) -
                 "jsonrpc": "2.0",
                 "id": 2,
                 "method": "tools/list",
-                "params": {"_meta": {META_PROTOCOL_VERSION: "2026-07-28"}},
+                "params": {"_meta": _modern_meta()},
             },
         )
         res = listed["result"]
@@ -90,14 +109,27 @@ def test_stateless_list_read_results_are_cacheable_and_private(tmp_path: Path) -
         assert isinstance(res["ttlMs"], int) and res["ttlMs"] > 0
         assert res["cacheScope"] == "private"
 
-        resources = _rpc(proc, {"jsonrpc": "2.0", "id": 3, "method": "resources/list", "params": {}})
+        resources = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "resources/list",
+                "params": {"_meta": _modern_meta()},
+            },
+        )
         assert resources["result"]["cacheScope"] == "private"
         assert isinstance(resources["result"]["ttlMs"], int)
         uri = resources["result"]["resources"][0]["uri"]
 
         read = _rpc(
             proc,
-            {"jsonrpc": "2.0", "id": 4, "method": "resources/read", "params": {"uri": uri}},
+            {
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "resources/read",
+                "params": {"uri": uri, "_meta": _modern_meta()},
+            },
         )
         assert read["result"]["cacheScope"] == "private"
         assert isinstance(read["result"]["ttlMs"], int)
@@ -105,7 +137,12 @@ def test_stateless_list_read_results_are_cacheable_and_private(tmp_path: Path) -
 
         templates = _rpc(
             proc,
-            {"jsonrpc": "2.0", "id": 5, "method": "resources/templates/list", "params": {}},
+            {
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "resources/templates/list",
+                "params": {"_meta": _modern_meta()},
+            },
         )
         assert templates["result"]["cacheScope"] == "private"
     finally:
@@ -133,10 +170,11 @@ def test_unsupported_version_fails_closed(tmp_path: Path) -> None:
                 "jsonrpc": "2.0",
                 "id": 8,
                 "method": "tools/list",
-                "params": {"_meta": {META_PROTOCOL_VERSION: "1999-01-01"}},
+                "params": {"_meta": _modern_meta("1999-01-01")},
             },
         )
         assert stateless["error"]["code"] == UNSUPPORTED_PROTOCOL_VERSION
+        assert stateless["error"]["data"]["requested"] == "1999-01-01"
         legacy = _rpc(
             proc,
             {
@@ -167,5 +205,92 @@ def test_legacy_initialize_and_ping_still_work(tmp_path: Path) -> None:
         assert init["result"]["serverInfo"]["name"] == "scholialang"
         pong = _rpc(proc, {"jsonrpc": "2.0", "id": 11, "method": "ping", "params": {}})
         assert "result" in pong
+    finally:
+        proc.terminate()
+
+
+def test_modern_removed_methods_are_method_not_found(tmp_path: Path) -> None:
+    proc = _server(tmp_path)
+    try:
+        for request_id, method in enumerate(
+            (
+                "initialize",
+                "ping",
+                "logging/setLevel",
+                "resources/subscribe",
+                "resources/unsubscribe",
+            ),
+            start=20,
+        ):
+            response = _rpc(
+                proc,
+                {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "method": method,
+                    "params": {"_meta": _modern_meta()},
+                },
+            )
+            assert response["error"]["code"] == -32601
+    finally:
+        proc.terminate()
+
+
+def test_modern_request_requires_client_capabilities(tmp_path: Path) -> None:
+    proc = _server(tmp_path)
+    try:
+        response = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 30,
+                "method": "tools/list",
+                "params": {
+                    "_meta": {META_PROTOCOL_VERSION: "2026-07-28"},
+                },
+            },
+        )
+        assert response["error"]["code"] == -32602
+        assert META_CLIENT_CAPABILITIES in response["error"]["message"]
+        malformed = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 31,
+                "method": "tools/list",
+                "params": {
+                    "_meta": {
+                        META_PROTOCOL_VERSION: "2026-07-28",
+                        META_CLIENT_CAPABILITIES: [],
+                    },
+                },
+            },
+        )
+        assert malformed["error"]["code"] == -32602
+        bad_info = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 32,
+                "method": "tools/list",
+                "params": {
+                    "_meta": {
+                        **_modern_meta(),
+                        META_CLIENT_INFO: {"name": "client-without-version"},
+                    },
+                },
+            },
+        )
+        assert bad_info["error"]["code"] == -32602
+        legacy_in_modern_carrier = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 33,
+                "method": "tools/list",
+                "params": {"_meta": _modern_meta("2025-11-25")},
+            },
+        )
+        assert legacy_in_modern_carrier["error"]["code"] == UNSUPPORTED_PROTOCOL_VERSION
     finally:
         proc.terminate()

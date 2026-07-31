@@ -15,6 +15,8 @@ import sys
 from pathlib import Path
 
 from scholialang_mcp.server import (
+    META_CLIENT_CAPABILITIES,
+    META_CLIENT_INFO,
     META_PROTOCOL_VERSION,
     META_SERVER_INFO,
     SUPPORTED_MCP_PROTOCOL_VERSIONS,
@@ -51,6 +53,13 @@ def _server() -> "subprocess.Popen[str]":
     )
 
 
+def _modern_meta(version: str = "2026-07-28") -> dict[str, object]:
+    return {
+        META_PROTOCOL_VERSION: version,
+        META_CLIENT_CAPABILITIES: {},
+    }
+
+
 def test_2026_release_is_supported_and_preferred() -> None:
     assert "2026-07-28" in SUPPORTED_MCP_PROTOCOL_VERSIONS
     assert SUPPORTED_MCP_PROTOCOL_VERSIONS[0] == "2026-07-28"
@@ -59,12 +68,22 @@ def test_2026_release_is_supported_and_preferred() -> None:
 def test_server_discover_advertises_versions_and_identity() -> None:
     proc = _server()
     try:
-        r = _rpc(proc, {"jsonrpc": "2.0", "id": 1, "method": "server/discover", "params": {}})
+        r = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "server/discover",
+                "params": {"_meta": _modern_meta()},
+            },
+        )
         res = r["result"]
-        assert "2026-07-28" in res["protocolVersions"]
-        assert res["serverInfo"]["name"] == "mcp__scholialang__atlas"
+        assert "2026-07-28" in res["supportedVersions"]
+        assert "serverInfo" not in res
         assert res["resultType"] == "complete"
-        assert META_SERVER_INFO in res["_meta"]
+        assert res["_meta"][META_SERVER_INFO]["name"] == "mcp__scholialang__atlas"
+        assert isinstance(res["ttlMs"], int) and res["ttlMs"] > 0
+        assert res["cacheScope"] == "private"
     finally:
         proc.terminate()
 
@@ -78,7 +97,7 @@ def test_stateless_request_reads_version_from_meta_and_lists_cacheable() -> None
                 "jsonrpc": "2.0",
                 "id": 2,
                 "method": "tools/list",
-                "params": {"_meta": {META_PROTOCOL_VERSION: "2026-07-28"}},
+                "params": {"_meta": _modern_meta()},
             },
         )
         res = r["result"]
@@ -126,10 +145,12 @@ def test_unsupported_version_fails_closed() -> None:
                 "jsonrpc": "2.0",
                 "id": 3,
                 "method": "tools/list",
-                "params": {"_meta": {META_PROTOCOL_VERSION: "1999-01-01"}},
+                "params": {"_meta": _modern_meta("1999-01-01")},
             },
         )
         assert r["error"]["code"] == UNSUPPORTED_PROTOCOL_VERSION
+        assert r["error"]["data"]["requested"] == "1999-01-01"
+        assert "2026-07-28" in r["error"]["data"]["supported"]
     finally:
         proc.terminate()
 
@@ -162,7 +183,7 @@ def test_mixed_version_request_cannot_silently_mis_negotiate() -> None:
                 "id": 31,
                 "method": "tools/list",
                 "params": {
-                    "_meta": {META_PROTOCOL_VERSION: "1999-01-01"},
+                    "_meta": _modern_meta("1999-01-01"),
                     "protocolVersion": "2025-11-25",
                 },
             },
@@ -192,7 +213,7 @@ def test_legacy_initialize_and_ping_still_work() -> None:
         proc.terminate()
 
 
-def test_initialize_negotiates_up_to_2026_when_offered() -> None:
+def test_legacy_initialize_cannot_negotiate_modern_version() -> None:
     proc = _server()
     try:
         init = _rpc(
@@ -204,6 +225,94 @@ def test_initialize_negotiates_up_to_2026_when_offered() -> None:
                 "params": {"protocolVersion": "2026-07-28", "capabilities": {}},
             },
         )
-        assert init["result"]["protocolVersion"] == "2026-07-28"
+        assert init["error"]["code"] == UNSUPPORTED_PROTOCOL_VERSION
+        assert "2026-07-28" not in init["error"]["data"]["supported"]
+    finally:
+        proc.terminate()
+
+
+def test_modern_removed_methods_are_method_not_found() -> None:
+    proc = _server()
+    try:
+        for request_id, method in enumerate(
+            (
+                "initialize",
+                "ping",
+                "logging/setLevel",
+                "resources/subscribe",
+                "resources/unsubscribe",
+            ),
+            start=40,
+        ):
+            response = _rpc(
+                proc,
+                {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "method": method,
+                    "params": {"_meta": _modern_meta()},
+                },
+            )
+            assert response["error"]["code"] == -32601
+    finally:
+        proc.terminate()
+
+
+def test_modern_request_requires_client_capabilities() -> None:
+    proc = _server()
+    try:
+        response = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 50,
+                "method": "tools/list",
+                "params": {
+                    "_meta": {META_PROTOCOL_VERSION: "2026-07-28"},
+                },
+            },
+        )
+        assert response["error"]["code"] == -32602
+        assert META_CLIENT_CAPABILITIES in response["error"]["message"]
+        malformed = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 51,
+                "method": "tools/list",
+                "params": {
+                    "_meta": {
+                        META_PROTOCOL_VERSION: "2026-07-28",
+                        META_CLIENT_CAPABILITIES: [],
+                    },
+                },
+            },
+        )
+        assert malformed["error"]["code"] == -32602
+        bad_info = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 52,
+                "method": "tools/list",
+                "params": {
+                    "_meta": {
+                        **_modern_meta(),
+                        META_CLIENT_INFO: {"name": "client-without-version"},
+                    },
+                },
+            },
+        )
+        assert bad_info["error"]["code"] == -32602
+        legacy_in_modern_carrier = _rpc(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 53,
+                "method": "tools/list",
+                "params": {"_meta": _modern_meta("2025-11-25")},
+            },
+        )
+        assert legacy_in_modern_carrier["error"]["code"] == UNSUPPORTED_PROTOCOL_VERSION
     finally:
         proc.terminate()
