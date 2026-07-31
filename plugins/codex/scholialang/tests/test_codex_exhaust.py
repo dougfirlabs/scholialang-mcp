@@ -126,6 +126,12 @@ class _HomeCase(unittest.TestCase):
         os.environ.pop("SCHOLIA_EXHAUST", None)
         self.project = str(Path(self.tempdir.name) / "proj")
         Path(self.project).mkdir(parents=True, exist_ok=True)
+        # Discovery filters rollouts by backing-file mtime against a wall-clock
+        # window, so stamp the shared fixture fresh each run. Otherwise the
+        # watcher tests pass only on a just-checked-out tree (CI) and fail on
+        # any working copy older than the window — a checkout-age flake, not a
+        # real condition.
+        os.utime(FIXTURE, None)
 
     def tearDown(self):
         for k, v in self._saved.items():

@@ -12,10 +12,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-PROTOCOL_VERSION = "2025-11-25"
-SUPPORTED_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26")
+# Preferred protocol version = the stable 2026-07-28 release. Older revisions
+# stay supported so the adapter is dual-version (PRD mcp-2026-07-28-prd-01):
+# pre-handshake-removal hosts keep using ``initialize`` while 2026-07-28 hosts
+# use ``server/discover`` + per-request ``_meta`` version carriage.
+PROTOCOL_VERSION = "2026-07-28"
+SUPPORTED_PROTOCOL_VERSIONS = ("2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26")
 SERVER_NAME = "scholialang"
-SERVER_VERSION = "0.6.2"
+SERVER_VERSION = "0.7.0"
+
+# MCP 2026-07-28 ``_meta`` keys (SEP-2575 / SEP-2322) and the error code for a
+# version the server does not support (-32022 per the 2026-07-28 error-code
+# allocation policy).
+META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion"
+META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities"
+META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo"
+META_SERVER_INFO = "io.modelcontextprotocol/serverInfo"
+UNSUPPORTED_PROTOCOL_VERSION = -32022
+# CacheableResult hints (SEP-2549) for list/read results. Scope is ``private``:
+# this server runs locally against one operator's DAG store, so nothing it
+# returns may be shared through a cross-client cache.
+CACHEABLE_TTL_MS = 300_000
+CACHE_SCOPE = "private"
 MIN_VALIDATOR_VERSION = (0, 6, 2)
 MAX_TEXT = 6000
 
@@ -2137,11 +2155,21 @@ def schema(properties=None, required=None):
     }
 
 
-def negotiated_protocol_version(params):
+def server_info():
+    return {"name": SERVER_NAME, "title": "Scholialang", "version": SERVER_VERSION}
+
+
+def modern_protocol_version(params):
+    """Return the per-request modern protocol version, if declared."""
+    meta = params.get("_meta")
+    if isinstance(meta, dict) and meta.get(META_PROTOCOL_VERSION):
+        return str(meta.get(META_PROTOCOL_VERSION))
+    return None
+
+
+def legacy_protocol_version(params):
     requested = params.get("protocolVersion")
-    if requested in SUPPORTED_PROTOCOL_VERSIONS:
-        return requested
-    return PROTOCOL_VERSION
+    return str(requested) if requested else None
 
 
 def tool_schema(name):
@@ -2272,6 +2300,16 @@ def list_tools():
 
 
 def rpc_result(message_id, result):
+    # 2026-07-28: every result carries ``resultType`` (SEP-2322) and the server
+    # identifies itself in ``_meta`` (SEP-2575). Both are additive — earlier
+    # protocol clients ignore the extra keys and, per spec, treat a missing
+    # ``resultType`` as ``"complete"`` — so this stays dual-version.
+    if isinstance(result, dict):
+        result = dict(result)
+        result.setdefault("resultType", "complete")
+        meta = dict(result.get("_meta") or {})
+        meta.setdefault(META_SERVER_INFO, server_info())
+        result["_meta"] = meta
     return {"jsonrpc": "2.0", "id": message_id, "result": result}
 
 
@@ -2283,17 +2321,33 @@ def rpc_error(message_id, code, message, data=None):
 
 
 def dispatch(method, params):
+    # 2026-07-28 MUST: advertise supported versions, capabilities, identity.
+    # Also serves as the STDIO backward-compatibility probe for new hosts.
+    if method == "server/discover":
+        return {
+            "supportedVersions": list(SUPPORTED_PROTOCOL_VERSIONS),
+            "capabilities": {"tools": {}, "resources": {}},
+            "instructions": "Use Scholialang DAG tools for explicit local SQLite work traces. Prefer summaries, frontier, search, and neighborhoods for token efficiency.",
+            "ttlMs": CACHEABLE_TTL_MS,
+            "cacheScope": CACHE_SCOPE,
+        }
+    # Legacy handshake — retained for pre-2026 hosts (dual-version). New hosts
+    # never send it; they call server/discover and carry version in _meta.
     if method == "initialize":
         return {
-            "protocolVersion": negotiated_protocol_version(params),
+            "protocolVersion": legacy_protocol_version(params),
             "capabilities": {"tools": {}, "resources": {}},
-            "serverInfo": {"name": SERVER_NAME, "title": "Scholialang", "version": SERVER_VERSION},
+            "serverInfo": server_info(),
             "instructions": "Use Scholialang DAG tools for explicit local SQLite work traces. Prefer summaries, frontier, search, and neighborhoods for token efficiency.",
         }
+    # ping was removed in 2026-07-28 but kept here as a no-op so pre-2026 hosts
+    # that still heartbeat do not break.
     if method == "ping":
         return {}
     if method == "tools/list":
-        return {"tools": list_tools()}
+        # CacheableResult (SEP-2549): static catalog, private scope. Definition
+        # order is the wire order — deterministic across calls and processes.
+        return {"tools": list_tools(), "ttlMs": CACHEABLE_TTL_MS, "cacheScope": CACHE_SCOPE}
     if method == "tools/call":
         name = require_str(params, "name")
         args = params.get("arguments") or {}
@@ -2305,17 +2359,21 @@ def dispatch(method, params):
         resources = []
         for uri, text in RESOURCE_TEXT.items():
             resources.append({"uri": uri, "name": uri.split("://", 1)[1], "mimeType": "text/markdown" if text.startswith("#") else "application/json"})
-        return {"resources": resources}
+        return {"resources": resources, "ttlMs": CACHEABLE_TTL_MS, "cacheScope": CACHE_SCOPE}
     if method == "resources/read":
         uri = require_str(params, "uri")
         if uri not in RESOURCE_TEXT:
             raise ValueError(f"unknown resource: {uri}")
         text = RESOURCE_TEXT[uri]
         mime = "text/markdown" if text.startswith("#") else "application/json"
-        return {"contents": [{"uri": uri, "mimeType": mime, "text": text}]}
+        return {
+            "contents": [{"uri": uri, "mimeType": mime, "text": text}],
+            "ttlMs": CACHEABLE_TTL_MS,
+            "cacheScope": CACHE_SCOPE,
+        }
     if method in {"resources/templates/list", "prompts/list"}:
         key = "resourceTemplates" if method.startswith("resources") else "prompts"
-        return {key: []}
+        return {key: [], "ttlMs": CACHEABLE_TTL_MS, "cacheScope": CACHE_SCOPE}
     raise NotImplementedError(method)
 
 
@@ -2327,6 +2385,68 @@ def handle_message(message):
     if not method or message_id is None:
         return None
     params = message.get("params") or {}
+    if not isinstance(params, dict):
+        return rpc_error(message_id, -32602, "params must be a JSON object")
+    meta = params.get("_meta")
+    if meta is not None and not isinstance(meta, dict):
+        return rpc_error(message_id, -32602, "_meta must be a JSON object")
+    modern_version = modern_protocol_version(params)
+    if modern_version is not None and modern_version != PROTOCOL_VERSION:
+        return rpc_error(
+            message_id,
+            UNSUPPORTED_PROTOCOL_VERSION,
+            "Unsupported protocol version",
+            {
+                "supported": list(SUPPORTED_PROTOCOL_VERSIONS),
+                "requested": modern_version,
+            },
+        )
+    if modern_version == PROTOCOL_VERSION:
+        capabilities = (meta or {}).get(META_CLIENT_CAPABILITIES)
+        if not isinstance(capabilities, dict):
+            return rpc_error(
+                message_id,
+                -32602,
+                f"missing or invalid required _meta field: {META_CLIENT_CAPABILITIES}",
+            )
+        client_info = (meta or {}).get(META_CLIENT_INFO)
+        if client_info is not None and (
+            not isinstance(client_info, dict)
+            or not isinstance(client_info.get("name"), str)
+            or not isinstance(client_info.get("version"), str)
+        ):
+            return rpc_error(
+                message_id,
+                -32602,
+                f"invalid optional _meta field: {META_CLIENT_INFO}",
+            )
+        if method in {
+            "initialize",
+            "ping",
+            "logging/setLevel",
+            "resources/subscribe",
+            "resources/unsubscribe",
+        }:
+            return rpc_error(message_id, -32601, f"Method not found: {method}")
+    if method == "server/discover" and modern_version != PROTOCOL_VERSION:
+        return rpc_error(
+            message_id,
+            -32602,
+            "server/discover requires 2026-07-28 per-request _meta",
+        )
+    if method == "initialize":
+        requested = legacy_protocol_version(params)
+        legacy_versions = tuple(
+            version for version in SUPPORTED_PROTOCOL_VERSIONS
+            if version != PROTOCOL_VERSION
+        )
+        if requested not in legacy_versions:
+            return rpc_error(
+                message_id,
+                UNSUPPORTED_PROTOCOL_VERSION,
+                "Unsupported protocol version",
+                {"supported": list(legacy_versions), "requested": requested or ""},
+            )
     try:
         return rpc_result(message_id, dispatch(method, params))
     except NotImplementedError:

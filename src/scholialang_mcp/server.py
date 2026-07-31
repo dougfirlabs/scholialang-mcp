@@ -23,9 +23,37 @@ MODE_ENABLED = "enabled"
 VALID_MODES = (MODE_OFF, MODE_ENABLED)
 
 SERVER_NAME = "mcp__scholialang__atlas"
-MCP_PROTOCOL_VERSION = "2024-11-05"
-SUPPORTED_MCP_PROTOCOL_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
-SERVER_VERSION = "0.6.2"
+# Preferred protocol version = the stable 2026-07-28 release. Older revisions
+# stay supported so the adapter is dual-version: pre-handshake-removal hosts
+# keep working via ``initialize`` while 2026-07-28 hosts use ``server/discover``
+# + per-request ``_meta`` version carriage.
+MCP_PROTOCOL_VERSION = "2026-07-28"
+SUPPORTED_MCP_PROTOCOL_VERSIONS = (
+    "2026-07-28",
+    "2025-11-25",
+    "2025-06-18",
+    "2025-03-26",
+    "2024-11-05",
+)
+SERVER_VERSION = "0.7.0"
+
+# MCP 2026-07-28 ``_meta`` keys (SEP-2575 / SEP-2322 / SEP-2549).
+META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion"
+META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities"
+META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo"
+META_SERVER_INFO = "io.modelcontextprotocol/serverInfo"
+# JSON-RPC error code for a version the server does not support (renumbered
+# -32004 -> -32022 in 2026-07-28's error-code allocation policy).
+UNSUPPORTED_PROTOCOL_VERSION = -32022
+# CacheableResult hints (SEP-2549). The tool catalog only changes on a server
+# upgrade, so a 5-minute freshness window is safe and cuts re-polling. Scope is
+# ``private``: this server runs locally against one operator's project, so
+# nothing it returns may be shared through a cross-client cache (PRD
+# mcp-2026-07-28-prd-01 requires the private scope verified; the catalog is
+# harmless today, but private is the uniform safe default for every result
+# this server can emit).
+TOOLS_LIST_TTL_MS = 300_000
+CACHE_SCOPE = "private"
 
 REFUSAL_STATUS = "refused"
 REFUSAL_REASON = "disabled_by_mode"
@@ -248,7 +276,7 @@ class ScholiaMCPServer:
                 "status": "unsupported",
                 "error": "regenerate_unavailable",
                 "path": path,
-                "hint": "regeneration is host-adapter specific in scholialang-mcp v0.6.2",
+                "hint": "regeneration is host-adapter specific in scholialang-mcp v0.7.0",
             }
         return {"status": "accepted", "path": path}
 
@@ -325,12 +353,34 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
 ]
 
 
+def _server_info() -> dict[str, Any]:
+    return {"name": SERVER_NAME, "version": SERVER_VERSION}
+
+
 def _ok(request_id: Any, result: Any) -> dict[str, Any]:
+    # 2026-07-28: every result carries ``resultType`` (SEP-2322) and the
+    # server identifies itself in ``_meta`` (SEP-2575). Both are additive —
+    # earlier-protocol clients ignore the extra keys and, per spec, treat a
+    # missing ``resultType`` as ``"complete"`` — so this stays dual-version.
+    if isinstance(result, dict):
+        result = dict(result)
+        result.setdefault("resultType", "complete")
+        meta = dict(result.get("_meta") or {})
+        meta.setdefault(META_SERVER_INFO, _server_info())
+        result["_meta"] = meta
     return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
 
-def _err(request_id: Any, code: int, message: str) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+def _err(
+    request_id: Any,
+    code: int,
+    message: str,
+    data: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    error: dict[str, Any] = {"code": code, "message": message}
+    if data is not None:
+        error["data"] = data
+    return {"jsonrpc": "2.0", "id": request_id, "error": error}
 
 
 def _invoke_tool(server: ScholiaMCPServer, name: str, args: dict[str, Any]) -> dict[str, Any]:
@@ -353,11 +403,44 @@ def _invoke_tool(server: ScholiaMCPServer, name: str, args: dict[str, Any]) -> d
     raise KeyError(name)
 
 
-def _negotiated_protocol_version(params: dict[str, Any]) -> str:
+def _modern_protocol_version(params: dict[str, Any]) -> Optional[str]:
+    """Return the per-request modern protocol version, if one is declared."""
+    meta = params.get("_meta")
+    if isinstance(meta, dict) and meta.get(META_PROTOCOL_VERSION):
+        return str(meta.get(META_PROTOCOL_VERSION))
+    return None
+
+
+def _legacy_protocol_version(params: dict[str, Any]) -> Optional[str]:
     requested = params.get("protocolVersion")
-    if requested in SUPPORTED_MCP_PROTOCOL_VERSIONS:
-        return str(requested)
-    return MCP_PROTOCOL_VERSION
+    return str(requested) if requested else None
+
+
+def _unsupported_version(
+    request_id: Any,
+    requested: str,
+    *,
+    supported: tuple[str, ...] = SUPPORTED_MCP_PROTOCOL_VERSIONS,
+) -> dict[str, Any]:
+    return _err(
+        request_id,
+        UNSUPPORTED_PROTOCOL_VERSION,
+        "Unsupported protocol version",
+        {"supported": list(supported), "requested": requested},
+    )
+
+
+def _discover_result() -> dict[str, Any]:
+    """Final-stable ``server/discover`` payload."""
+    return {
+        "supportedVersions": list(SUPPORTED_MCP_PROTOCOL_VERSIONS),
+        "capabilities": {"tools": {"listChanged": False}},
+        "instructions": (
+            "Use the Scholia atlas tools to inspect host-generated project summaries."
+        ),
+        "ttlMs": TOOLS_LIST_TTL_MS,
+        "cacheScope": CACHE_SCOPE,
+    }
 
 
 def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Optional[dict[str, Any]]:
@@ -370,19 +453,90 @@ def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Option
     if not isinstance(params, dict):
         return _err(request_id, -32602, "params must be a JSON object")
 
+    meta = params.get("_meta")
+    if meta is not None and not isinstance(meta, dict):
+        return _err(request_id, -32602, "_meta must be a JSON object")
+
+    modern_version = _modern_protocol_version(params)
+    if modern_version is not None:
+        if modern_version != MCP_PROTOCOL_VERSION:
+            return _unsupported_version(request_id, modern_version)
+        capabilities = (meta or {}).get(META_CLIENT_CAPABILITIES)
+        if not isinstance(capabilities, dict):
+            return _err(
+                request_id,
+                -32602,
+                f"missing or invalid required _meta field: {META_CLIENT_CAPABILITIES}",
+            )
+        client_info = (meta or {}).get(META_CLIENT_INFO)
+        if client_info is not None and (
+            not isinstance(client_info, dict)
+            or not isinstance(client_info.get("name"), str)
+            or not isinstance(client_info.get("version"), str)
+        ):
+            return _err(
+                request_id,
+                -32602,
+                f"invalid optional _meta field: {META_CLIENT_INFO}",
+            )
+        if method in {
+            "initialize",
+            "ping",
+            "logging/setLevel",
+            "resources/subscribe",
+            "resources/unsubscribe",
+        }:
+            return _err(request_id, -32601, f"Method not found: {method}")
+
+    # 2026-07-28 MUST: advertise supported versions, capabilities, identity.
+    # Also serves as the STDIO backward-compatibility probe for new hosts.
+    if method == "server/discover":
+        if modern_version != MCP_PROTOCOL_VERSION:
+            return _err(
+                request_id,
+                -32602,
+                "server/discover requires 2026-07-28 per-request _meta",
+            )
+        return _ok(request_id, _discover_result())
+    # Legacy handshake — retained for pre-2026 hosts (dual-version). New hosts
+    # never send it; they call server/discover and carry version in _meta.
     if method == "initialize":
+        requested = _legacy_protocol_version(params)
+        legacy_versions = tuple(
+            version
+            for version in SUPPORTED_MCP_PROTOCOL_VERSIONS
+            if version != MCP_PROTOCOL_VERSION
+        )
+        if requested not in legacy_versions:
+            return _unsupported_version(
+                request_id,
+                requested or "",
+                supported=legacy_versions,
+            )
         return _ok(
             request_id,
             {
-                "protocolVersion": _negotiated_protocol_version(params),
+                "protocolVersion": requested,
                 "capabilities": {"tools": {"listChanged": False}},
-                "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
+                "serverInfo": _server_info(),
             },
         )
+    # ping was removed in 2026-07-28 but kept here as a no-op so pre-2026 hosts
+    # that still heartbeat do not break.
     if method == "ping":
         return _ok(request_id, {})
     if method == "tools/list":
-        return _ok(request_id, {"tools": list(TOOL_DEFINITIONS)})
+        # CacheableResult (SEP-2549): static catalog, private scope (see
+        # CACHE_SCOPE). Definition order is the wire order — deterministic
+        # across calls and processes per the 2026-07-28 SHOULD.
+        return _ok(
+            request_id,
+            {
+                "tools": list(TOOL_DEFINITIONS),
+                "ttlMs": TOOLS_LIST_TTL_MS,
+                "cacheScope": CACHE_SCOPE,
+            },
+        )
     if method == "tools/call":
         tool_name = str(params.get("name", ""))
         tool_args = params.get("arguments") or {}
@@ -400,11 +554,10 @@ def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Option
             },
         )
 
-    try:
-        result = _invoke_tool(server, method, params)
-    except KeyError:
-        return _err(request_id, -32601, f"unknown method: {method}")
-    return _ok(request_id, result)
+    # Unknown JSON-RPC methods fail with -32601. 0.6.2 additionally dispatched
+    # unknown methods as direct tool invocations (audit p7); that undocumented
+    # surface is removed — tools are reachable only through ``tools/call``.
+    return _err(request_id, -32601, f"unknown method: {method}")
 
 
 def codex_config_snippet(repo_root: Path, *, python_bin: Optional[str] = None) -> str:

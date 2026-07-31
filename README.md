@@ -81,8 +81,10 @@ Run the MCP server against a workspace root:
 python -m scholialang_mcp --repo-root /path/to/repo
 ```
 
-The server speaks JSON-RPC over stdio and supports the MCP handshake:
-`initialize`, `tools/list`, and `tools/call`.
+The server speaks JSON-RPC over stdio through a dual-era adapter. MCP
+2026-07-28 clients use stateless per-request `_meta` and `server/discover`;
+pre-2026 clients retain the legacy `initialize` lifecycle. Both eras expose
+`tools/list` and `tools/call`.
 
 Tools:
 
