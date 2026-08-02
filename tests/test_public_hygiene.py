@@ -46,6 +46,7 @@ _PRUNE_DIRS = {
     ".github",
     ".ralph",
     ".opentalon",
+    ".scholia",
     ".pytest_cache",
     "__pycache__",
     ".venv",

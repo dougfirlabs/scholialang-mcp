@@ -33,7 +33,8 @@ This repo provides:
 
 The repo is intentionally separate from `scholialang`, which contains the
 language model, parser, validator, and serializers. This package depends on
-`scholialang>=0.6.2,<0.7` and tracks `scholialang-spec` v0.6.2.
+`scholialang>=0.7.1,<0.8` and tracks the `scholialang-spec` additive
+`fingerprint=` contract (over the v0.6.2 shared conformance corpus).
 
 ## Install
 

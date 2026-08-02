@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.7.1
+
+- **Fingerprint parity — synchronized suite release.** First synchronized
+  `scholialang` + `scholialang-mcp` release: both advance to 0.7.1 together
+  (`scholialang` skipped 0.7.0 intentionally; the mcp's prior release was
+  0.7.0). Re-vendored the offline validator snapshot from the `scholialang`
+  0.7.1 release commit `fb4de98`, which adds additive `<algo>:<hex>`
+  `fingerprint=` support on `<Observation>` (`fingerprint_well_formed` rule).
+  The bundled offline validator now recognizes `fingerprint=`; a fingerprint-less
+  trace validates byte-identically to prior behavior. `UPSTREAM.json` cites the
+  0.7.1 provenance and `SCHOLIA_VALIDATOR_VERSION` reads `0.7.1` across all three
+  host plugins.
+- **Dependency advance.** Bumped the `scholialang` dependency to
+  `>=0.7.1,<0.8` and raised the plugin's installed-package acceptance floor
+  (`MIN_VALIDATOR_VERSION`) to `(0, 7, 1)`. **Coordinated publish order:**
+  `scholialang` 0.7.1 must publish to PyPI *before* this release; until then a
+  CI install of the dependency FAILS by design — this is expected, not a defect,
+  and the constraint is intentionally not widened to mask it.
+- **Shared contract parity.** The additive `fingerprint=` fixtures/contract the
+  plugin validates against match `scholialang-spec` `9c1fcfa` (the merged
+  contract) — referenced, not forked. The shared `action_recorded` conformance
+  corpus is unchanged at spec v0.6.2; the 0.7.1 vendored engine still passes it
+  byte-for-byte (the additive-revision parity proof).
+- **Version and host parity.** Bumped package, MCP/LSP server identities, Claude
+  Code / Codex plugin manifests, and marketplace metadata to 0.7.1; the three
+  plugin servers and vendored snapshots remain byte-identical.
+
 ## v0.7.0
 
 - **Final-stable MCP 2026-07-28 adapter.** Added the stateless, per-request

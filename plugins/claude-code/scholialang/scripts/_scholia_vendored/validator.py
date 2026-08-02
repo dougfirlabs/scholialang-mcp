@@ -65,6 +65,7 @@ from .atoms import (
     Step,
     Storing,
     Uncertainty,
+    is_valid_fingerprint,
     is_valid_location,
     parse_operators_from_content,
 )
@@ -89,6 +90,9 @@ RULE_SINGLE_ACTIVE_CONCLUDING_PER_GOAL = "single_active_concluding_per_goal"
 RULE_MIN_CONFIDENCE_CEILING = "min_confidence_ceiling"
 # v0.6 — content-addressable canonical_id integrity (hard-fail).
 RULE_CANONICAL_ID_WELL_FORMED = "canonical_id_well_formed"
+# v0.6.x-proposed — fingerprint= well-formedness (hard-fail; vacuous when
+# absent). See docs/scholia/FINGERPRINT.md §3.
+RULE_FINGERPRINT_WELL_FORMED = "fingerprint_well_formed"
 
 RULE_NAMES: tuple[str, ...] = (
     RULE_WELL_FORMED,
@@ -109,6 +113,7 @@ RULE_NAMES: tuple[str, ...] = (
     RULE_SINGLE_ACTIVE_CONCLUDING_PER_GOAL,
     RULE_MIN_CONFIDENCE_CEILING,
     RULE_CANONICAL_ID_WELL_FORMED,
+    RULE_FINGERPRINT_WELL_FORMED,
 )
 
 WARNING_RULE_NAMES: tuple[str, ...] = (
@@ -586,6 +591,67 @@ def check_canonical_id_well_formed(
                         "have been mutated relative to the declared canonical_id; "
                         "re-emit with the recomputed value or treat the stored "
                         "value as tampered."
+                    ),
+                )
+            )
+    return errors
+
+
+# ── v0.6.x-proposed — fingerprint= well-formedness (hard-fail) ───────
+
+
+def check_fingerprint_well_formed(
+    trace: list[Step], _index: dict[str, Atom]
+) -> list[ValidationError]:
+    """v0.6.x-proposed — every atom carrying a ``fingerprint`` is well-formed.
+
+    See ``docs/scholia/FINGERPRINT.md`` §3. The rule is purely structural
+    and additive, mirroring ``canonical_id_well_formed``:
+
+    1. When an atom carries no ``fingerprint`` the rule is **vacuous** —
+       the ignore-if-absent guarantee (§4). A fingerprint-less trace
+       validates byte-identically to pre-revision behavior.
+    2. When present, the value must match ``^[a-z0-9]+:[0-9a-f]+$`` (an
+       ``<algo>:<hex>`` pair). A malformed value (``sha256:NOTHEX``, a bare
+       hash with no ``algo:`` prefix, an empty value) is a hard-fail.
+    3. When present, the atom **must** also carry a ``location`` — a
+       fingerprint binds a span; with no span to bind it is a hard-fail.
+
+    The rule does **not** recompute the digest against source (a notation
+    validator has no repo access); re-verification is a consumer-side
+    operation (§5). ``fingerprint`` lives only on ``<Observation>`` today,
+    but the walk is generic (``getattr`` default ``None``) so it follows
+    ``location`` wherever a future revision makes it legal.
+    """
+    errors: list[ValidationError] = []
+    for atom in _walk_atoms(trace):
+        fingerprint = getattr(atom, "fingerprint", None)
+        if fingerprint is None:
+            continue
+        if not is_valid_fingerprint(fingerprint):
+            errors.append(
+                ValidationError(
+                    rule=RULE_FINGERPRINT_WELL_FORMED,
+                    atom_id=atom.id or "",
+                    message=(
+                        f"fingerprint {fingerprint!r} is not well-formed; "
+                        "expected '<algo>:<hex>' (a lowercase algorithm label, "
+                        "a colon, then lowercase hex) — see "
+                        "docs/scholia/FINGERPRINT.md §3."
+                    ),
+                )
+            )
+            continue
+        if not getattr(atom, "location", None):
+            errors.append(
+                ValidationError(
+                    rule=RULE_FINGERPRINT_WELL_FORMED,
+                    atom_id=atom.id or "",
+                    message=(
+                        f"fingerprint {fingerprint!r} present without a "
+                        "location; a fingerprint binds a source span, so the "
+                        "atom must also carry location — see "
+                        "docs/scholia/FINGERPRINT.md §3."
                     ),
                 )
             )
@@ -1458,6 +1524,7 @@ _RULES: tuple[
     (RULE_REFER_AT_LEAST_ONE, check_refer_at_least_one),
     (RULE_CRITICALITY_NON_DECREASING, check_criticality_non_decreasing),
     (RULE_CANONICAL_ID_WELL_FORMED, check_canonical_id_well_formed),
+    (RULE_FINGERPRINT_WELL_FORMED, check_fingerprint_well_formed),
 )
 
 _WARNING_RULES: tuple[

@@ -143,11 +143,23 @@ class Observation(Atom):
     ground truth from the rewriter's Phase 2 enrichment; callers MUST
     NOT guess line numbers. The validator enforces the format regex
     via ``check_location_edge_shape``.
+
+    v0.6.x-proposed (``docs/scholia/FINGERPRINT.md``) adds an OPTIONAL
+    ``fingerprint`` — a ``<algo>:<hex>`` content hash of the source span
+    at ``location`` so a later consumer can mechanically re-verify the
+    claim (symbol unchanged / moved / stale). It is strictly additive:
+    absence carries no claim and a fingerprint-less Observation validates
+    byte-identically to pre-revision behavior. The validator enforces its
+    well-formedness (present ⇒ ``<algo>:<hex>`` + a companion ``location``)
+    via ``check_fingerprint_well_formed``; the digest itself is NOT
+    recomputed against source (a notation validator has no repo access —
+    re-verification is a consumer-side operation, see FINGERPRINT.md §3).
     """
 
     timestamp: Optional[str] = None
     location: Optional[str] = None
     confidence: Optional[str] = None
+    fingerprint: Optional[str] = None
     kind: ClassVar[str] = "Observation"
 
 
@@ -744,6 +756,17 @@ _NON_HASH_FIELDS: frozenset[str] = frozenset({
     "kind",
 })
 
+# External-code-metadata fields excluded from the canonical_id hash.
+# ``fingerprint`` (FINGERPRINT.md §8) is the identity of the *code the
+# atom points at*, not the identity of the *atom* — the two answer
+# different questions and must not be folded together. Excluding it also
+# makes the attribute genuinely non-load-bearing (§4.1): stripping every
+# ``fingerprint`` yields a trace whose atoms address to the same
+# canonical_id, so removing it is lossless at the identity layer too.
+_EXTERNAL_CODE_FIELDS: frozenset[str] = frozenset({
+    "fingerprint",
+})
+
 
 def _hash_value(value: Any) -> Any:
     """Coerce a field value to a JSON-serializable shape for hashing."""
@@ -776,7 +799,11 @@ def compute_canonical_id(atom: "Atom") -> str:
     """
     attrs: dict[str, Any] = {}
     for f in fields(atom):
-        if f.name in _NON_HASH_FIELDS or f.name in _PROVENANCE_FIELDS:
+        if (
+            f.name in _NON_HASH_FIELDS
+            or f.name in _PROVENANCE_FIELDS
+            or f.name in _EXTERNAL_CODE_FIELDS
+        ):
             continue
         value = getattr(atom, f.name, None)
         if value is None:
@@ -858,7 +885,7 @@ def iter_atom_classes() -> list[tuple[str, type[Atom]]]:
 # map here (next to the atoms) means adding a new atom is a single-
 # file change.
 KIND_SPECIFIC_FIELDS: dict[str, tuple[str, ...]] = {
-    "Observation": ("timestamp", "location", "confidence"),
+    "Observation": ("timestamp", "location", "confidence", "fingerprint"),
     "Action": ("timestamp",),
     "Evidence": ("for_ref", "polarity"),
     "Finding": ("for_hyp", "for_goal", "status"),
@@ -968,7 +995,7 @@ def wire_name_for(kind: str, py_field: str) -> str:
 # constants are imported by parser/validator/tests so the canonical
 # set lives in one place. Bumping a set requires a spec doc update.
 
-SCHOLIA_VALIDATOR_VERSION: str = "0.6.2"
+SCHOLIA_VALIDATOR_VERSION: str = "0.7.1"
 
 V031_EDGE_TYPES: frozenset[str] = frozenset({
     "depends_on",
@@ -1003,6 +1030,14 @@ V031_META_CRITICALITIES: frozenset[str] = frozenset({
 import re as _v031_re  # local alias keeps the public namespace tidy
 V031_LOCATION_RE: _v031_re.Pattern[str] = _v031_re.compile(r"^[^:]+:\d+:\d+$")
 
+# ``<algo>:<hex>`` fingerprint value format (FINGERPRINT.md §3.2): a
+# lowercase algorithm label, a colon, then lowercase hexadecimal. Mirrors
+# the ``canonical_id`` (``sha256:<hex>``) precedent. Used by the validator's
+# ``fingerprint_well_formed`` rule when the attribute is present; the
+# digest input itself is 52X-B2's single definition and is NOT restated
+# or recomputed here (a notation validator has no repo access).
+FINGERPRINT_RE: _v031_re.Pattern[str] = _v031_re.compile(r"^[a-z0-9]+:[0-9a-f]+$")
+
 # v0.4-B back-compat aliases — referenced by atlas/code_graph callers.
 V04B_EDGE_TYPES = V031_EDGE_TYPES
 
@@ -1019,6 +1054,18 @@ def is_valid_edge_type(value: str | None) -> bool:
     if not value or not isinstance(value, str):
         return False
     return value in V031_EDGE_TYPES
+
+
+def is_valid_fingerprint(value: str | None) -> bool:
+    """Return ``True`` when ``value`` matches the ``<algo>:<hex>`` shape.
+
+    Structural only — it checks the notation surface (FINGERPRINT.md §3.2),
+    not whether the digest matches any source span (that is a consumer
+    operation, §5). Empty / non-string input returns ``False``.
+    """
+    if not value or not isinstance(value, str):
+        return False
+    return bool(FINGERPRINT_RE.match(value))
 
 
 # ── v0.6 — minimal single-atom XML serialization ─────────────────────

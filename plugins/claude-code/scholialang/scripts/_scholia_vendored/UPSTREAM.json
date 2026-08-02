@@ -1,10 +1,10 @@
 {
-  "commit": "ff58c2e17de8ec2b7e5536588b01b29e0c4cb60a",
+  "commit": "fb4de9834d82752aa030f5dd2cdc0e0d2e6951b1",
   "files": {
     "atoms.py": {
       "source_path": "src/scholialang/atoms.py",
-      "source_sha256": "31e23a73436b1a05f2d89897e9bb125867c5e6dfe60944ba7cd419669f993a84",
-      "vendored_sha256": "31e23a73436b1a05f2d89897e9bb125867c5e6dfe60944ba7cd419669f993a84"
+      "source_sha256": "b6f4b924cfd912097f0aa8d688eca740b311bcc7addc5bf0a2f74c1dba9f5076",
+      "vendored_sha256": "b6f4b924cfd912097f0aa8d688eca740b311bcc7addc5bf0a2f74c1dba9f5076"
     },
     "parser.py": {
       "source_path": "src/scholialang/parser.py",
@@ -13,8 +13,8 @@
     },
     "validator.py": {
       "source_path": "src/scholialang/validator.py",
-      "source_sha256": "c43f552d1a65ff63280193e5afbb374260955b3012e97cd8f4a04b8814657c4b",
-      "vendored_sha256": "28d0ff1d4116f0d47a230223d9c8fb22bd05f6fccc4305285e577834d0775db6"
+      "source_sha256": "bc5ea422c4cbb1c1d61063e71e3bbab25bbfb5d82315556e828becdfff9f60b0",
+      "vendored_sha256": "5a8d08d9d634e6f3b8bac70364c7a2623c02baecf962415dfd70d494d93d8ca2"
     }
   },
   "import_rewrites": {
@@ -37,5 +37,5 @@
   },
   "schema": 1,
   "source": "https://github.com/dougfirlabs/scholialang",
-  "validator_version": "0.6.2"
+  "validator_version": "0.7.1"
 }
