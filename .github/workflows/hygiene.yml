@@ -20,8 +20,11 @@ jobs:
               --exclude-dir=.github \
               --exclude-dir=.ralph \
               --exclude-dir=.opentalon \
+              --exclude-dir=.scholia \
+              --exclude-dir=.scholialang \
               --exclude-dir=__pycache__ \
               --exclude-dir=.pytest_cache \
+              --exclude-dir=node_modules \
               --exclude-dir=dist \
               --exclude-dir=build \
               --exclude=test_public_hygiene.py \

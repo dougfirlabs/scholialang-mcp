@@ -6,3 +6,16 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+
+# Local trace stores. Pruned from the leak-guard walk in
+# tests/test_public_hygiene.py, so they must not be committable: this is a
+# PUBLIC repo and that guard exists to stop internal references from shipping.
+# Ignoring them is what makes pruning them safe -- otherwise a `git add -A`
+# could commit local trace data into a directory the scanner is told to skip.
+.scholia/
+.scholialang/
+
+# The two internal RSI/operator scratch dirs are also pruned from that walk,
+# but are deliberately NOT named here: spelling an internal codename in a
+# public .gitignore is itself the leak the guard blocks. Ignore them locally
+# with `.git/info/exclude`, which is never published.
