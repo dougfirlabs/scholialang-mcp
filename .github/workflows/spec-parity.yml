@@ -1,0 +1,49 @@
+name: spec-parity
+
+# Proves the "referenced, not forked" claim mechanically: the vendored offline
+# validator is driven against the SHARED scholialang-spec fingerprint corpus at
+# the exact merged contract commit, rather than against inline cases retyped
+# into this repo. Mirrors scholialang's spec-conformance.yml.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  fingerprint-fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # PyYAML is needed only to read the shared manifest; it is deliberately
+      # NOT a package dependency, so the offline `test` job stays dependency-free.
+      - name: Install test dependencies
+        run: python -m pip install pytest pytest-timeout pyyaml
+
+      - name: Clone pinned spec at exact ref
+        # scholialang-spec-ref.txt pins the merged fingerprint contract commit
+        # (a full SHA, not a tag). `git clone --branch` cannot resolve an
+        # arbitrary SHA, so clone then fetch+checkout the exact commit.
+        run: |
+          ref="$(tr -d '[:space:]' < scholialang-spec-ref.txt)"
+          echo "pinned scholialang-spec ref: ${ref}"
+          git clone --filter=blob:none https://github.com/dougfirlabs/scholialang-spec ../scholialang-spec
+          git -C ../scholialang-spec fetch --depth 1 origin "${ref}"
+          git -C ../scholialang-spec checkout --detach "${ref}"
+          echo "checked out: $(git -C ../scholialang-spec rev-parse HEAD)"
+          test -f ../scholialang-spec/tests/fixtures/fingerprint/manifest.yaml \
+            || { echo "::error::fingerprint fixtures absent at pinned ref ${ref}"; exit 1; }
+
+      - name: Fingerprint fixture parity (fail-closed, all six)
+        # REQUIRE=1 turns a missing or truncated corpus RED instead of a green
+        # skip. No pip install of the package: this drives the VENDORED
+        # snapshot, which is what ships to users.
+        env:
+          PYTHONPATH: src
+          SCHOLIALANG_SPEC_DIR: ${{ github.workspace }}/../scholialang-spec
+          MCP_REQUIRE_FINGERPRINT_FIXTURES: "1"
+        run: python -m pytest tests/test_spec_fingerprint_fixtures.py -q

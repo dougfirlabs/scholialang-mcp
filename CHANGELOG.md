@@ -15,13 +15,19 @@
 - **Dependency advance.** Bumped the `scholialang` dependency to
   `>=0.7.1,<0.8` and raised the plugin's installed-package acceptance floor
   (`MIN_VALIDATOR_VERSION`) to `(0, 7, 1)`. **Coordinated publish order:**
-  `scholialang` 0.7.1 must publish to PyPI *before* this release; until then a
-  CI install of the dependency FAILS by design — this is expected, not a defect,
-  and the constraint is intentionally not widened to mask it.
-- **Shared contract parity.** The additive `fingerprint=` fixtures/contract the
-  plugin validates against match `scholialang-spec` `9c1fcfa` (the merged
-  contract) — referenced, not forked. The shared `action_recorded` conformance
-  corpus is unchanged at spec v0.6.2; the 0.7.1 vendored engine still passes it
+  `scholialang` 0.7.1 must publish to PyPI *before* this release is published,
+  or the dependency will not resolve for anyone installing from PyPI. This
+  repo's CI does not `pip install` the package (it runs `PYTHONPATH=src
+  pytest`), so the ordering is **not** enforced by a red check — it has to be
+  respected at publish time. `publish.yml` builds and `twine check`s the
+  artifact but does not resolve dependencies either.
+- **Shared contract parity.** The additive `fingerprint=` contract the plugin
+  validates against is `scholialang-spec` `9c1fcfa` (the merged contract) —
+  referenced, not forked. `scholialang-spec-ref.txt` pins that SHA and the
+  `spec-parity` workflow drives the vendored engine against the spec's own
+  fixture manifest at it, fail-closed, so the parity claim is mechanically
+  checked rather than asserted. The shared `action_recorded` conformance corpus
+  is unchanged at spec v0.6.2; the 0.7.1 vendored engine still passes it
   byte-for-byte (the additive-revision parity proof).
 - **Version and host parity.** Bumped package, MCP/LSP server identities, Claude
   Code / Codex plugin manifests, and marketplace metadata to 0.7.1; the three
