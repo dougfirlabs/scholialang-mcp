@@ -10,8 +10,8 @@ from pathlib import Path
 import scholialang_mcp
 
 
-PACKAGE_VERSION = "0.7.0"
-SCHOLIA_VERSION = "0.6.2"
+PACKAGE_VERSION = "0.7.1"
+SCHOLIA_VERSION = "0.7.1"
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -32,7 +32,7 @@ def _json(path: str) -> dict:
 def test_python_package_versions_and_dependency_are_aligned():
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
     assert metadata["version"] == PACKAGE_VERSION
-    assert metadata["dependencies"] == [f"scholialang>={SCHOLIA_VERSION},<0.7"]
+    assert metadata["dependencies"] == [f"scholialang>={SCHOLIA_VERSION},<0.8"]
     assert scholialang_mcp.__version__ == PACKAGE_VERSION
     assert _constant(ROOT / "src/scholialang_mcp/server.py", "SERVER_VERSION") == PACKAGE_VERSION
     assert _constant(ROOT / "src/scholialang_mcp/lsp/server.py", "SERVER_VERSION") == PACKAGE_VERSION

@@ -19,7 +19,7 @@ from pathlib import Path
 PROTOCOL_VERSION = "2026-07-28"
 SUPPORTED_PROTOCOL_VERSIONS = ("2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26")
 SERVER_NAME = "scholialang"
-SERVER_VERSION = "0.7.0"
+SERVER_VERSION = "0.7.1"
 
 # MCP 2026-07-28 ``_meta`` keys (SEP-2575 / SEP-2322) and the error code for a
 # version the server does not support (-32022 per the 2026-07-28 error-code
@@ -34,7 +34,7 @@ UNSUPPORTED_PROTOCOL_VERSION = -32022
 # returns may be shared through a cross-client cache.
 CACHEABLE_TTL_MS = 300_000
 CACHE_SCOPE = "private"
-MIN_VALIDATOR_VERSION = (0, 6, 2)
+MIN_VALIDATOR_VERSION = (0, 7, 1)
 MAX_TEXT = 6000
 
 

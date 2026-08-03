@@ -1,4 +1,10 @@
-"""Provenance, byte-parity, and shared v0.6.2 conformance gates."""
+"""Provenance, byte-parity, and shared conformance gates.
+
+The vendored engine tracks the scholialang 0.7.1 release (additive
+``fingerprint=`` support). The shared action_recorded conformance corpus is
+still cut at spec v0.6.2 — an additive validator revision must keep passing it
+byte-for-byte, which is exactly what these gates assert.
+"""
 
 from __future__ import annotations
 
@@ -11,8 +17,13 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE_VERSION = "0.6.2"
-SCHOLIALANG_COMMIT = "ff58c2e17de8ec2b7e5536588b01b29e0c4cb60a"
+# Vendored validator engine: re-vendored from the scholialang 0.7.1 release
+# commit (additive fingerprint= support).
+VENDORED_VALIDATOR_VERSION = "0.7.1"
+SCHOLIALANG_COMMIT = "fb4de9834d82752aa030f5dd2cdc0e0d2e6951b1"
+# Shared action_recorded conformance corpus: unchanged, still cut at spec
+# v0.6.2 (fingerprint fixtures live separately in scholialang-spec).
+SPEC_CORPUS_VERSION = "0.6.2"
 SPEC_COMMIT = "eb238069df1c907674f688a46fa23b8179263e1a"
 HOSTS = ("claude-code", "codex", "ollama")
 VENDOR_FILES = ("atoms.py", "parser.py", "validator.py", "UPSTREAM.json")
@@ -75,7 +86,7 @@ def test_vendored_engine_provenance_and_byte_identity():
     provenance = json.loads((canonical_dir / "UPSTREAM.json").read_text(encoding="utf-8"))
     assert provenance["source"] == "https://github.com/dougfirlabs/scholialang"
     assert provenance["commit"] == SCHOLIALANG_COMMIT
-    assert provenance["validator_version"] == RELEASE_VERSION
+    assert provenance["validator_version"] == VENDORED_VALIDATOR_VERSION
 
     for name in VENDOR_FILES:
         canonical = (canonical_dir / name).read_bytes()
@@ -90,7 +101,7 @@ def test_shared_spec_corpus_provenance():
     provenance = json.loads((fixture_dir / "UPSTREAM.json").read_text(encoding="utf-8"))
     assert provenance["source"] == "https://github.com/dougfirlabs/scholialang-spec"
     assert provenance["commit"] == SPEC_COMMIT
-    assert provenance["spec_version"] == RELEASE_VERSION
+    assert provenance["spec_version"] == SPEC_CORPUS_VERSION
     for name, metadata in provenance["files"].items():
         assert _sha256((fixture_dir / name).read_bytes()) == metadata["sha256"]
 
@@ -107,7 +118,7 @@ def test_vendored_engine_passes_all_shared_action_recorded_cases():
     corpus = json.loads(fixture_path.read_text(encoding="utf-8"))
     assert len(corpus["cases"]) == 13
     parser, validator = _load_canonical_engine()
-    assert validator.SCHOLIA_VALIDATOR_VERSION == RELEASE_VERSION
+    assert validator.SCHOLIA_VALIDATOR_VERSION == VENDORED_VALIDATOR_VERSION
 
     for case in corpus["cases"]:
         trace = parser.parse(case["trace"])
@@ -119,3 +130,50 @@ def test_vendored_engine_passes_all_shared_action_recorded_cases():
         assert (not errors) == (expected["outcome"] == "pass"), case["id"]
         if "atom_ids" in expected:
             assert [error.atom_id for error in errors] == expected["atom_ids"], case["id"]
+
+
+def test_vendored_engine_recognizes_fingerprint_attribute():
+    """0.7.1 parity: the offline vendored validator recognizes the additive
+    ``fingerprint=`` attribute on ``<Observation>`` and enforces the
+    ``fingerprint_well_formed`` rule (FINGERPRINT.md §3) without any network or
+    PyPI install. This is the offline parity gate for the re-vendored snapshot.
+    """
+    parser, validator = _load_canonical_engine()
+    graph = _FixtureGraph([])
+
+    def _fingerprint_errors(trace_xml: str):
+        result = validator.validate(parser.parse(trace_xml), graph=graph)
+        return result.errors_by_rule["fingerprint_well_formed"]
+
+    # Well-formed ``<algo>:<hex>`` fingerprint bound to a location → recognized
+    # and accepted (the attribute is known; no hard-fail).
+    assert _fingerprint_errors(
+        '<Step id="S_01">'
+        '<Observation id="Obs_01" location="src/a.py:1:2" '
+        'fingerprint="sha256:deadbeef">saw</Observation>'
+        "</Step>"
+    ) == []
+
+    # A malformed value (no ``algo:`` prefix / non-hex) is a hard-fail.
+    malformed = _fingerprint_errors(
+        '<Step id="S_01">'
+        '<Observation id="Obs_01" location="src/a.py:1:2" '
+        'fingerprint="NOTHEX">saw</Observation>'
+        "</Step>"
+    )
+    assert [error.atom_id for error in malformed] == ["Obs_01"]
+
+    # A fingerprint with no ``location`` to bind is a hard-fail.
+    unbound = _fingerprint_errors(
+        '<Step id="S_01">'
+        '<Observation id="Obs_01" fingerprint="sha256:deadbeef">saw</Observation>'
+        "</Step>"
+    )
+    assert [error.atom_id for error in unbound] == ["Obs_01"]
+
+    # Ignore-if-absent: a fingerprint-less trace is vacuously clean.
+    assert _fingerprint_errors(
+        '<Step id="S_01">'
+        '<Observation id="Obs_01" location="src/a.py:1:2">saw</Observation>'
+        "</Step>"
+    ) == []
