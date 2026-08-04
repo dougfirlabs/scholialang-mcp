@@ -1,8 +1,16 @@
+import importlib.util
 import json
 import tempfile
 from pathlib import Path
 
-from scripts.build_claude_desktop_mcpb import ROOT, stage_bundle
+
+ROOT = Path(__file__).resolve().parents[1]
+_BUILD_SCRIPT = ROOT / "scripts" / "build_claude_desktop_mcpb.py"
+_SPEC = importlib.util.spec_from_file_location("build_claude_desktop_mcpb", _BUILD_SCRIPT)
+assert _SPEC is not None and _SPEC.loader is not None
+_BUILD_MODULE = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_BUILD_MODULE)
+stage_bundle = _BUILD_MODULE.stage_bundle
 
 
 def test_desktop_manifest_and_staged_server_are_release_aligned():
