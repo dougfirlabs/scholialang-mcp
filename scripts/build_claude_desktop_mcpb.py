@@ -72,7 +72,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=ROOT / "dist" / "scholialang-claude-desktop-0.7.1.mcpb",
+        default=ROOT / "dist" / "scholialang-claude-desktop-0.7.2.mcpb",
     )
     args = parser.parse_args()
     digest = build(args.output)

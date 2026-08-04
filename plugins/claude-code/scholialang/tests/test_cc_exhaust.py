@@ -34,7 +34,7 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(
             kinds,
             [
-                "Summary",       # summary record
+                "Observation",   # summary record (Summary is not an atom)
                 "Question",      # user string prompt
                 "Finding",       # assistant thinking + text
                 "Action",        # assistant tool_use

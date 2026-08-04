@@ -10,8 +10,8 @@ from pathlib import Path
 import scholialang_mcp
 
 
-PACKAGE_VERSION = "0.7.1"
-SCHOLIA_VERSION = "0.7.1"
+PACKAGE_VERSION = "0.7.2"
+SCHOLIA_VERSION = "0.7.2"
 ROOT = Path(__file__).resolve().parents[1]
 
 
