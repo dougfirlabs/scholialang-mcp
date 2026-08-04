@@ -1,0 +1,9 @@
+[project]
+name = "scholialang-claude-desktop"
+version = "0.7.1"
+description = "Bundled local Scholialang MCP server for Claude Desktop"
+requires-python = ">=3.10,<4.0"
+dependencies = []
+
+[tool.uv]
+package = false

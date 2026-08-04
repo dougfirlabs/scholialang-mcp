@@ -30,6 +30,9 @@ This repo provides:
   - `plugins/claude-code/scholialang/` — Claude Code plugin
   - `plugins/ollama/scholialang/` — Ollama / local-model recipes for
     Continue.dev, Cline, open-webui, and generic stdio hosts
+- a forwardable Claude Desktop MCP Bundle template under
+  `plugins/claude-desktop/scholialang/`; build it with
+  `python3 scripts/build_claude_desktop_mcpb.py`
 
 The repo is intentionally separate from `scholialang`, which contains the
 language model, parser, validator, and serializers. This package depends on
