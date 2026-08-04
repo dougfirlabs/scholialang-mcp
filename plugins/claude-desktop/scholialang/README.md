@@ -32,7 +32,7 @@ reviewed source material.
 From the repository root:
 
 ```sh
-python3 scripts/build_claude_desktop_mcpb.py --output dist/scholialang-claude-desktop-0.7.1.mcpb
+python3 scripts/build_claude_desktop_mcpb.py --output dist/scholialang-claude-desktop-0.7.2.mcpb
 ```
 
 The build stages the canonical stdio server and vendored validator, validates
