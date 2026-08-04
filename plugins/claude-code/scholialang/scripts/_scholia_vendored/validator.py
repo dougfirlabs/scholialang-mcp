@@ -7,8 +7,18 @@ content-addressable additions — ``canonical_id_well_formed`` (a universal
 recompute-and-compare hard-fail) and the canonical-id-aware
 ``reference_complete`` rule fed by the 4-path :func:`resolve_refer`
 resolver. v0.6.2 extends ``action_recorded`` to accept later, explicitly
-REFER-linked results across Step boundaries. ``SCHOLIA_VALIDATOR_VERSION``
-(tracked separately from the package version) reads ``0.6.2``.
+REFER-linked results across Step boundaries. v0.7.1 adds the additive
+``fingerprint_well_formed`` rule (see ``FINGERPRINT.md`` in scholialang-spec):
+hard-fail, vacuous when the attribute is absent, and purely structural -- it
+never recomputes a digest against source.
+
+``SCHOLIA_VALIDATOR_VERSION`` tracks the package version and reads ``0.7.2``.
+It was versioned separately through 0.6.2; as of the 0.7.1 synchronized suite
+release the two move together, so a reader can map a validation result straight
+onto an installed package. The shared spec conformance corpus is a separate
+axis and is still cut at v0.6.2 -- an additive rule revision must keep passing
+it byte-for-byte. ``tests/unit/scholia/test_release_versions.py`` enforces the
+package-side parity.
 
 Each rule is its own pure function for unit-testability. They all
 take the trace + a pre-built reference index (id → atom) and return
@@ -959,7 +969,10 @@ def check_constraint_respected(
         for constraint in active_constraints:
             verbs = _extract_forbidden_verbs(constraint.content)
             for verb in verbs:
-                if verb and verb in action_content:
+                # Match a complete action token, never a substring inside an
+                # unrelated word (``delete`` must not match ``undeleted``).
+                token_pattern = rf"(?<![a-z0-9_-]){re.escape(verb)}(?![a-z0-9_-])"
+                if verb and re.search(token_pattern, action_content):
                     errors.append(
                         ValidationError(
                             rule=RULE_CONSTRAINT_RESPECTED,
@@ -974,11 +987,8 @@ def check_constraint_respected(
     return errors
 
 
-_FORBIDDEN_RE_PARTS = (
-    r"[Nn]ever\s+(?P<verb1>[a-z][a-z_\- ]{1,40}?)\b",
-    r"must\s+not\s+(?P<verb2>[a-z][a-z_\- ]{1,40}?)\b",
-    r"do\s+not\s+(?P<verb3>[a-z][a-z_\- ]{1,40}?)\b",
-)
+_FORBIDDEN_RE = r"\b(?:never|must\s+not|do\s+not)\s+(?P<verb>[a-z][a-z_-]*)\b"
+_NON_VERB_OPENERS = {"a", "an", "any", "the"}
 
 
 def _extract_forbidden_verbs(constraint_text: str) -> list[str]:
@@ -992,15 +1002,14 @@ def _extract_forbidden_verbs(constraint_text: str) -> list[str]:
     import re as _re
 
     verbs: list[str] = []
-    for pattern in _FORBIDDEN_RE_PARTS:
-        for match in _re.finditer(pattern, constraint_text):
-            for key in ("verb1", "verb2", "verb3"):
-                try:
-                    phrase = match.group(key)
-                except (IndexError, LookupError):
-                    continue
-                if phrase:
-                    verbs.append(phrase.strip().lower())
+    for match in _re.finditer(_FORBIDDEN_RE, constraint_text, flags=_re.IGNORECASE):
+        token = match.group("verb").strip().lower()
+        # A noun phrase such as ``Never a bare null`` is a data-shape rule,
+        # not an imperative verb phrase. Semantic enforcement belongs in a
+        # dedicated rule; treating the article ``a`` as a verb makes almost
+        # every Action a false positive.
+        if token not in _NON_VERB_OPENERS:
+            verbs.append(token)
     return verbs
 
 

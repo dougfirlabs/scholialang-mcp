@@ -5,6 +5,7 @@ import os
 import sqlite3
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
@@ -416,6 +417,236 @@ class ScholialangDagTests(unittest.TestCase):
         )
 
 
+class PublicDagContractRegressionTests(unittest.TestCase):
+    """Release-gate tests for the public DAG/plugin features.
+
+    These intentionally test compositions rather than private helpers. A tool
+    that stores a graph but cannot export a grammar-valid trace is not a
+    working round trip, even when its isolated storage test passes.
+    """
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.old_home = os.environ.get("SCHOLIALANG_HOME")
+        os.environ["SCHOLIALANG_HOME"] = self.tempdir.name
+        self.project_path = str(Path(self.tempdir.name) / "project")
+
+    def tearDown(self):
+        if self.old_home is None:
+            os.environ.pop("SCHOLIALANG_HOME", None)
+        else:
+            os.environ["SCHOLIALANG_HOME"] = self.old_home
+        self.tempdir.cleanup()
+
+    def start(self):
+        return server.tool_dag_start(
+            {
+                "project_path": self.project_path,
+                "title": "Public contract",
+                "objective": "Complete a grammar-valid public round trip.",
+            }
+        )["structuredContent"]
+
+    def add(self, dag_id, kind, summary, **extra):
+        args = {
+            "dag_id": dag_id,
+            "project_path": self.project_path,
+            "kind": kind,
+            "summary": summary,
+            **extra,
+        }
+        return server.tool_dag_add_atom(args)["structuredContent"]["atom"]
+
+    def export_text(self, dag_id, export_format, **extra):
+        result = server.tool_dag_export(
+            {
+                "dag_id": dag_id,
+                "project_path": self.project_path,
+                "format": export_format,
+                **extra,
+            }
+        )
+        self.assertFalse(result["isError"], result)
+        return result["content"][0]["text"]
+
+    def test_catalog_and_lookup_cover_every_canonical_atom(self):
+        catalog = server.tool_catalog({})["structuredContent"]
+        canonical = set(server.SCHOLIA_ATOMS.ATOM_KINDS)
+        advertised = {atom["tag"] for atom in catalog["atoms"]}
+        self.assertEqual(advertised, canonical)
+        for kind in canonical:
+            lookup = server.tool_lookup({"term": kind})["structuredContent"]
+            self.assertTrue(
+                any(match.get("type") == "atom" and match.get("tag") == kind for match in lookup["matches"]),
+                kind,
+            )
+
+    def test_catalog_distinguishes_package_release_from_language_grammar(self):
+        catalog = server.tool_catalog({})["structuredContent"]
+        self.assertEqual(catalog["package_version"], "0.7.2")
+        self.assertEqual(catalog["language_grammar_version"], "0.6.2")
+
+    def test_add_atom_schema_is_closed_and_preserves_atom_attributes(self):
+        schema = server.tool_schema("scholia_dag_add_atom")
+        self.assertEqual(set(schema["properties"]["kind"]["enum"]), set(server.SCHOLIA_ATOMS.ATOM_KINDS))
+        self.assertIn("attributes", schema["properties"])
+
+        started = self.start()
+        goal_id = started["goal_atom"]["id"]
+        concluding = self.add(
+            started["dag_id"],
+            "Concluding",
+            "The public round trip is complete.",
+            attributes={"for_goal": goal_id, "status": "met"},
+        )
+        self.assertEqual(concluding["attributes"], {"for_goal": goal_id, "status": "met"})
+
+    def test_add_atom_rejects_unknown_atom_kind(self):
+        dag_id = self.start()["dag_id"]
+        with self.assertRaisesRegex(ValueError, "unknown.*atom kind"):
+            self.add(dag_id, "Trace", "This wrapper is not a canonical atom.")
+
+    def test_finish_session_defaults_to_canonical_goal_closing_concluding(self):
+        created = server.tool_dag_ensure_session(
+            {
+                "project_path": self.project_path,
+                "session_id": "contract-session",
+                "host": "test",
+                "objective": "Close this session canonically.",
+            }
+        )["structuredContent"]
+        finished = server.tool_dag_finish_session(
+            {
+                "project_path": self.project_path,
+                "session_id": "contract-session",
+                "host": "test",
+                "summary": "Session complete.",
+            }
+        )["structuredContent"]
+        self.assertEqual(finished["atom"]["kind"], "Concluding")
+        self.assertEqual(finished["atom"]["attributes"]["for_goal"], created["goal_atom"]["id"])
+
+    def test_xml_export_is_grammar_valid_and_preserves_goal_closure(self):
+        started = self.start()
+        goal_id = started["goal_atom"]["id"]
+        observation = self.add(
+            started["dag_id"],
+            "Observation",
+            "The regression suite passed.",
+        )
+        self.add(
+            started["dag_id"],
+            "Concluding",
+            "The public round trip is complete.",
+            content="The evidence establishes completion.",
+            attributes={"for_goal": goal_id, "status": "met"},
+            links=[{"to": observation["id"], "relation": "derived_from"}],
+        )
+        xml_text = self.export_text(started["dag_id"], "xml")
+        root = ET.fromstring(xml_text)
+        self.assertEqual(root.tag, "Scholia")
+        concluding = root.find(".//Concluding")
+        self.assertIsNotNone(concluding)
+        self.assertEqual(concluding.attrib["for_goal"], goal_id)
+        lint = server.tool_lint_snippet({"snippet": xml_text})["structuredContent"]
+        self.assertTrue(lint["ok"], lint)
+
+    def test_action_result_graph_round_trips_to_a_valid_trace(self):
+        started = self.start()
+        action = self.add(started["dag_id"], "Action", "Apply the requested change.")
+        self.add(
+            started["dag_id"],
+            "Finding",
+            "The requested change passed verification.",
+            links=[{"to": action["id"], "relation": "records_result"}],
+        )
+        server.tool_dag_finish_session(
+            {
+                "project_path": self.project_path,
+                "session_id": "not-used",
+                "host": "not-used",
+            }
+        )
+        xml_text = self.export_text(started["dag_id"], "xml")
+        self.assertNotIn("<Trace", xml_text)
+        self.assertNotRegex(xml_text, r"<Edge\s+from=")
+        lint = server.tool_lint_snippet({"snippet": xml_text})["structuredContent"]
+        self.assertFalse([error for error in lint["errors"] if error["rule"] == "well_formed"], lint)
+        action_errors = [error for error in lint["errors"] if error["rule"] == "action_recorded"]
+        self.assertEqual(action_errors, [], lint)
+
+    def test_hypothesis_evidence_attributes_round_trip(self):
+        started = self.start()
+        hypothesis = self.add(started["dag_id"], "Hypothesis", "The patch fixes the defect.")
+        self.add(
+            started["dag_id"],
+            "Evidence",
+            "The regression test passes.",
+            attributes={"for": hypothesis["id"], "polarity": "supports"},
+        )
+        self.add(
+            started["dag_id"],
+            "Finding",
+            "The hypothesis is supported.",
+            attributes={"for_hyp": hypothesis["id"], "status": "met"},
+        )
+        xml_text = self.export_text(started["dag_id"], "xml")
+        lint = server.tool_lint_snippet({"snippet": xml_text})["structuredContent"]
+        self.assertFalse([error for error in lint["errors"] if error["rule"] == "well_formed"], lint)
+        hypothesis_errors = [error for error in lint["errors"] if error["rule"] == "hypothesis_evaluated"]
+        self.assertEqual(hypothesis_errors, [], lint)
+
+    def test_decision_result_graph_round_trips_without_losing_closure(self):
+        started = self.start()
+        decision = self.add(started["dag_id"], "Deciding", "Select the safe release path.")
+        self.add(
+            started["dag_id"],
+            "Finding",
+            "The staged patch path was selected.",
+            links=[{"to": decision["id"], "relation": "records_result"}],
+        )
+        xml_text = self.export_text(started["dag_id"], "xml")
+        lint = server.tool_lint_snippet({"snippet": xml_text})["structuredContent"]
+        self.assertFalse([error for error in lint["errors"] if error["rule"] == "well_formed"], lint)
+        decision_errors = [error for error in lint["errors"] if error["rule"] == "decision_closed"]
+        self.assertEqual(decision_errors, [], lint)
+
+    def test_machine_exports_remain_parseable_when_max_chars_is_small(self):
+        dag_id = self.start()["dag_id"]
+        json_text = self.export_text(dag_id, "json", max_chars=32)
+        xml_text = self.export_text(dag_id, "xml", max_chars=32)
+        json.loads(json_text)
+        ET.fromstring(xml_text)
+
+    def test_neighbors_search_and_compact_have_behavioral_coverage(self):
+        started = self.start()
+        observation = self.add(started["dag_id"], "Observation", "Unique satellite observation.")
+        finding = self.add(
+            started["dag_id"],
+            "Finding",
+            "Satellite evidence is present.",
+            links=[{"to": observation["id"], "relation": "derived_from"}],
+        )
+        neighbors = server.tool_dag_neighbors(
+            {
+                "dag_id": started["dag_id"],
+                "project_path": self.project_path,
+                "atom_id": finding["id"],
+            }
+        )["structuredContent"]
+        self.assertEqual({node["id"] for node in neighbors["nodes"]}, {finding["id"], observation["id"]})
+
+        search = server.tool_dag_search(
+            {"project_path": self.project_path, "query": "satellite"}
+        )["structuredContent"]
+        self.assertTrue(search["matches"])
+
+        compact = server.tool_dag_compact(
+            {"dag_id": started["dag_id"], "project_path": self.project_path}
+        )["structuredContent"]
+        self.assertIn("Satellite evidence is present", compact["summary"])
+
+
 class AutoEmitSessionTests(unittest.TestCase):
     """Default per-project auto-emit: idempotent session DAGs, host tagging,
     opt-out gating, session close, schema migration, and concurrency pragma."""
@@ -486,7 +717,7 @@ class AutoEmitSessionTests(unittest.TestCase):
         res = self.ensure(auto=False)
         self.assertTrue(res["created"])
 
-    def test_finish_session_appends_summary(self):
+    def test_finish_session_appends_concluding(self):
         created = self.ensure()
         fin = server.tool_dag_finish_session(
             {
@@ -498,7 +729,7 @@ class AutoEmitSessionTests(unittest.TestCase):
         )["structuredContent"]
         self.assertTrue(fin["found"])
         self.assertEqual(fin["dag_id"], created["dag_id"])
-        self.assertEqual(fin["atom"]["kind"], "Summary")
+        self.assertEqual(fin["atom"]["kind"], "Concluding")
 
     def test_finish_session_missing_is_safe(self):
         fin = server.tool_dag_finish_session(
@@ -578,6 +809,19 @@ class ScholialangValidatorTests(unittest.TestCase):
         rules = {err["rule"] for err in result["errors"]}
         self.assertIn("hypothesis_evaluated", rules)
 
+    def test_lint_never_a_bare_null_does_not_false_positive(self):
+        snippet = (
+            '<Step id="S1">'
+            '<Constraint id="C1">Never a bare null.</Constraint>'
+            '<Action id="A1">Persist a structured result.'
+            '<Finding id="F1">The result was persisted.</Finding>'
+            '</Action>'
+            '</Step>'
+        )
+        result = server.tool_lint_snippet({"snippet": snippet})["structuredContent"]
+        constraint_errors = [error for error in result["errors"] if error["rule"] == "constraint_respected"]
+        self.assertEqual(constraint_errors, [], result)
+
     def test_lint_unrecorded_action_violates_rule(self):
         snippet = '<Step id="S1"><Goal id="G1">x</Goal><Action id="A1">do it</Action></Step>'
         result = json.loads(server.tool_lint_snippet({"snippet": snippet})["content"][0]["text"])
@@ -635,7 +879,7 @@ class ScholialangValidatorTests(unittest.TestCase):
         self.assertIn("Concluding", result["scholia_atom_kinds_v05"])
         self.assertIn("scholia_canonical_operators_v05", result)
         self.assertIn("scholia_criticality_rank", result)
-        self.assertEqual(result["scholia_validator_version"], "0.7.1")
+        self.assertEqual(result["scholia_validator_version"], "0.7.2")
         # Back-compat aliases remain available for older clients.
         self.assertIn("scholia_atom_kinds_v04", result)
         self.assertIn("scholia_canonical_operators_v04", result)
@@ -727,7 +971,7 @@ class ScholialangPluginManifestTests(unittest.TestCase):
     def test_installed_validator_must_meet_release_floor(self):
         class Atoms:
             ATOM_KINDS = ("Goal", "Concluding")
-            SCHOLIA_VALIDATOR_VERSION = "0.7.1"
+            SCHOLIA_VALIDATOR_VERSION = "0.7.2"
 
         self.assertTrue(server._has_goal_concluding(Atoms))
         Atoms.SCHOLIA_VALIDATOR_VERSION = "0.7.0"
