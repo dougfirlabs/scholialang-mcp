@@ -16,7 +16,7 @@ import subprocess
 from pathlib import Path
 
 
-RELEASE_VERSION = "0.7.1"
+RELEASE_VERSION = "0.7.2"
 SOURCE_FILES = {
     "atoms.py": "src/scholialang/atoms.py",
     "parser.py": "src/scholialang/parser.py",
