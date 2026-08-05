@@ -5,7 +5,10 @@
       "args": [
         "./scripts/codex_mcp_entry.py"
       ],
-      "cwd": "."
+      "cwd": ".",
+      "env": {
+        "SCHOLIA_HOST": "codex"
+      }
     }
   }
 }

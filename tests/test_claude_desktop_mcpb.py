@@ -29,6 +29,9 @@ def test_desktop_manifest_and_staged_server_are_release_aligned():
         "src/scholialang_mcp_server.py"
     )
     assert template_manifest["server"]["mcp_config"]["command"] == "uv"
+    assert template_manifest["server"]["mcp_config"]["env"]["SCHOLIA_HOST"] == (
+        "claude-desktop"
+    )
     assert template_manifest["tools_generated"] is True
 
     with tempfile.TemporaryDirectory() as tmp:

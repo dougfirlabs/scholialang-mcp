@@ -653,15 +653,31 @@ class AutoEmitSessionTests(unittest.TestCase):
 
     def setUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
-        self.old_home = os.environ.get("SCHOLIALANG_HOME")
-        self.old_flag = os.environ.get("SCHOLIA_AUTOEMIT")
+        self.old_env = {
+            key: os.environ.get(key)
+            for key in (
+                "SCHOLIALANG_HOME",
+                "SCHOLIA_AUTOEMIT",
+                "SCHOLIA_HOST",
+                "SCHOLIA_SESSION_ID",
+                "SCHOLIA_RUNTIME_ID",
+                "CLAUDE_SESSION_ID",
+            )
+        }
         os.environ["SCHOLIALANG_HOME"] = self.tempdir.name
-        os.environ.pop("SCHOLIA_AUTOEMIT", None)
+        os.environ["SCHOLIA_RUNTIME_ID"] = "test-runtime"
+        for key in (
+            "SCHOLIA_AUTOEMIT",
+            "SCHOLIA_HOST",
+            "SCHOLIA_SESSION_ID",
+            "CLAUDE_SESSION_ID",
+        ):
+            os.environ.pop(key, None)
         self.project_path = str(Path(self.tempdir.name) / "project")
         Path(self.project_path).mkdir(parents=True, exist_ok=True)
 
     def tearDown(self):
-        for key, val in (("SCHOLIALANG_HOME", self.old_home), ("SCHOLIA_AUTOEMIT", self.old_flag)):
+        for key, val in self.old_env.items():
             if val is None:
                 os.environ.pop(key, None)
             else:
@@ -689,6 +705,58 @@ class AutoEmitSessionTests(unittest.TestCase):
         self.assertTrue(first["created"])
         self.assertFalse(second["created"])
         self.assertEqual(first["dag_id"], second["dag_id"])
+
+    def test_implicit_identity_is_runtime_scoped_and_never_unknown_default(self):
+        first = server.tool_dag_ensure_session(
+            {"project_path": self.project_path}
+        )["structuredContent"]
+        second = server.tool_dag_ensure_session(
+            {"project_path": self.project_path}
+        )["structuredContent"]
+        self.assertEqual(first["host"], "mcp")
+        self.assertEqual(first["session_id"], server.RUNTIME_SESSION_ID)
+        self.assertEqual(first["dag_id"], second["dag_id"])
+        self.assertNotEqual(first["session_key"], "unknown:default")
+
+    def test_session_identity_precedence_is_args_then_scholia_then_claude_env(self):
+        os.environ["SCHOLIA_HOST"] = "env-host"
+        os.environ["SCHOLIA_SESSION_ID"] = "scholia-env-session"
+        os.environ["CLAUDE_SESSION_ID"] = "claude-env-session"
+
+        explicit = self.ensure(host="arg-host", session_id="arg-session")
+        scholia_env = server.tool_dag_ensure_session(
+            {"project_path": self.project_path}
+        )["structuredContent"]
+        os.environ.pop("SCHOLIA_SESSION_ID")
+        claude_env = server.tool_dag_ensure_session(
+            {"project_path": self.project_path}
+        )["structuredContent"]
+
+        self.assertEqual(explicit["session_key"], "arg-host:arg-session")
+        self.assertEqual(scholia_env["session_key"], "env-host:scholia-env-session")
+        self.assertEqual(claude_env["session_key"], "env-host:claude-env-session")
+
+    def test_explicit_session_binds_implicit_calls_in_same_host_runtime(self):
+        explicit = self.ensure(host="claude-code", session_id="real-hook-session")
+        os.environ["SCHOLIA_HOST"] = "claude-code"
+        implicit = server.tool_dag_ensure_session(
+            {"project_path": self.project_path}
+        )["structuredContent"]
+        self.assertEqual(implicit["session_id"], "real-hook-session")
+        self.assertEqual(implicit["dag_id"], explicit["dag_id"])
+
+    def test_finish_session_uses_same_implicit_identity_resolution(self):
+        os.environ["SCHOLIA_HOST"] = "desktop"
+        os.environ["SCHOLIA_SESSION_ID"] = "desktop-session"
+        created = server.tool_dag_ensure_session(
+            {"project_path": self.project_path}
+        )["structuredContent"]
+        finished = server.tool_dag_finish_session(
+            {"project_path": self.project_path, "summary": "done"}
+        )["structuredContent"]
+        self.assertTrue(finished["found"])
+        self.assertEqual(finished["dag_id"], created["dag_id"])
+        self.assertEqual(finished["atom"]["kind"], "Concluding")
 
     def test_two_hosts_same_session_get_distinct_dags(self):
         cc = self.ensure(host="claude-code")
@@ -933,8 +1001,25 @@ class ScholialangPluginManifestTests(unittest.TestCase):
     def test_claude_code_mcp_config_points_at_server(self):
         data = self._read_json("plugins", "claude-code", "scholialang", ".mcp.json")
         self.assertIn("scholialang", data["mcpServers"])
-        args = data["mcpServers"]["scholialang"]["args"]
+        config = data["mcpServers"]["scholialang"]
+        args = config["args"]
         self.assertTrue(any("scholialang_mcp_server.py" in arg for arg in args))
+        self.assertEqual(config["env"]["SCHOLIA_HOST"], "claude-code")
+
+    def test_claude_code_lifecycle_hooks_use_exec_form(self):
+        data = self._read_json(
+            "plugins", "claude-code", "scholialang", "hooks", "hooks.json"
+        )
+        for event in ("SessionStart", "SessionEnd"):
+            handler = data["hooks"][event][0]["hooks"][0]
+            self.assertEqual(handler["command"], "python3")
+            self.assertEqual(len(handler["args"]), 1)
+            self.assertTrue(handler["args"][0].endswith(f"{event.lower().replace('session', 'session_')}.py"))
+
+    def test_codex_mcp_config_declares_host_identity(self):
+        data = self._read_json("plugins", "codex", "scholialang", ".mcp.json")
+        config = data["mcpServers"]["scholialang"]
+        self.assertEqual(config["env"]["SCHOLIA_HOST"], "codex")
 
     def test_ollama_recipes_present(self):
         recipes_dir = self.REPO_ROOT / "plugins" / "ollama" / "scholialang" / "recipes"

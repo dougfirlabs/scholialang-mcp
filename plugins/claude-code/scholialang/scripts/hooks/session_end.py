@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Claude Code SessionEnd hook: close this project's session trace.
 
-Appends a Summary atom marking session end to the per-project session DAG, if
+Appends a canonical Concluding atom to the per-project session DAG, if
 one exists (none exists when auto-emit was opted out at start, in which case this
 is a safe no-op). Never fails the session.
 """
@@ -69,7 +69,6 @@ def main():
             "project_path": cwd,
             "session_id": session_id,
             "host": HOST,
-            "kind": "Summary",
             "summary": f"Claude Code session ended ({reason}).",
         }
     )

@@ -5,7 +5,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/session_start.py\""
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hooks/session_start.py"
+            ]
           }
         ]
       }
@@ -15,7 +18,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/session_end.py\""
+            "command": "python3",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/hooks/session_end.py"
+            ]
           }
         ]
       }
