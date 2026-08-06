@@ -7,6 +7,7 @@ import re
 import secrets
 import sqlite3
 import sys
+import xml.etree.ElementTree as ET
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,7 +20,7 @@ from pathlib import Path
 PROTOCOL_VERSION = "2026-07-28"
 SUPPORTED_PROTOCOL_VERSIONS = ("2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26")
 SERVER_NAME = "scholialang"
-SERVER_VERSION = "0.7.1"
+SERVER_VERSION = "0.7.2"
 
 # MCP 2026-07-28 ``_meta`` keys (SEP-2575 / SEP-2322) and the error code for a
 # version the server does not support (-32022 per the 2026-07-28 error-code
@@ -34,8 +35,14 @@ UNSUPPORTED_PROTOCOL_VERSION = -32022
 # returns may be shared through a cross-client cache.
 CACHEABLE_TTL_MS = 300_000
 CACHE_SCOPE = "private"
-MIN_VALIDATOR_VERSION = (0, 7, 1)
+MIN_VALIDATOR_VERSION = (0, 7, 2)
 MAX_TEXT = 6000
+
+# A stdio MCP server can outlive, or be started independently of, a host's
+# conversation lifecycle.  When the host does not expose a conversation ID,
+# keep implicit calls isolated to this server process instead of collapsing
+# every caller into the historical ``unknown:default`` bucket.
+RUNTIME_SESSION_ID = "runtime-" + secrets.token_hex(8)
 
 
 def _validator_version_tuple(value):
@@ -82,32 +89,28 @@ def _load_scholia_engine():
 
 SCHOLIA_VALIDATOR, SCHOLIA_PARSER, SCHOLIA_ATOMS, LINT_ENGINE = _load_scholia_engine()
 
-ATOM_KINDS = [
-    "Goal",
-    "Hypothesis",
-    "Observation",
-    "Evidence",
-    "Finding",
-    "Concluding",
-    "Deciding",
-    "Action",
-    "Contradiction",
-    "Retract",
-    "Summary",
-]
+ATOM_KINDS = list(SCHOLIA_ATOMS.ATOM_KINDS)
+
+_ATOM_SUMMARIES = {
+    "Goal": "The target proposition the trace is pursuing.",
+    "Hypothesis": "A proposition the agent will test.",
+    "Observation": "External input from a command, file, query, or review.",
+    "Evidence": "Material that supports, refutes, or qualifies a hypothesis.",
+    "Finding": "A conclusion drawn from available evidence.",
+    "Concluding": "A premise-backed final or checkpoint conclusion.",
+    "Deciding": "A branch point and selected path.",
+    "Action": "A durable external state change.",
+    "Contradiction": "Two trace claims that cannot both be true.",
+    "Retract": "Explicit revocation of a prior finding.",
+}
 
 ATOMS = [
-    {"id": "goal", "tag": "Goal", "summary": "The target proposition the trace is pursuing."},
-    {"id": "hypothesis", "tag": "Hypothesis", "summary": "A proposition the agent will test."},
-    {"id": "observation", "tag": "Observation", "summary": "External input from a command, file, query, or review."},
-    {"id": "evidence", "tag": "Evidence", "summary": "Material that supports, refutes, or qualifies a hypothesis."},
-    {"id": "finding", "tag": "Finding", "summary": "A conclusion drawn from available evidence."},
-    {"id": "concluding", "tag": "Concluding", "summary": "A premise-backed final or checkpoint conclusion."},
-    {"id": "decision", "tag": "Deciding", "summary": "A branch point and selected path."},
-    {"id": "action", "tag": "Action", "summary": "A durable external state change."},
-    {"id": "contradiction", "tag": "Contradiction", "summary": "Two trace claims that cannot both be true."},
-    {"id": "retraction", "tag": "Retract", "summary": "Explicit revocation of a prior finding."},
-    {"id": "summary", "tag": "Summary", "summary": "A compact restatement of graph state."},
+    {
+        "id": kind.lower(),
+        "tag": kind,
+        "summary": _ATOM_SUMMARIES.get(kind, f"Canonical Scholia {kind} atom."),
+    }
+    for kind in ATOM_KINDS
 ]
 
 OPERATORS = [
@@ -230,6 +233,7 @@ def init_db(conn):
           content TEXT NOT NULL,
           files_json TEXT NOT NULL,
           confidence_json TEXT,
+          attrs_json TEXT NOT NULL DEFAULT '{}',
           created_at TEXT NOT NULL,
           PRIMARY KEY (dag_id, atom_id),
           FOREIGN KEY (dag_id) REFERENCES dags(dag_id) ON DELETE CASCADE
@@ -256,6 +260,16 @@ def init_db(conn):
           FOREIGN KEY (dag_id) REFERENCES dags(dag_id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS session_bindings (
+          project_key TEXT NOT NULL,
+          host TEXT NOT NULL,
+          runtime_scope TEXT NOT NULL,
+          session_key TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (project_key, host, runtime_scope),
+          FOREIGN KEY (project_key) REFERENCES projects(project_key) ON DELETE CASCADE
+        );
+
         CREATE INDEX IF NOT EXISTS idx_dags_project_updated ON dags(project_key, updated_at DESC);
         CREATE INDEX IF NOT EXISTS idx_nodes_dag_ordinal ON nodes(dag_id, ordinal);
         CREATE INDEX IF NOT EXISTS idx_edges_dag_from ON edges(dag_id, from_atom_id);
@@ -264,6 +278,7 @@ def init_db(conn):
     )
     # Migrate pre-0.3.0 databases and back the idempotent session lookup.
     _ensure_column(conn, "dags", "session_key", "TEXT")
+    _ensure_column(conn, "nodes", "attrs_json", "TEXT NOT NULL DEFAULT '{}'")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_dags_session ON dags(project_key, session_key)")
     conn.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_dags_session_unique "
@@ -354,6 +369,7 @@ def row_to_dag(conn, row):
             "content": node["content"],
             "files": json_loads(node["files_json"], []),
             "confidence": json_loads(node["confidence_json"], None),
+            "attributes": json_loads(node["attrs_json"], {}) if "attrs_json" in node.keys() else {},
             "created_at": node["created_at"],
         }
         nodes[node["atom_id"]] = atom
@@ -459,7 +475,32 @@ def normalize_kind(kind):
     for known in ATOM_KINDS:
         if raw.lower() == known.lower():
             return known
-    return re.sub(r"[^A-Za-z0-9_-]", "", raw) or "Finding"
+    raise ValueError(f"unknown Scholia atom kind: {raw}")
+
+
+def normalize_attributes(kind, value):
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise ValueError("attributes must be an object")
+    allowed_by_kind = getattr(SCHOLIA_PARSER, "_ALLOWED_ATTRS_BY_KIND", {})
+    allowed = set(allowed_by_kind.get(kind, ())) - {"id", "value"}
+    normalized = {}
+    for key, raw_value in value.items():
+        key = str(key)
+        if key not in allowed:
+            raise ValueError(
+                f"unknown attribute {key!r} for {kind}; allowed attributes: {sorted(allowed)}"
+            )
+        if raw_value is None:
+            continue
+        if isinstance(raw_value, list):
+            normalized[key] = [str(item) for item in raw_value]
+        elif isinstance(raw_value, (str, int, float, bool)):
+            normalized[key] = str(raw_value).lower() if isinstance(raw_value, bool) else str(raw_value)
+        else:
+            raise ValueError(f"attribute {key!r} must be a scalar or array")
+    return normalized
 
 
 def dag_id_arg(args):
@@ -626,6 +667,7 @@ def tool_dag_add_atom(args):
             "content": compact_text(args.get("content", ""), MAX_TEXT),
             "files": optional_list(args, "files"),
             "confidence": args.get("confidence"),
+            "attributes": normalize_attributes(kind, args.get("attributes")),
             "created_at": now(),
         }
         ordinal = len(dag["order"]) + 1
@@ -633,9 +675,9 @@ def tool_dag_add_atom(args):
             """
             INSERT INTO nodes (
               dag_id, atom_id, ordinal, kind, summary, content,
-              files_json, confidence_json, created_at
+              files_json, confidence_json, attrs_json, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 dag_id,
@@ -646,6 +688,7 @@ def tool_dag_add_atom(args):
                 node["content"],
                 json_dumps(node["files"]),
                 json_dumps(node["confidence"]) if node["confidence"] is not None else None,
+                json_dumps(node["attributes"]),
                 node["created_at"],
             ),
         )
@@ -714,8 +757,82 @@ def autoemit_enabled(project_path=None):
     return autoemit_disabled_reason(project_path) is None
 
 
+def runtime_scope_id():
+    """Return the host-process scope shared by sibling hook/MCP children."""
+    return compact_text(
+        os.environ.get("SCHOLIA_RUNTIME_ID") or f"parent-pid-{os.getppid()}",
+        200,
+    )
+
+
+def requested_session_identity(args):
+    """Resolve identity supplied by a caller or host environment."""
+    host = compact_text(
+        args.get("host") or os.environ.get("SCHOLIA_HOST") or "mcp",
+        60,
+    )
+    raw_session_id = (
+        args.get("session_id")
+        or os.environ.get("SCHOLIA_SESSION_ID")
+        or os.environ.get("CLAUDE_SESSION_ID")
+    )
+    session_id = compact_text(raw_session_id, 200) if raw_session_id else None
+    return host, session_id
+
+
+def find_bound_session_id(conn, project_key, host):
+    row = conn.execute(
+        "SELECT session_key FROM session_bindings "
+        "WHERE project_key = ? AND host = ? AND runtime_scope = ?",
+        (project_key, host, runtime_scope_id()),
+    ).fetchone()
+    if row is None:
+        return None
+    prefix = f"{host}:"
+    session_key = row["session_key"]
+    return session_key[len(prefix):] if session_key.startswith(prefix) else None
+
+
+def bind_runtime_session(conn, project_key, host, session_key):
+    conn.execute(
+        """
+        INSERT INTO session_bindings (
+          project_key, host, runtime_scope, session_key, updated_at
+        ) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(project_key, host, runtime_scope) DO UPDATE SET
+          session_key = excluded.session_key,
+          updated_at = excluded.updated_at
+        """,
+        (project_key, host, runtime_scope_id(), session_key, now()),
+    )
+
+
+def clear_runtime_session_binding(conn, project_key, host, session_key):
+    conn.execute(
+        "DELETE FROM session_bindings "
+        "WHERE project_key = ? AND host = ? AND runtime_scope = ? AND session_key = ?",
+        (project_key, host, runtime_scope_id(), session_key),
+    )
+
+
+def resolve_session_identity(args, conn=None, info=None):
+    """Resolve a stable identity without a cross-host shared fallback.
+
+    Explicit tool arguments are authoritative.  Hosts may then provide a
+    stable identity through SCHOLIA_* variables (CLAUDE_SESSION_ID remains a
+    compatibility input for Claude Code wrappers).  If neither is available,
+    the fallback is unique to this MCP server process and remains idempotent
+    for its lifetime.
+    """
+    host, session_id = requested_session_identity(args)
+    if session_id is None and conn is not None and info is not None:
+        session_id = find_bound_session_id(conn, info["project_key"], host)
+    session_id = session_id or RUNTIME_SESSION_ID
+    return host, session_id
+
+
 def session_key_for(host, session_id):
-    return f"{host or 'unknown'}:{session_id or 'default'}"
+    return f"{host}:{session_id}"
 
 
 def find_session_dag_row(conn, project_key, session_key):
@@ -734,8 +851,8 @@ def tool_dag_ensure_session(args):
     auto=True; explicit calls (auto=False) always create.
     """
     project_path = args.get("project_path")
-    host = compact_text(args.get("host") or "unknown", 60)
-    session_id = compact_text(args.get("session_id") or "default", 200)
+    host, requested_session_id = requested_session_identity(args)
+    session_id = requested_session_id or RUNTIME_SESSION_ID
     auto = args.get("auto", True)
     session_key = session_key_for(host, session_id)
 
@@ -757,6 +874,9 @@ def tool_dag_ensure_session(args):
     try:
         info = project_info(project_path)
         upsert_project(conn, info)
+        if requested_session_id is None:
+            session_id = find_bound_session_id(conn, info["project_key"], host) or RUNTIME_SESSION_ID
+            session_key = session_key_for(host, session_id)
         existing = find_session_dag_row(conn, info["project_key"], session_key)
         if existing is None:
             dag_id = "dag_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "_" + secrets.token_hex(4)
@@ -790,6 +910,8 @@ def tool_dag_ensure_session(args):
                         session_key,
                     ),
                 )
+                if requested_session_id is not None:
+                    bind_runtime_session(conn, info["project_key"], host, session_key)
                 conn.commit()
             except sqlite3.IntegrityError:
                 # Another host/process created the same session DAG concurrently.
@@ -814,6 +936,9 @@ def tool_dag_ensure_session(args):
                     f"Started session DAG {dag_id} for {info['project_name']} ({host}).", structured
                 )
 
+        if requested_session_id is not None:
+            bind_runtime_session(conn, info["project_key"], host, session_key)
+            conn.commit()
         dag = row_to_dag(conn, existing)
         structured = dag_metadata(dag)
         structured.update({"enabled": True, "created": False, "host": host, "session_id": session_id})
@@ -825,19 +950,19 @@ def tool_dag_ensure_session(args):
 
 
 def tool_dag_finish_session(args):
-    """Append a closing Summary/Concluding atom to this session's DAG.
+    """Append a goal-closing Concluding atom to this session's DAG.
 
     Re-derives the DAG from (project, host, session_id) so the caller need not
     track the dag_id. Safe no-op when no session DAG exists (e.g. opt-out was
     active at session start).
     """
     project_path = args.get("project_path")
-    host = compact_text(args.get("host") or "unknown", 60)
-    session_id = compact_text(args.get("session_id") or "default", 200)
-    session_key = session_key_for(host, session_id)
+    host, _ = requested_session_identity(args)
     conn = connect()
     try:
         info = project_info(project_path)
+        host, session_id = resolve_session_identity(args, conn, info)
+        session_key = session_key_for(host, session_id)
         existing = find_session_dag_row(conn, info["project_key"], session_key)
         dag_id = existing["dag_id"] if existing is not None else None
         project_path_resolved = info["project_path"]
@@ -848,8 +973,32 @@ def tool_dag_finish_session(args):
         structured = {"found": False, "host": host, "session_id": session_id, "session_key": session_key}
         return content_result("No session DAG to finish.", structured)
 
-    kind = normalize_kind(args.get("kind") or "Summary")
+    kind = normalize_kind(args.get("kind") or "Concluding")
     summary_text = args.get("summary") or "Session ended."
+    dag = load_dag(dag_id, project_path_resolved)
+    goal_ids = [node_id for node_id in dag.get("order", []) if dag["nodes"][node_id].get("kind") == "Goal"]
+    attributes = {}
+    links = []
+    if kind == "Concluding" and goal_ids:
+        attributes = {"for_goal": goal_ids[0], "status": "met"}
+        links.append({"to": goal_ids[0], "relation": "derived_from", "label": "session goal closure"})
+        premise_ids = [
+            node_id
+            for node_id in dag.get("order", [])
+            if dag["nodes"][node_id].get("kind") in {"Finding", "Observation", "Evidence"}
+        ]
+        if not premise_ids:
+            premise = tool_dag_add_atom(
+                {
+                    "dag_id": dag_id,
+                    "project_path": project_path_resolved,
+                    "kind": "Observation",
+                    "summary": "The session-end event was recorded.",
+                    "content": "The session-end event was recorded.",
+                }
+            )["structuredContent"]["atom"]
+            premise_ids.append(premise["id"])
+        links.append({"to": premise_ids[-1], "relation": "derived_from", "label": "session closing premise"})
     atom = tool_dag_add_atom(
         {
             "dag_id": dag_id,
@@ -857,8 +1006,16 @@ def tool_dag_finish_session(args):
             "kind": kind,
             "summary": compact_text(summary_text, 500),
             "content": compact_text(summary_text, MAX_TEXT),
+            "attributes": attributes,
+            "links": links,
         }
     )["structuredContent"]["atom"]
+    conn = connect()
+    try:
+        clear_runtime_session_binding(conn, info["project_key"], host, session_key)
+        conn.commit()
+    finally:
+        conn.close()
     structured = {"found": True, "dag_id": dag_id, "atom": atom, "host": host, "session_id": session_id}
     return content_result(f"Finished session DAG {dag_id} ({host}).", structured)
 
@@ -926,7 +1083,7 @@ def build_summary(dag, max_items=8, focus_atom_id=None):
     else:
         recent_nodes = [dag["nodes"][node_id] for node_id in dag.get("order", [])[-max_items:] if node_id in dag["nodes"]]
         heading = "Recent Nodes"
-    frontier = frontier_nodes(dag, kind_filter=["Concluding", "Finding", "Deciding", "Action", "Summary"])[:max_items]
+    frontier = frontier_nodes(dag, kind_filter=["Concluding", "Finding", "Deciding", "Action"])[:max_items]
     lines = [
         f"# {dag.get('title', dag.get('dag_id'))}",
         "",
@@ -1034,19 +1191,52 @@ def tool_dag_export(args):
     if export_format == "json":
         text = json.dumps(dag, indent=2, sort_keys=True)
     elif export_format == "xml":
-        rows = [f'<Trace id="{html.escape(dag["dag_id"])}" title="{html.escape(dag.get("title", ""))}">']
-        for node_id in dag.get("order", []):
-            node = dag["nodes"][node_id]
-            kind = html.escape(node.get("kind", "Atom"))
-            rows.append(f'  <{kind} id="{html.escape(node_id)}">')
-            rows.append(f'    <Summary>{html.escape(node.get("summary", ""))}</Summary>')
-            if node.get("content"):
-                rows.append(f'    <Content>{html.escape(node.get("content", ""))}</Content>')
-            rows.append(f"  </{kind}>")
+        root = ET.Element("Scholia")
+        step = ET.SubElement(root, "Step", {"id": "Step_export_01", "name": dag.get("title", "Exported DAG")})
+        nodes = dag.get("nodes", {})
+        child_parent = {}
+        reference_targets = {}
         for edge in dag.get("edges", []):
-            rows.append(f'  <Edge from="{html.escape(edge["from"])}" to="{html.escape(edge["to"])}" relation="{html.escape(edge["relation"])}"/>')
-        rows.append("</Trace>")
-        text = "\n".join(rows)
+            source = nodes.get(edge["from"], {})
+            target = nodes.get(edge["to"], {})
+            if (
+                edge.get("relation") == "records_result"
+                and source.get("kind") in {"Finding", "Concluding"}
+                and target.get("kind") in {"Action", "Deciding"}
+            ):
+                child_parent[source["id"]] = target["id"]
+            else:
+                reference_targets.setdefault(source.get("id"), []).append(target.get("id"))
+
+        goal_ids = [node_id for node_id in dag.get("order", []) if nodes[node_id].get("kind") == "Goal"]
+
+        def node_element(node_id):
+            node = nodes[node_id]
+            kind = node["kind"]
+            attrs = {"id": node_id}
+            for key, value in (node.get("attributes") or {}).items():
+                attrs[key] = ",".join(value) if isinstance(value, list) else str(value)
+            if kind == "Concluding" and not attrs.get("for_goal") and len(goal_ids) == 1:
+                attrs["for_goal"] = goal_ids[0]
+            elem = ET.Element(kind, attrs)
+            content = node.get("content") or node.get("summary") or ""
+            refs = [target for target in reference_targets.get(node_id, []) if target]
+            if kind == "Concluding" and attrs.get("for_goal") and "REFER:" not in content:
+                refs.append(attrs["for_goal"])
+            for target in dict.fromkeys(refs):
+                marker = f"REFER:{target}"
+                if marker not in content:
+                    content = f"{content} {marker}".strip()
+            elem.text = content
+            for child_id, parent_id in child_parent.items():
+                if parent_id == node_id:
+                    elem.append(node_element(child_id))
+            return elem
+
+        for node_id in dag.get("order", []):
+            if node_id not in child_parent:
+                step.append(node_element(node_id))
+        text = ET.tostring(root, encoding="unicode")
     else:
         lines = [build_summary(dag, 12), "", "## Nodes"]
         for node_id in dag.get("order", []):
@@ -1060,7 +1250,10 @@ def tool_dag_export(args):
         for edge in dag.get("edges", []):
             lines.append(f"- {edge['from']} -[{edge['relation']}]-> {edge['to']}")
         text = "\n".join(lines).strip()
-    return content_result(compact_text(text, int(args.get("max_chars", 20000))), {"dag_id": dag["dag_id"], "format": export_format})
+    # Truncating machine-readable formats creates invalid JSON/XML. Their
+    # integrity takes precedence over the display-oriented size hint.
+    rendered = text if export_format in {"json", "xml"} else compact_text(text, int(args.get("max_chars", 20000)))
+    return content_result(rendered, {"dag_id": dag["dag_id"], "format": export_format})
 
 
 def tool_catalog(_args):
@@ -1083,6 +1276,8 @@ def tool_catalog(_args):
         "scholia_validator_version": getattr(SCHOLIA_ATOMS, "SCHOLIA_VALIDATOR_VERSION", "unknown"),
         "lint_engine": LINT_ENGINE,
         "autoemit_default": True,
+        "package_version": SERVER_VERSION,
+        "language_grammar_version": "0.6.2",
     }
     return content_result(json.dumps(structured, indent=2, sort_keys=True), structured)
 
@@ -2032,7 +2227,7 @@ def tool_codex_import_thread(args):
             {
                 "dag_id": dag_id,
                 "project_path": project_path,
-                "kind": "Summary",
+                "kind": "Observation",
                 "summary": summary,
                 "content": json.dumps({"remaining_events": len(raw_lines) - max_events, "rollout_path": str(path)}, indent=2),
                 "files": [str(path)],
@@ -2185,7 +2380,7 @@ def tool_schema(name):
         return schema({
             **common_dag,
             "atom_id": {"type": "string"},
-            "kind": {"type": "string"},
+            "kind": {"type": "string", "enum": list(ATOM_KINDS)},
             "summary": {"type": "string"},
             "content": {"type": "string"},
             "files": {"type": "array", "items": {"type": "string"}},
@@ -2194,6 +2389,7 @@ def tool_schema(name):
                 "description": "Optional confidence value, normally a decimal string in [0.0, 1.0].",
             },
             "refs": {"type": "array", "items": {"type": "string"}},
+            "attributes": {"type": "object", "additionalProperties": True},
             "links": {"type": "array", "items": {"type": "object"}},
         }, ["summary"])
     if name.endswith("dag_link"):
@@ -2265,7 +2461,7 @@ def list_tools():
         "scholia_dag_add_atom": "Add an atom node and optional edges to a local SQLite DAG.",
         "scholia_dag_link": "Create an explicit acyclic edge between two atoms.",
         "scholia_dag_ensure_session": "Idempotently find-or-create this session's per-project DAG (host-tagged, opt-out aware). Safe to call repeatedly.",
-        "scholia_dag_finish_session": "Append a closing Summary/Concluding atom to this session's per-project DAG.",
+        "scholia_dag_finish_session": "Append a goal-closing Concluding atom to this session's per-project DAG.",
         "scholia_dag_list": "List recent local DAGs.",
         "scholia_dag_summary": "Return a compact graph summary for token-efficient recall.",
         "scholia_dag_read": "Read bounded DAG metadata, nodes, and edges.",
@@ -2285,7 +2481,7 @@ def list_tools():
         "scholia_trace_export": "Compatibility alias for scholia_dag_export.",
         "scholia_catalog": "List Scholialang atoms, operators, relations, and resources.",
         "scholia_lookup": "Lookup a Scholialang atom, operator, or relation.",
-        "scholia_lint_snippet": "Validate a Scholia snippet against the full v0.6 grammar (closed-set atoms, canonical_id well-formedness, reference completeness, Concluding closure rules, and warning checks). Pass mode='tag_balance' for the legacy tag-only check.",
+        "scholia_lint_snippet": "Validate a Scholia snippet against the stable Scholia v0.6.2 language grammar using the 0.7.2 validator (closed-set atoms, canonical_id/fingerprint well-formedness, references, closure rules, and warnings). Pass mode='tag_balance' for the legacy tag-only check.",
         "scholia_lint_trace": "Validate a Scholia trace and return per-rule structured errors plus counts. Use for CI gates and dashboard rendering.",
     }
     return [

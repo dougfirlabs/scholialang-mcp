@@ -8,7 +8,8 @@
       ],
       "cwd": "SCHOLIALANG_MCP_DIR",
       "env": {
-        "SCHOLIALANG_HOME": "${env:HOME}/.scholialang"
+        "SCHOLIALANG_HOME": "${env:HOME}/.scholialang",
+        "SCHOLIA_HOST": "cline"
       },
       "disabled": false,
       "autoApprove": [

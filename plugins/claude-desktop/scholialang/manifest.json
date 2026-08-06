@@ -1,0 +1,79 @@
+{
+  "manifest_version": "0.4",
+  "name": "scholialang",
+  "display_name": "Scholialang",
+  "version": "0.7.2",
+  "description": "Scholialang plugin 0.7.2: local reasoning DAG and stable Scholia v0.6.2 grammar validation for Claude Desktop.",
+  "long_description": "Scholialang plugin release 0.7.2 gives Claude Desktop an explicit, local evidence graph for goals, hypotheses, observations, evidence, findings, decisions, actions, contradictions, and conclusions. It implements the stable Scholia v0.6.2 language grammar. Traces are stored in a local SQLite database under the user's home directory. The extension makes no network calls and requires no account or API key.",
+  "author": {
+    "name": "Doug Fir Labs",
+    "url": "https://dougfirlabs.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dougfirlabs/scholialang-mcp.git"
+  },
+  "homepage": "https://scholialang.org/",
+  "documentation": "https://github.com/dougfirlabs/scholialang-mcp#readme",
+  "support": "https://github.com/dougfirlabs/scholialang-mcp/issues",
+  "server": {
+    "type": "uv",
+    "entry_point": "src/scholialang_mcp_server.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${__dirname}",
+        "src/scholialang_mcp_server.py"
+      ],
+      "env": {
+        "SCHOLIA_HOST": "claude-desktop"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "scholia_dag_ensure_session",
+      "description": "Open or resume a local per-project Scholialang session DAG."
+    },
+    {
+      "name": "scholia_dag_add_atom",
+      "description": "Record an explicit reasoning atom and its evidence relationships."
+    },
+    {
+      "name": "scholia_dag_summary",
+      "description": "Return a compact summary of a local Scholialang DAG."
+    },
+    {
+      "name": "scholia_dag_search",
+      "description": "Search local Scholialang traces and decisions."
+    },
+    {
+      "name": "scholia_lint_snippet",
+      "description": "Validate a Scholia snippet against the stable Scholia v0.6.2 language grammar."
+    }
+  ],
+  "tools_generated": true,
+  "keywords": [
+    "scholialang",
+    "reasoning",
+    "evidence",
+    "trace",
+    "dag",
+    "memory",
+    "audit"
+  ],
+  "license": "MIT OR Apache-2.0",
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "python": ">=3.10,<4.0"
+    }
+  }
+}

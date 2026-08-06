@@ -50,7 +50,7 @@ works when auto-emit is off.
 
 ## When To Lint
 
-- Call `scholia_lint_snippet` when the user pastes a Scholia trace and asks if it's valid, or before storing a fragment that will be referenced elsewhere. The default `mode='full'` runs the complete v0.6 grammar — closed-set atom kinds, canonical_id well-formedness, reference completeness, decision closure, action recording, hypothesis evaluation, retract consistency, constraint respect, goal declaration, operator vocabulary, v0.3.1 optional field shapes, and Concluding closure rules with warnings.
+- Call `scholia_lint_snippet` when the user pastes a Scholia trace and asks if it's valid, or before storing a fragment that will be referenced elsewhere. The default `mode='full'` uses the package's 0.7.2 validator for the stable Scholia v0.6.2 language grammar — closed-set atom kinds, canonical_id/fingerprint well-formedness, reference completeness, decision closure, action recording, hypothesis evaluation, retract consistency, constraint respect, goal declaration, operator vocabulary, optional field shapes, and Concluding closure rules with warnings.
 - Use `mode='tag_balance'` for fast syntactic-only checks when full grammar isn't needed.
 - Call `scholia_lint_trace` when you need a per-rule breakdown for CI gates, dashboards, or "which rule failed" questions — the response includes `errors_by_rule` and `counts_by_rule` keyed on the canonical `RULE_NAMES`.
 

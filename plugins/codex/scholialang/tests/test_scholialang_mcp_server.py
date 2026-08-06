@@ -501,7 +501,7 @@ class ScholialangValidatorTests(unittest.TestCase):
         self.assertIn("Concluding", result["scholia_atom_kinds_v05"])
         self.assertIn("scholia_canonical_operators_v05", result)
         self.assertIn("scholia_criticality_rank", result)
-        self.assertEqual(result["scholia_validator_version"], "0.7.1")
+        self.assertEqual(result["scholia_validator_version"], "0.7.2")
         # Back-compat aliases remain available for older clients.
         self.assertIn("scholia_atom_kinds_v04", result)
         self.assertIn("scholia_canonical_operators_v04", result)

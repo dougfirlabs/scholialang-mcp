@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.7.2
+
+- Repair the public DAG-to-grammar contract: XML exports now use canonical
+  Scholia structure, preserve atom attributes, translate result edges into
+  nested closure, and never truncate JSON/XML into invalid documents.
+- Replace the plugin-only `Summary` pseudo-atom with canonical atoms, reject
+  unknown atom kinds, and expose the complete canonical atom catalog through
+  `scholia_catalog` / `scholia_lookup`.
+- Make session finish emit a goal-closing, premise-backed `Concluding` and add
+  behavioral tests for every public DAG/export/search composition identified
+  during the 0.7.1 damage-control audit.
+- Isolate implicit MCP session identity by host and server runtime instead of
+  reusing the cross-project `unknown:default` bucket; explicit tool arguments
+  and host-provided `SCHOLIA_SESSION_ID` / `CLAUDE_SESSION_ID` values take
+  precedence. Claude Code's explicit SessionStart identity is bound to
+  subsequent implicit MCP calls in the same project/host runtime. Host
+  manifests now declare `SCHOLIA_HOST`.
+- Repair the Claude Code SessionEnd hook so it invokes canonical session
+  closure rather than the removed `Summary` pseudo-atom. An end-to-end hook
+  test proves the announced DAG ID is the exact persisted, appendable DAG and
+  that SessionEnd closes it with a premise-backed `Concluding`.
+- Vendor the synchronized scholialang 0.7.2 constraint fix. The language
+  grammar remains Scholia v0.6.2; package/plugin release and grammar versions
+  are now labeled separately in public copy.
+
 ## v0.7.1
 
 - **Fingerprint parity — synchronized suite release.** First synchronized

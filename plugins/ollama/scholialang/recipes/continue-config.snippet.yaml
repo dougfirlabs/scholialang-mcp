@@ -15,3 +15,4 @@ mcpServers:
       # Override if you want per-project storage instead of the global
       # ~/.scholialang database.
       SCHOLIALANG_HOME: "${HOME}/.scholialang"
+      SCHOLIA_HOST: "continue"

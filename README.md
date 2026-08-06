@@ -25,16 +25,24 @@ This repo provides:
 - provider stubs for Claude, Codex, Ollama, and OpenAI host adapters
 - **three release-ready plugins** for the major coding harnesses, each
   with the same stdio MCP server, the same SQLite-backed local DAG,
-  the same full v0.6 grammar validator, and shared storage:
+  the same validator for the stable Scholia v0.6.2 language grammar, and shared storage:
   - `plugins/codex/scholialang/` — Codex plugin
   - `plugins/claude-code/scholialang/` — Claude Code plugin
   - `plugins/ollama/scholialang/` — Ollama / local-model recipes for
     Continue.dev, Cline, open-webui, and generic stdio hosts
+- a forwardable Claude Desktop MCP Bundle template under
+  `plugins/claude-desktop/scholialang/`; build it with
+  `python3 scripts/build_claude_desktop_mcpb.py`
 
 The repo is intentionally separate from `scholialang`, which contains the
 language model, parser, validator, and serializers. This package depends on
-`scholialang>=0.7.1,<0.8` and tracks the `scholialang-spec` additive
+`scholialang>=0.7.2,<0.8` and tracks the `scholialang-spec` additive
 `fingerprint=` contract (over the v0.6.2 shared conformance corpus).
+
+> **Two version axes:** `0.7.2` is the Python package/plugin release. `v0.6.2`
+> is the stable Scholia language grammar it implements. References to “v0.6”
+> in grammar documentation do not mean that an older `0.6.x` package is
+> installed. Public UI and bundle copy should always name both axes.
 
 ## Install
 
@@ -151,7 +159,7 @@ PYTHONPATH=src python3 -m scholialang_mcp codex-trace-config --repo-root /path/t
 
 Three release-ready plugin trees ship with this repo, one per major
 coding harness. Each plugin bundles the same stdio MCP server, the same
-local SQLite DAG store, the same full v0.6 grammar validator, and the
+local SQLite DAG store, the validator for the stable Scholia v0.6.2 grammar, and the
 same Codex rollout importer. Traces written in one harness are visible
 from the other two (shared `~/.scholialang/scholialang.sqlite3`).
 
@@ -169,7 +177,7 @@ Each plugin's tool surface is identical:
   v0.6 closed-set vocabulary (32 atom kinds, 11 canonical
   operators, v0.6 structural primitive closed sets for `Edge`, `Effect`,
   `Ref`, and `Meta`, and the criticality ladder)
-- `scholia_lint_snippet` — full v0.6 grammar validation (closed-set
+- `scholia_lint_snippet` — stable Scholia v0.6.2 grammar validation (closed-set
   atoms, reference completeness, decision closure, action recording,
   hypothesis evaluation, retract consistency, constraint respect, goal
   declaration, operator vocabulary, location/edge shape, Concluding

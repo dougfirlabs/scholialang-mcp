@@ -1,7 +1,7 @@
 # Scholialang Claude Code Plugin
 
 Local Claude Code plugin for explicit Scholialang traces, SQLite-backed DAG
-storage, full v0.6 grammar validation, and rollout exhaust imports.
+storage, validation of the stable Scholia v0.6.2 language grammar, and rollout exhaust imports.
 
 This plugin is intentionally local-first. The MCP server runs over stdio inside
 Claude Code, writes to a local SQLite database, and does not require a hosted
@@ -11,10 +11,10 @@ service, bearer token, webhook, or remote worker.
 
 - `scholia_dag_*` tools for project-aware Scholialang DAG traces.
 - `scholia_trace_*` compatibility aliases for trace-oriented callers.
-- `scholia_catalog`, `scholia_lookup` reference tools (the v0.6 closed-set
+- `scholia_catalog`, `scholia_lookup` reference tools (the v0.6.2 closed-set
   atom kinds, canonical operators, edge types, effect kinds, ref types, and
   criticality ladder).
-- `scholia_lint_snippet` — full v0.6 grammar validation (closed-set atoms,
+- `scholia_lint_snippet` — stable Scholia v0.6.2 grammar validation (closed-set atoms,
   reference completeness, decision closure, action recording, hypothesis
   evaluation, retract consistency, constraint respect, goal declaration,
   operator vocabulary, location/edge shape, Concluding closure errors, and
@@ -211,10 +211,19 @@ observation, evidence, and finding, then summarize the frontier.
 Expected: a new local DAG is created in SQLite, four atoms added, the
 frontier summary returns the final finding.
 
+Claude Code's SessionStart and SessionEnd hooks bind the checkpoint DAG with
+the hook payload's real session identifier. The binding is scoped to the
+project, host, and Claude runtime, so a later implicit MCP call resolves to the
+same hook-announced DAG. The bundled MCP server is also tagged with
+`SCHOLIA_HOST=claude-code`; explicit tool arguments remain authoritative,
+followed by `SCHOLIA_SESSION_ID` / `CLAUDE_SESSION_ID`, with a process-scoped
+random fallback only when the host exposes no session ID. The server never
+uses the historical cross-host `unknown:default` bucket.
+
 For the validator surface:
 
 ```text
-Lint this Scholia snippet with the full v0.6 grammar:
+Lint this Scholia snippet with the stable v0.6.2 language grammar:
 <Step id="S1"><Hypothesis id="H1">x</Hypothesis></Step>
 ```
 
@@ -232,7 +241,7 @@ to see which engine is in use:
 - `scholialang-package` — the installed pip package
 - `scholialang-vendored` — the bundled fallback
 
-To force the package path, `python -m pip install "scholialang>=0.7.1,<0.8"`
+To force the package path, `python -m pip install "scholialang>=0.7.2,<0.8"`
 and restart Claude Code.
 
 ## Safety Model

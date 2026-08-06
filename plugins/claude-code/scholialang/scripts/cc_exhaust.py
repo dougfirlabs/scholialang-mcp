@@ -163,7 +163,9 @@ def _classify(obj):
         return "Question", "", [_scrub(content)]
 
     if rtype == "summary":
-        return "Summary", "", [_scrub(obj.get("summary", ""))]
+        # ``Summary`` is a transcript record type, not a canonical Scholia
+        # atom. Preserve it as an Observation in the local exhaust DAG.
+        return "Observation", " (summary)", [_scrub(obj.get("summary", ""))]
 
     # attachment / last-prompt / queue-operation / system / anything else:
     # preserved as a generic Observation so the exhaust trail stays complete.

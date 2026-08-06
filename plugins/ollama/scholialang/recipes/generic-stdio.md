@@ -16,6 +16,13 @@ server itself doesn't write to its `cwd`. Set the `SCHOLIALANG_HOME`
 environment variable if you want to override the default
 `~/.scholialang` storage root.
 
+Set `SCHOLIA_HOST` to a stable harness name and, when the harness exposes one,
+set `SCHOLIA_SESSION_ID` to the conversation identifier. Explicit `host` and
+`session_id` tool arguments take precedence. Without a host-provided session
+identifier, the server creates a random process-scoped identity; it remains
+idempotent for that server process and never falls back to a cross-host
+`unknown:default` DAG.
+
 ## Required Capabilities
 
 The harness must:

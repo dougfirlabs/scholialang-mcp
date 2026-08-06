@@ -1,7 +1,13 @@
 import importlib.util
+import io
+import json
 import os
+import re
+import subprocess
+import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
@@ -135,6 +141,140 @@ class SessionEndStopTests(unittest.TestCase):
         self.assertTrue(Path(path).exists())
         end_hook._stop_exhaust(self.tempdir.name, "s")
         self.assertFalse(Path(path).exists())
+
+
+class SessionHookLifecycleTests(unittest.TestCase):
+    """The hook-announced DAG is the persisted, appendable, closed DAG."""
+
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self._saved = {
+            key: os.environ.get(key)
+            for key in (
+                "SCHOLIALANG_HOME",
+                "SCHOLIA_AUTOEMIT",
+                "SCHOLIA_EXHAUST",
+                "SCHOLIA_LIVE",
+                "SCHOLIA_HOST",
+                "SCHOLIA_RUNTIME_ID",
+            )
+        }
+        os.environ["SCHOLIALANG_HOME"] = self.tempdir.name
+        os.environ["SCHOLIA_EXHAUST"] = "0"
+        os.environ["SCHOLIA_HOST"] = "claude-code"
+        os.environ["SCHOLIA_RUNTIME_ID"] = "hook-runtime"
+        os.environ.pop("SCHOLIA_AUTOEMIT", None)
+        os.environ.pop("SCHOLIA_LIVE", None)
+        self.project = str(Path(self.tempdir.name) / "project")
+        Path(self.project).mkdir(parents=True, exist_ok=True)
+
+    def tearDown(self):
+        for key, value in self._saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        self.tempdir.cleanup()
+
+    def _run_hook(self, hook, payload):
+        old_stdin = hook.sys.stdin
+        output = io.StringIO()
+        try:
+            hook.sys.stdin = io.StringIO(json.dumps(payload))
+            with redirect_stdout(output):
+                hook.main()
+        finally:
+            hook.sys.stdin = old_stdin
+        return output.getvalue()
+
+    def test_start_announces_exact_persisted_dag_and_end_closes_it(self):
+        session_id = "hook-session-1"
+        payload = {
+            "cwd": self.project,
+            "session_id": session_id,
+            "reason": "test complete",
+        }
+        output = self._run_hook(start_hook, payload)
+        match = re.search(r"(dag_[0-9TZ]+_[0-9a-f]+)", output)
+        self.assertIsNotNone(match, output)
+        announced_dag_id = match.group(1)
+
+        persisted = server.load_dag(announced_dag_id, self.project)
+        self.assertEqual(persisted["dag_id"], announced_dag_id)
+        implicit = server.tool_dag_ensure_session(
+            {"project_path": self.project}
+        )["structuredContent"]
+        self.assertEqual(implicit["dag_id"], announced_dag_id)
+        self.assertEqual(implicit["session_id"], session_id)
+        observation = server.tool_dag_add_atom(
+            {
+                "dag_id": announced_dag_id,
+                "project_path": self.project,
+                "kind": "Observation",
+                "summary": "The announced DAG accepted an atom.",
+            }
+        )["structuredContent"]["atom"]
+
+        self._run_hook(end_hook, payload)
+        closed = server.load_dag(announced_dag_id, self.project)
+        kinds = [closed["nodes"][node_id]["kind"] for node_id in closed["order"]]
+        self.assertNotIn("Summary", kinds)
+        self.assertEqual(kinds[-1], "Concluding")
+        concluding = closed["nodes"][closed["order"][-1]]
+        goal_id = next(
+            node_id
+            for node_id in closed["order"]
+            if closed["nodes"][node_id]["kind"] == "Goal"
+        )
+        self.assertEqual(concluding["attributes"]["for_goal"], goal_id)
+        targets = {
+            edge["to"]
+            for edge in closed["edges"]
+            if edge["from"] == concluding["id"]
+        }
+        self.assertIn(goal_id, targets)
+        self.assertIn(observation["id"], targets)
+
+        after_close = server.tool_dag_ensure_session(
+            {"project_path": self.project}
+        )["structuredContent"]
+        self.assertNotEqual(after_close["dag_id"], announced_dag_id)
+        self.assertEqual(after_close["session_id"], server.RUNTIME_SESSION_ID)
+
+    def test_hook_and_mcp_child_processes_share_real_session_binding(self):
+        session_id = "cross-process-hook-session"
+        payload = json.dumps({"cwd": self.project, "session_id": session_id})
+        env = os.environ.copy()
+        env.pop("SCHOLIA_RUNTIME_ID", None)
+        started = subprocess.run(
+            [sys.executable, str(SCRIPTS / "hooks" / "session_start.py")],
+            input=payload,
+            text=True,
+            capture_output=True,
+            check=True,
+            env=env,
+        )
+        match = re.search(r"(dag_[0-9TZ]+_[0-9a-f]+)", started.stdout)
+        self.assertIsNotNone(match, started.stdout)
+        announced_dag_id = match.group(1)
+
+        probe = (
+            "import json, scholialang_mcp_server as s; "
+            f"r=s.tool_dag_ensure_session({{'project_path': {self.project!r}}})"
+            "['structuredContent']; "
+            "print(json.dumps({'dag_id': r['dag_id'], 'session_id': r['session_id']}))"
+        )
+        implicit = subprocess.run(
+            [sys.executable, "-c", probe],
+            text=True,
+            capture_output=True,
+            check=True,
+            cwd=SCRIPTS,
+            env=env,
+        )
+        resolved = json.loads(implicit.stdout)
+        self.assertEqual(resolved["dag_id"], announced_dag_id)
+        self.assertEqual(resolved["session_id"], session_id)
 
 
 if __name__ == "__main__":
