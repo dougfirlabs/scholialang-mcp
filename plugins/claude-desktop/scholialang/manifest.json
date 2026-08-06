@@ -27,7 +27,9 @@
         "${__dirname}",
         "src/scholialang_mcp_server.py"
       ],
-      "env": {}
+      "env": {
+        "SCHOLIA_HOST": "claude-desktop"
+      }
     }
   },
   "tools": [

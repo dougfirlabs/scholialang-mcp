@@ -38,6 +38,12 @@ CACHE_SCOPE = "private"
 MIN_VALIDATOR_VERSION = (0, 7, 2)
 MAX_TEXT = 6000
 
+# A stdio MCP server can outlive, or be started independently of, a host's
+# conversation lifecycle.  When the host does not expose a conversation ID,
+# keep implicit calls isolated to this server process instead of collapsing
+# every caller into the historical ``unknown:default`` bucket.
+RUNTIME_SESSION_ID = "runtime-" + secrets.token_hex(8)
+
 
 def _validator_version_tuple(value):
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)", str(value))
@@ -252,6 +258,16 @@ def init_db(conn):
           markdown TEXT NOT NULL,
           updated_at TEXT NOT NULL,
           FOREIGN KEY (dag_id) REFERENCES dags(dag_id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS session_bindings (
+          project_key TEXT NOT NULL,
+          host TEXT NOT NULL,
+          runtime_scope TEXT NOT NULL,
+          session_key TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (project_key, host, runtime_scope),
+          FOREIGN KEY (project_key) REFERENCES projects(project_key) ON DELETE CASCADE
         );
 
         CREATE INDEX IF NOT EXISTS idx_dags_project_updated ON dags(project_key, updated_at DESC);
@@ -741,8 +757,82 @@ def autoemit_enabled(project_path=None):
     return autoemit_disabled_reason(project_path) is None
 
 
+def runtime_scope_id():
+    """Return the host-process scope shared by sibling hook/MCP children."""
+    return compact_text(
+        os.environ.get("SCHOLIA_RUNTIME_ID") or f"parent-pid-{os.getppid()}",
+        200,
+    )
+
+
+def requested_session_identity(args):
+    """Resolve identity supplied by a caller or host environment."""
+    host = compact_text(
+        args.get("host") or os.environ.get("SCHOLIA_HOST") or "mcp",
+        60,
+    )
+    raw_session_id = (
+        args.get("session_id")
+        or os.environ.get("SCHOLIA_SESSION_ID")
+        or os.environ.get("CLAUDE_SESSION_ID")
+    )
+    session_id = compact_text(raw_session_id, 200) if raw_session_id else None
+    return host, session_id
+
+
+def find_bound_session_id(conn, project_key, host):
+    row = conn.execute(
+        "SELECT session_key FROM session_bindings "
+        "WHERE project_key = ? AND host = ? AND runtime_scope = ?",
+        (project_key, host, runtime_scope_id()),
+    ).fetchone()
+    if row is None:
+        return None
+    prefix = f"{host}:"
+    session_key = row["session_key"]
+    return session_key[len(prefix):] if session_key.startswith(prefix) else None
+
+
+def bind_runtime_session(conn, project_key, host, session_key):
+    conn.execute(
+        """
+        INSERT INTO session_bindings (
+          project_key, host, runtime_scope, session_key, updated_at
+        ) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(project_key, host, runtime_scope) DO UPDATE SET
+          session_key = excluded.session_key,
+          updated_at = excluded.updated_at
+        """,
+        (project_key, host, runtime_scope_id(), session_key, now()),
+    )
+
+
+def clear_runtime_session_binding(conn, project_key, host, session_key):
+    conn.execute(
+        "DELETE FROM session_bindings "
+        "WHERE project_key = ? AND host = ? AND runtime_scope = ? AND session_key = ?",
+        (project_key, host, runtime_scope_id(), session_key),
+    )
+
+
+def resolve_session_identity(args, conn=None, info=None):
+    """Resolve a stable identity without a cross-host shared fallback.
+
+    Explicit tool arguments are authoritative.  Hosts may then provide a
+    stable identity through SCHOLIA_* variables (CLAUDE_SESSION_ID remains a
+    compatibility input for Claude Code wrappers).  If neither is available,
+    the fallback is unique to this MCP server process and remains idempotent
+    for its lifetime.
+    """
+    host, session_id = requested_session_identity(args)
+    if session_id is None and conn is not None and info is not None:
+        session_id = find_bound_session_id(conn, info["project_key"], host)
+    session_id = session_id or RUNTIME_SESSION_ID
+    return host, session_id
+
+
 def session_key_for(host, session_id):
-    return f"{host or 'unknown'}:{session_id or 'default'}"
+    return f"{host}:{session_id}"
 
 
 def find_session_dag_row(conn, project_key, session_key):
@@ -761,8 +851,8 @@ def tool_dag_ensure_session(args):
     auto=True; explicit calls (auto=False) always create.
     """
     project_path = args.get("project_path")
-    host = compact_text(args.get("host") or "unknown", 60)
-    session_id = compact_text(args.get("session_id") or "default", 200)
+    host, requested_session_id = requested_session_identity(args)
+    session_id = requested_session_id or RUNTIME_SESSION_ID
     auto = args.get("auto", True)
     session_key = session_key_for(host, session_id)
 
@@ -784,6 +874,9 @@ def tool_dag_ensure_session(args):
     try:
         info = project_info(project_path)
         upsert_project(conn, info)
+        if requested_session_id is None:
+            session_id = find_bound_session_id(conn, info["project_key"], host) or RUNTIME_SESSION_ID
+            session_key = session_key_for(host, session_id)
         existing = find_session_dag_row(conn, info["project_key"], session_key)
         if existing is None:
             dag_id = "dag_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "_" + secrets.token_hex(4)
@@ -817,6 +910,8 @@ def tool_dag_ensure_session(args):
                         session_key,
                     ),
                 )
+                if requested_session_id is not None:
+                    bind_runtime_session(conn, info["project_key"], host, session_key)
                 conn.commit()
             except sqlite3.IntegrityError:
                 # Another host/process created the same session DAG concurrently.
@@ -841,6 +936,9 @@ def tool_dag_ensure_session(args):
                     f"Started session DAG {dag_id} for {info['project_name']} ({host}).", structured
                 )
 
+        if requested_session_id is not None:
+            bind_runtime_session(conn, info["project_key"], host, session_key)
+            conn.commit()
         dag = row_to_dag(conn, existing)
         structured = dag_metadata(dag)
         structured.update({"enabled": True, "created": False, "host": host, "session_id": session_id})
@@ -859,12 +957,12 @@ def tool_dag_finish_session(args):
     active at session start).
     """
     project_path = args.get("project_path")
-    host = compact_text(args.get("host") or "unknown", 60)
-    session_id = compact_text(args.get("session_id") or "default", 200)
-    session_key = session_key_for(host, session_id)
+    host, _ = requested_session_identity(args)
     conn = connect()
     try:
         info = project_info(project_path)
+        host, session_id = resolve_session_identity(args, conn, info)
+        session_key = session_key_for(host, session_id)
         existing = find_session_dag_row(conn, info["project_key"], session_key)
         dag_id = existing["dag_id"] if existing is not None else None
         project_path_resolved = info["project_path"]
@@ -912,6 +1010,12 @@ def tool_dag_finish_session(args):
             "links": links,
         }
     )["structuredContent"]["atom"]
+    conn = connect()
+    try:
+        clear_runtime_session_binding(conn, info["project_key"], host, session_key)
+        conn.commit()
+    finally:
+        conn.close()
     structured = {"found": True, "dag_id": dag_id, "atom": atom, "host": host, "session_id": session_id}
     return content_result(f"Finished session DAG {dag_id} ({host}).", structured)
 

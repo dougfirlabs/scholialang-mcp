@@ -211,6 +211,15 @@ observation, evidence, and finding, then summarize the frontier.
 Expected: a new local DAG is created in SQLite, four atoms added, the
 frontier summary returns the final finding.
 
+Claude Code's SessionStart and SessionEnd hooks bind the checkpoint DAG with
+the hook payload's real session identifier. The binding is scoped to the
+project, host, and Claude runtime, so a later implicit MCP call resolves to the
+same hook-announced DAG. The bundled MCP server is also tagged with
+`SCHOLIA_HOST=claude-code`; explicit tool arguments remain authoritative,
+followed by `SCHOLIA_SESSION_ID` / `CLAUDE_SESSION_ID`, with a process-scoped
+random fallback only when the host exposes no session ID. The server never
+uses the historical cross-host `unknown:default` bucket.
+
 For the validator surface:
 
 ```text

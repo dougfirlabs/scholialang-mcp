@@ -20,6 +20,13 @@ Smoke prompt:
 > observation, evidence, and finding, link the finding to its evidence, and
 > summarize the frontier.
 
+The bundle identifies implicit session calls as `claude-desktop`. If Desktop
+does not provide a conversation identifier, the server uses a random identity
+that is stable only for that MCP server process. This keeps separate server
+runs from ever colliding in a shared fallback DAG. Hosts that expose a stable
+conversation identifier should pass it as `session_id` or set
+`SCHOLIA_SESSION_ID`.
+
 ## Privacy and storage
 
 The server is local-only and makes no network calls. Its default working store

@@ -8,7 +8,8 @@
     "cwd": "SCHOLIALANG_MCP_DIR",
     "transport": "stdio",
     "env": {
-      "SCHOLIALANG_HOME": "${HOME}/.scholialang"
+      "SCHOLIALANG_HOME": "${HOME}/.scholialang",
+      "SCHOLIA_HOST": "open-webui"
     }
   }
 }
