@@ -3,6 +3,15 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: >-
+          Version being published (e.g. 0.7.2). Must match pyproject.toml
+          exactly. Required so a manual run cannot silently publish whatever
+          happens to be on the default branch.
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -23,12 +32,28 @@ jobs:
       - name: Install release dependencies
         run: python -m pip install --upgrade build twine pytest pytest-timeout
 
-      - name: Verify release tag
+      - name: Verify release version
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          DISPATCH_VERSION: ${{ inputs.version }}
         run: |
           PACKAGE_VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
-          test "$RELEASE_TAG" = "v$PACKAGE_VERSION"
+          if [ -n "${RELEASE_TAG}" ]; then
+            EXPECTED="v${PACKAGE_VERSION}"
+            ACTUAL="${RELEASE_TAG}"
+            SOURCE="release tag"
+          else
+            EXPECTED="${PACKAGE_VERSION}"
+            ACTUAL="${DISPATCH_VERSION}"
+            SOURCE="workflow_dispatch input"
+          fi
+          echo "pyproject version: ${PACKAGE_VERSION}"
+          echo "${SOURCE}: ${ACTUAL}"
+          if [ "${ACTUAL}" != "${EXPECTED}" ]; then
+            echo "::error::${SOURCE} '${ACTUAL}' does not match pyproject.toml version '${PACKAGE_VERSION}' (expected '${EXPECTED}'). Refusing to publish."
+            exit 1
+          fi
+          echo "Version guard passed."
 
       - name: Run tests
         run: PYTHONPATH=src pytest
