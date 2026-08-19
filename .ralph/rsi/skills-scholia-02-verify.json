@@ -1,0 +1,63 @@
+{
+  "kind": "prd",
+  "schema_version": 1,
+  "id": "skills-scholia-02-verify",
+  "title": "Scholialang Skills 02: public positive, negative, composition, and installed-artifact verification",
+  "status": "approved",
+  "group_id": "scholialang-public-skills-2026-08-19",
+  "sequence": 2,
+  "run_policy": "gated_stack",
+  "depends_on_prds": ["skills-scholia-01-doctor"],
+  "blocks_prds": ["skills-scholia-03-cross-host-release-gate"],
+  "problem": "Version and source parity do not prove that advertised functionality works. A prior public plugin could create DAG records yet fail its own export/lint lifecycle because individual features were tested without positive, negative, composition, and installed-artifact coverage. Users need one deterministic verification workflow that tests the public contract rather than merely comparing versions.",
+  "outcome": "The public repository contains a concise scholialang-verify skill backed by a deterministic runner. It executes bounded shared positive/negative fixtures, DAG create/add/link/finish/export/parse/validate round trips, action-to-finding and hypothesis-evidence-finding closure, catalog completeness, search/neighbors/compaction smoke, and clean installed wheel/plugin probes. It emits per-scenario machine evidence and an honest overall verdict without mutating the user's real DAG store.",
+  "hard_constraints": [
+    "Initialize the new skill with the system skill-creator init script and use the same canonical-source/materialization convention established by Skills 01. Do not create auxiliary README/install/changelog files inside it.",
+    "All verification must run against isolated temporary repositories, DAG databases, homes, and virtual environments. Never write to the user's real ~/.scholialang database, plugin cache, or project traces.",
+    "Parity is one facet only. The required matrix includes at least one positive, meaningful negative, composition/round-trip, and clean installed-artifact scenario for every advertised feature family in scope.",
+    "Exercise the actual public MCP tool/lifecycle boundary where possible; do not replace an end-to-end check with direct calls to private helpers and then claim protocol functionality.",
+    "Preserve raw request/response/result artifacts within bounded redacted evidence. Do not retain secrets, customer data, hidden reasoning, or unrestricted home-directory snapshots.",
+    "A skipped required scenario is not pass. Distinguish pass, fail, unsupported, and not_run, and require all declared required scenarios for an overall pass.",
+    "Reuse shared scholialang-spec fixtures when present and clearly report when the sibling fixture source is unavailable. The installed-artifact arm must remain independently runnable from a clean source tree or wheel fixture.",
+    "Run the new verification suite plus existing MCP protocol, support-matrix, release-version, vendored-contract, and Claude Desktop bundle tests. No version bump, publication, tag, global install, or default-branch mutation."
+  ],
+  "key_files": [
+    "tests/integration/test_mcp_protocol.py",
+    "tests/integration/test_mcp_support_matrix.py",
+    "tests/integration/test_mcp_2026_conformance.py",
+    "tests/integration/test_mcp_plugin_2026_conformance.py",
+    "tests/test_v062_vendor_contract.py",
+    "tests/test_claude_desktop_mcpb.py",
+    "tests/test_spec_fingerprint_fixtures.py",
+    "scripts/build_claude_desktop_mcpb.py"
+  ],
+  "success_metrics": [
+    "The verifier produces deterministic scenario JSON with pass/fail/unsupported/not_run and an overall verdict derived only from required scenarios.",
+    "Positive and negative fixtures cover catalog, Goal/Concluding, Action/Finding, Hypothesis/Evidence/Finding, and invalid unknown-kind/reference cases.",
+    "A full isolated DAG lifecycle exports parseable/valid Scholia and exercises search, neighbors, and compaction without touching the real store.",
+    "A clean installed-artifact arm and at least one vendored plugin arm pass the same required contract."
+  ],
+  "stories": [
+    {
+      "id": "SKSCH02-S1",
+      "title": "Define the bounded conformance scenario manifest and evidence schema",
+      "priority": 1,
+      "passes": 0,
+      "description": "Create an explicit scenario manifest with required/optional status, public boundary, inputs, expected outcome, evidence paths, and deterministic verdict derivation. Include positive, negative, composition, and installed-artifact classes."
+    },
+    {
+      "id": "SKSCH02-S2",
+      "title": "Create the isolated scholialang-verify runner and skill",
+      "priority": 2,
+      "passes": 0,
+      "description": "Build the skill and isolated runner around temporary homes, stores and environments. Exercise public MCP and CLI boundaries, shared fixtures, full DAG round trips, and installed artifacts."
+    },
+    {
+      "id": "SKSCH02-S3",
+      "title": "Pin failure honesty, determinism, and no-real-store tests",
+      "priority": 3,
+      "passes": 0,
+      "description": "Test required skip/failure behavior, stable repeated evidence, redaction, hostile environment isolation, and a sentinel real DAG store that remains byte-unmodified. Re-run the existing contract suites."
+    }
+  ]
+}

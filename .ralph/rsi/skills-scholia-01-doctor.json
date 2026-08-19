@@ -1,0 +1,63 @@
+{
+  "kind": "prd",
+  "schema_version": 1,
+  "id": "skills-scholia-01-doctor",
+  "title": "Scholialang Skills 01: read-only cross-host version and capability Doctor",
+  "status": "approved",
+  "group_id": "scholialang-public-skills-2026-08-19",
+  "sequence": 1,
+  "run_policy": "gated_stack",
+  "depends_on_prds": [],
+  "blocks_prds": ["skills-scholia-02-verify", "skills-scholia-03-cross-host-release-gate"],
+  "problem": "Users and internal agents have encountered mismatched Scholialang Python package, scholialang-mcp package/plugin, vendored validator, grammar teaching, skill, and MCP/LSP tool versions. The current general Scholialang skill assumes installation is healthy and offers no deterministic answer to 'what is loaded, which grammar is implemented, and are these surfaces compatible?'.",
+  "outcome": "The public repository contains a concise scholialang-doctor skill backed by a deterministic read-only script. It reports host, package/plugin/manifest/vendored-validator/grammar versions, MCP and LSP entry-point availability, auto-emit configuration, database reachability metadata, and compatibility as separate facets. It emits stable JSON and human output with pass, not_ready, or fail, and never installs, upgrades, authenticates, or rewrites configuration by default.",
+  "hard_constraints": [
+    "Initialize the new skill with the system skill-creator init script. The canonical source must live in one repo-owned skill directory; host copies are generated artifacts and must not be hand-maintained authorities.",
+    "Keep SKILL.md concise. Put deterministic inspection in scripts/ and detailed version-axis definitions in a one-level reference only if necessary. Do not create README.md, INSTALLATION_GUIDE.md, CHANGELOG.md, or other auxiliary files inside the skill.",
+    "Doctor is read-only. It MUST NOT pip install, plugin install, upgrade, authenticate, edit config, initialize a DAG, or repair a database. Offer a separate recommendation field, never an automatic fix.",
+    "Report language grammar and package/plugin release as distinct axes. The stable Scholia grammar is v0.6.2 while the current implementation/plugin release is 0.7.2; never label that relationship as a downgrade.",
+    "Probe only public metadata and explicitly named local paths. Do not read environment secret values, credential files, DAG contents, customer data, or private reasoning.",
+    "Missing optional host surfaces are not generic failure. Return per-facet supported/present/compatible and derive an honest overall pass/not_ready/fail with reasons.",
+    "Support repository checkout inspection plus installed-distribution inspection without importing code from an untrusted current working directory ahead of the selected artifact.",
+    "Run targeted Doctor tests and existing release-version/vendor-contract tests. No package version bump, global install, .mcpb publication, PyPI upload, tag, release, or default-branch write."
+  ],
+  "key_files": [
+    "pyproject.toml",
+    "tests/test_release_versions.py",
+    "tests/test_v062_vendor_contract.py",
+    "plugins/claude-code/scholialang/.claude-plugin/plugin.json",
+    "plugins/codex/scholialang/.codex-plugin/plugin.json",
+    "plugins/claude-desktop/scholialang/manifest.json",
+    "plugins/claude-code/scholialang/skills/scholialang/SKILL.md",
+    "plugins/codex/scholialang/skills/scholialang/SKILL.md"
+  ],
+  "success_metrics": [
+    "Stable JSON distinguishes grammar, Python package, MCP package, plugin, vendored validator, and skill versions.",
+    "Positive fixture returns pass; mismatched package/plugin, stale skill, missing MCP, missing LSP, and opt-out fixtures return specific not_ready/fail reasons without mutation.",
+    "No output contains environment secret values or DAG content.",
+    "The skill passes quick validation and its deterministic script passes repository and installed-artifact tests."
+  ],
+  "stories": [
+    {
+      "id": "SKSCH01-S1",
+      "title": "Define the Doctor result contract and safe probes",
+      "priority": 1,
+      "passes": 0,
+      "description": "Implement a stable result schema and read-only probes for runtime host, distributions, plugin manifests, vendored validator, grammar, MCP/LSP entry points, auto-emit state, and database reachability metadata. Keep versions as separate named axes."
+    },
+    {
+      "id": "SKSCH01-S2",
+      "title": "Create the concise script-backed scholialang-doctor skill",
+      "priority": 2,
+      "passes": 0,
+      "description": "Use skill-creator initialization, write a small imperative SKILL.md, bundle the deterministic Doctor script, and provide generated Codex UI metadata. Do not add auxiliary documentation inside the skill."
+    },
+    {
+      "id": "SKSCH01-S3",
+      "title": "Pin mismatch, absence, privacy, and installed-artifact tests",
+      "priority": 3,
+      "passes": 0,
+      "description": "Test healthy, mismatched, stale, absent optional surface, opt-out, and hostile-CWD cases. Assert read-only behavior and redaction. Re-run existing release/version contracts."
+    }
+  ]
+}
