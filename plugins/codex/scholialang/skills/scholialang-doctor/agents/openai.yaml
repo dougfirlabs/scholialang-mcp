@@ -1,0 +1,3 @@
+interface:
+  display_name: "Scholialang Doctor"
+  short_description: "Read-only Scholialang version and capability doctor"
