@@ -1,0 +1,25 @@
+{
+  "canonical_source": "plugins/claude-code/scholialang/skills",
+  "do_not_edit": true,
+  "generated_by": "scripts/materialize_skills.py",
+  "generator_version": "0.7.2",
+  "grammar_version": "0.6.2",
+  "regenerate": "python3 scripts/materialize_skills.py --root <checkout>",
+  "schema_version": 1,
+  "skills": {
+    "scholialang-doctor": {
+      "files": {
+        "SKILL.md": "8a230da8bd8f3241f37f6bb853a1e8c7c310ee82054c94afd287b6d692fd7577",
+        "agents/openai.yaml": "f4880438cef223d68e27e67c4da3aed6d6bc98f8f6fe226287dc38d2ab8ea5df",
+        "scripts/scholia_doctor.py": "626e5b6dc5027896ace9cd34a856eb6d29effdc5ce180bb846ed1143576611c4"
+      }
+    },
+    "scholialang-verify": {
+      "files": {
+        "SKILL.md": "3bcfd29409252de729e79d3b71af187e7d80e27b007abcc7da44596be27014d6",
+        "agents/openai.yaml": "c8c3f42d2defba0acc168256b45deecbb9225d609811bad66903683dbb34f739",
+        "scripts/scholia_verify.py": "dbdb284cb651cacd4380f7c50371b491025236bf8e3e0dc598c562e13969c451"
+      }
+    }
+  }
+}

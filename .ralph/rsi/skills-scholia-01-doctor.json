@@ -3,12 +3,15 @@
   "schema_version": 1,
   "id": "skills-scholia-01-doctor",
   "title": "Scholialang Skills 01: read-only cross-host version and capability Doctor",
-  "status": "approved",
+  "status": "completed",
   "group_id": "scholialang-public-skills-2026-08-19",
   "sequence": 1,
   "run_policy": "gated_stack",
   "depends_on_prds": [],
-  "blocks_prds": ["skills-scholia-02-verify", "skills-scholia-03-cross-host-release-gate"],
+  "blocks_prds": [
+    "skills-scholia-02-verify",
+    "skills-scholia-03-cross-host-release-gate"
+  ],
   "problem": "Users and internal agents have encountered mismatched Scholialang Python package, scholialang-mcp package/plugin, vendored validator, grammar teaching, skill, and MCP/LSP tool versions. The current general Scholialang skill assumes installation is healthy and offers no deterministic answer to 'what is loaded, which grammar is implemented, and are these surfaces compatible?'.",
   "outcome": "The public repository contains a concise scholialang-doctor skill backed by a deterministic read-only script. It reports host, package/plugin/manifest/vendored-validator/grammar versions, MCP and LSP entry-point availability, auto-emit configuration, database reachability metadata, and compatibility as separate facets. It emits stable JSON and human output with pass, not_ready, or fail, and never installs, upgrades, authenticates, or rewrites configuration by default.",
   "hard_constraints": [
@@ -58,6 +61,122 @@
       "priority": 3,
       "passes": 0,
       "description": "Test healthy, mismatched, stale, absent optional surface, opt-out, and hostile-CWD cases. Assert read-only behavior and redaction. Re-run existing release/version contracts."
+    }
+  ],
+  "lifecycle": {
+    "run_status": "completed",
+    "last_successful_run_id": "a1d5be900edc4350bd6ec31ff5e1a9bb",
+    "last_successful_branch": "feat/skills-scholia-01-doctor",
+    "last_successful_commit": "fd1e9340fa7295c2a54bdf1fe6533fdd12037c92",
+    "completed_at": "2026-08-19T22:58:58+00:00",
+    "completion_evidence": {
+      "task": "skills-scholia-01-doctor",
+      "prd_id": "skills-scholia-01-doctor",
+      "provider": "claude",
+      "model": "claude-fable-5",
+      "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_y37z9jjv4w_home_horse.md",
+      "post_status": "present",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "a1d5be900edc4350bd6ec31ff5e1a9bb",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion": {
+    "run_id": "a1d5be900edc4350bd6ec31ff5e1a9bb",
+    "task": "skills-scholia-01-doctor",
+    "completed_at": "2026-08-19T22:58:58+00:00",
+    "branch": "feat/skills-scholia-01-doctor",
+    "commit": "fd1e9340fa7295c2a54bdf1fe6533fdd12037c92",
+    "final_status": "success",
+    "previous_status": "approved",
+    "lifecycle": {
+      "run_status": "completed",
+      "last_successful_run_id": "a1d5be900edc4350bd6ec31ff5e1a9bb",
+      "last_successful_branch": "feat/skills-scholia-01-doctor",
+      "last_successful_commit": "fd1e9340fa7295c2a54bdf1fe6533fdd12037c92",
+      "completed_at": "2026-08-19T22:58:58+00:00",
+      "completion_evidence": {
+        "task": "skills-scholia-01-doctor",
+        "prd_id": "skills-scholia-01-doctor",
+        "provider": "claude",
+        "model": "claude-fable-5",
+        "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_y37z9jjv4w_home_horse.md",
+        "post_status": "present",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "a1d5be900edc4350bd6ec31ff5e1a9bb",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
+    },
+    "completion_evidence": {
+      "task": "skills-scholia-01-doctor",
+      "prd_id": "skills-scholia-01-doctor",
+      "provider": "claude",
+      "model": "claude-fable-5",
+      "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_y37z9jjv4w_home_horse.md",
+      "post_status": "present",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "a1d5be900edc4350bd6ec31ff5e1a9bb",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion_history": [
+    {
+      "run_id": "a1d5be900edc4350bd6ec31ff5e1a9bb",
+      "task": "skills-scholia-01-doctor",
+      "completed_at": "2026-08-19T22:58:58+00:00",
+      "branch": "feat/skills-scholia-01-doctor",
+      "commit": "fd1e9340fa7295c2a54bdf1fe6533fdd12037c92",
+      "final_status": "success",
+      "previous_status": "approved",
+      "lifecycle": {
+        "run_status": "completed",
+        "last_successful_run_id": "a1d5be900edc4350bd6ec31ff5e1a9bb",
+        "last_successful_branch": "feat/skills-scholia-01-doctor",
+        "last_successful_commit": "fd1e9340fa7295c2a54bdf1fe6533fdd12037c92",
+        "completed_at": "2026-08-19T22:58:58+00:00",
+        "completion_evidence": {
+          "task": "skills-scholia-01-doctor",
+          "prd_id": "skills-scholia-01-doctor",
+          "provider": "claude",
+          "model": "claude-fable-5",
+          "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_y37z9jjv4w_home_horse.md",
+          "post_status": "present",
+          "test_gate": {
+            "all_passed": true,
+            "commands": [],
+            "run_id": "a1d5be900edc4350bd6ec31ff5e1a9bb",
+            "skipped": true,
+            "skipped_reason": "no machine-runnable commands in success_metrics"
+          }
+        }
+      },
+      "completion_evidence": {
+        "task": "skills-scholia-01-doctor",
+        "prd_id": "skills-scholia-01-doctor",
+        "provider": "claude",
+        "model": "claude-fable-5",
+        "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_y37z9jjv4w_home_horse.md",
+        "post_status": "present",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "a1d5be900edc4350bd6ec31ff5e1a9bb",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
     }
   ]
 }

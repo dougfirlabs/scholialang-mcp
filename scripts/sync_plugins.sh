@@ -23,4 +23,10 @@ for dst in "${targets[@]}"; do
   fi
   echo "synced -> ${dst#"$repo_root/"}"
 done
+
+# Skills: the claude-code copies are canonical; the Codex copies, the
+# generated agents/openai.yaml files, and PROVENANCE.json are rendered by the
+# deterministic materializer (checked by tests/test_skill_materialization.py,
+# tests/test_scholia_doctor.py, and tests/test_scholia_verify.py).
+python3 "$repo_root/scripts/materialize_skills.py" --root "$repo_root"
 echo "done"

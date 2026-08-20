@@ -3,11 +3,14 @@
   "schema_version": 1,
   "id": "skills-scholia-03-cross-host-release-gate",
   "title": "Scholialang Skills 03: canonical materialization and cross-host release gate",
-  "status": "approved",
+  "status": "completed",
   "group_id": "scholialang-public-skills-2026-08-19",
   "sequence": 3,
   "run_policy": "gated_stack",
-  "depends_on_prds": ["skills-scholia-01-doctor", "skills-scholia-02-verify"],
+  "depends_on_prds": [
+    "skills-scholia-01-doctor",
+    "skills-scholia-02-verify"
+  ],
   "blocks_prds": [],
   "problem": "A good skill can still drift when copied into Claude Code, Codex, Claude Desktop packaging, or vendored plugin trees. The repository currently has strong 0.7.2 version-parity tests, but the two new public skills need one canonical source, deterministic host materialization, trigger/metadata validation, clean bundle evidence, and a release decision that does not silently publish or force a version number.",
   "outcome": "Doctor and Verify have one canonical repo source each and deterministic supported-host materialization. Claude Code and Codex plugin trees receive validated host outputs; Claude Desktop's .mcpb is rebuilt and tested for the corresponding MCP capabilities even where the Desktop host does not expose a native skill surface. A machine-readable release gate proves version/metadata/content/conformance parity, builds clean artifacts, records checksums and a version recommendation, and stops before tag, PyPI, GitHub release, marketplace update, or global installation.",
@@ -58,6 +61,122 @@
       "priority": 3,
       "passes": 0,
       "description": "Emit machine-readable release evidence with source commit, version axes, reproducible hashes, scenario/test outcomes, residual risks, and version recommendation. Stop before every publication or version mutation gate."
+    }
+  ],
+  "lifecycle": {
+    "run_status": "completed",
+    "last_successful_run_id": "64d01a9941aa4ec38eaebfcd4e7a70b8",
+    "last_successful_branch": "feat/skills-scholia-03-cross-host-release-gate",
+    "last_successful_commit": "16eea73b20fb13959687ab1ad892d9ba51104545",
+    "completed_at": "2026-08-20T03:57:54+00:00",
+    "completion_evidence": {
+      "task": "skills-scholia-03-cross-host-release-gate",
+      "prd_id": "skills-scholia-03-cross-host-release-gate",
+      "provider": "claude",
+      "model": "claude-fable-5",
+      "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_qameegc6be_scholialan.md",
+      "post_status": "invalid",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "64d01a9941aa4ec38eaebfcd4e7a70b8",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion": {
+    "run_id": "64d01a9941aa4ec38eaebfcd4e7a70b8",
+    "task": "skills-scholia-03-cross-host-release-gate",
+    "completed_at": "2026-08-20T03:57:54+00:00",
+    "branch": "feat/skills-scholia-03-cross-host-release-gate",
+    "commit": "16eea73b20fb13959687ab1ad892d9ba51104545",
+    "final_status": "success",
+    "previous_status": "approved",
+    "lifecycle": {
+      "run_status": "completed",
+      "last_successful_run_id": "64d01a9941aa4ec38eaebfcd4e7a70b8",
+      "last_successful_branch": "feat/skills-scholia-03-cross-host-release-gate",
+      "last_successful_commit": "16eea73b20fb13959687ab1ad892d9ba51104545",
+      "completed_at": "2026-08-20T03:57:54+00:00",
+      "completion_evidence": {
+        "task": "skills-scholia-03-cross-host-release-gate",
+        "prd_id": "skills-scholia-03-cross-host-release-gate",
+        "provider": "claude",
+        "model": "claude-fable-5",
+        "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_qameegc6be_scholialan.md",
+        "post_status": "invalid",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "64d01a9941aa4ec38eaebfcd4e7a70b8",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
+    },
+    "completion_evidence": {
+      "task": "skills-scholia-03-cross-host-release-gate",
+      "prd_id": "skills-scholia-03-cross-host-release-gate",
+      "provider": "claude",
+      "model": "claude-fable-5",
+      "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_qameegc6be_scholialan.md",
+      "post_status": "invalid",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "64d01a9941aa4ec38eaebfcd4e7a70b8",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion_history": [
+    {
+      "run_id": "64d01a9941aa4ec38eaebfcd4e7a70b8",
+      "task": "skills-scholia-03-cross-host-release-gate",
+      "completed_at": "2026-08-20T03:57:54+00:00",
+      "branch": "feat/skills-scholia-03-cross-host-release-gate",
+      "commit": "16eea73b20fb13959687ab1ad892d9ba51104545",
+      "final_status": "success",
+      "previous_status": "approved",
+      "lifecycle": {
+        "run_status": "completed",
+        "last_successful_run_id": "64d01a9941aa4ec38eaebfcd4e7a70b8",
+        "last_successful_branch": "feat/skills-scholia-03-cross-host-release-gate",
+        "last_successful_commit": "16eea73b20fb13959687ab1ad892d9ba51104545",
+        "completed_at": "2026-08-20T03:57:54+00:00",
+        "completion_evidence": {
+          "task": "skills-scholia-03-cross-host-release-gate",
+          "prd_id": "skills-scholia-03-cross-host-release-gate",
+          "provider": "claude",
+          "model": "claude-fable-5",
+          "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_qameegc6be_scholialan.md",
+          "post_status": "invalid",
+          "test_gate": {
+            "all_passed": true,
+            "commands": [],
+            "run_id": "64d01a9941aa4ec38eaebfcd4e7a70b8",
+            "skipped": true,
+            "skipped_reason": "no machine-runnable commands in success_metrics"
+          }
+        }
+      },
+      "completion_evidence": {
+        "task": "skills-scholia-03-cross-host-release-gate",
+        "prd_id": "skills-scholia-03-cross-host-release-gate",
+        "provider": "claude",
+        "model": "claude-fable-5",
+        "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_qameegc6be_scholialan.md",
+        "post_status": "invalid",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "64d01a9941aa4ec38eaebfcd4e7a70b8",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
     }
   ]
 }
