@@ -1,0 +1,59 @@
+{
+  "kind": "run_plan",
+  "schema_version": "1.0",
+  "id": "scholialang-public-skills-recovery-2026-08-19",
+  "title": "Scholialang public skills verification recovery",
+  "description": "Resume the public-skills epic from its repaired, CI-green Doctor tip after an upstream provider failure and an OpenTalon external-project lifecycle-runtime repair.",
+  "created_at": "2026-08-20T03:10:00+00:00",
+  "driver": "claude",
+  "model": "claude-fable-5",
+  "source_branch": "gated-stack/scholialang-public-skills-mini-epic-2026-08-19/wave-1-tip",
+  "branch_freshness_mode": "current",
+  "cumulative_base_pivot": true,
+  "runtime_atlas": false,
+  "runtime_atlas_commit": "inline",
+  "live_artifact_eval": false,
+  "post_run_atlas_refresh": {
+    "mode": "report_only",
+    "include_touched": true,
+    "include_referenced": true,
+    "include_neighbors": false,
+    "neighbor_depth": 0,
+    "notify": true
+  },
+  "waves": [
+    {
+      "wave_id": "w2-verify-retry",
+      "tracks": [
+        {
+          "track_id": "verify",
+          "mode": "sequential",
+          "target_queue": "rsi",
+          "prds": [
+            "skills-scholia-02-verify"
+          ],
+          "dependencies": [],
+          "source_branch": "gated-stack/scholialang-public-skills-mini-epic-2026-08-19/wave-1-tip",
+          "branch_freshness_mode": "current"
+        }
+      ]
+    },
+    {
+      "wave_id": "w3-release-gate",
+      "tracks": [
+        {
+          "track_id": "cross-host-gate",
+          "mode": "sequential",
+          "target_queue": "rsi",
+          "prds": [
+            "skills-scholia-03-cross-host-release-gate"
+          ],
+          "dependencies": [
+            "skills-scholia-02-verify"
+          ],
+          "branch_freshness_mode": "current"
+        }
+      ]
+    }
+  ]
+}
