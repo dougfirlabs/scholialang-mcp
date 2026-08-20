@@ -75,7 +75,7 @@
       "provider": "claude",
       "model": "claude-fable-5",
       "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_qameegc6be_scholialan.md",
-      "post_status": "invalid",
+      "post_status": "valid",
       "test_gate": {
         "all_passed": true,
         "commands": [],
@@ -105,7 +105,7 @@
         "provider": "claude",
         "model": "claude-fable-5",
         "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_qameegc6be_scholialan.md",
-        "post_status": "invalid",
+        "post_status": "valid",
         "test_gate": {
           "all_passed": true,
           "commands": [],
@@ -121,7 +121,7 @@
       "provider": "claude",
       "model": "claude-fable-5",
       "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_qameegc6be_scholialan.md",
-      "post_status": "invalid",
+      "post_status": "valid",
       "test_gate": {
         "all_passed": true,
         "commands": [],
@@ -152,7 +152,7 @@
           "provider": "claude",
           "model": "claude-fable-5",
           "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_qameegc6be_scholialan.md",
-          "post_status": "invalid",
+          "post_status": "valid",
           "test_gate": {
             "all_passed": true,
             "commands": [],
@@ -168,7 +168,7 @@
         "provider": "claude",
         "model": "claude-fable-5",
         "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_qameegc6be_scholialan.md",
-        "post_status": "invalid",
+        "post_status": "valid",
         "test_gate": {
           "all_passed": true,
           "commands": [],
