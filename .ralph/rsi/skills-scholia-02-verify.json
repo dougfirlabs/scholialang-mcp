@@ -3,12 +3,16 @@
   "schema_version": 1,
   "id": "skills-scholia-02-verify",
   "title": "Scholialang Skills 02: public positive, negative, composition, and installed-artifact verification",
-  "status": "approved",
+  "status": "completed",
   "group_id": "scholialang-public-skills-2026-08-19",
   "sequence": 2,
   "run_policy": "gated_stack",
-  "depends_on_prds": ["skills-scholia-01-doctor"],
-  "blocks_prds": ["skills-scholia-03-cross-host-release-gate"],
+  "depends_on_prds": [
+    "skills-scholia-01-doctor"
+  ],
+  "blocks_prds": [
+    "skills-scholia-03-cross-host-release-gate"
+  ],
   "problem": "Version and source parity do not prove that advertised functionality works. A prior public plugin could create DAG records yet fail its own export/lint lifecycle because individual features were tested without positive, negative, composition, and installed-artifact coverage. Users need one deterministic verification workflow that tests the public contract rather than merely comparing versions.",
   "outcome": "The public repository contains a concise scholialang-verify skill backed by a deterministic runner. It executes bounded shared positive/negative fixtures, DAG create/add/link/finish/export/parse/validate round trips, action-to-finding and hypothesis-evidence-finding closure, catalog completeness, search/neighbors/compaction smoke, and clean installed wheel/plugin probes. It emits per-scenario machine evidence and an honest overall verdict without mutating the user's real DAG store.",
   "hard_constraints": [
@@ -58,6 +62,122 @@
       "priority": 3,
       "passes": 0,
       "description": "Test required skip/failure behavior, stable repeated evidence, redaction, hostile environment isolation, and a sentinel real DAG store that remains byte-unmodified. Re-run the existing contract suites."
+    }
+  ],
+  "lifecycle": {
+    "run_status": "completed",
+    "last_successful_run_id": "bff92e7d86194f95a6b1acf17027e16e",
+    "last_successful_branch": "feat/skills-scholia-02-verify",
+    "last_successful_commit": "f447c7718a4f426bc75016071f2782736146a12a",
+    "completed_at": "2026-08-20T03:36:21+00:00",
+    "completion_evidence": {
+      "task": "skills-scholia-02-verify",
+      "prd_id": "skills-scholia-02-verify",
+      "provider": "claude",
+      "model": "claude-fable-5",
+      "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_18ce7g1n03_scholialan.md",
+      "post_status": "invalid",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "bff92e7d86194f95a6b1acf17027e16e",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion": {
+    "run_id": "bff92e7d86194f95a6b1acf17027e16e",
+    "task": "skills-scholia-02-verify",
+    "completed_at": "2026-08-20T03:36:21+00:00",
+    "branch": "feat/skills-scholia-02-verify",
+    "commit": "f447c7718a4f426bc75016071f2782736146a12a",
+    "final_status": "success",
+    "previous_status": "approved",
+    "lifecycle": {
+      "run_status": "completed",
+      "last_successful_run_id": "bff92e7d86194f95a6b1acf17027e16e",
+      "last_successful_branch": "feat/skills-scholia-02-verify",
+      "last_successful_commit": "f447c7718a4f426bc75016071f2782736146a12a",
+      "completed_at": "2026-08-20T03:36:21+00:00",
+      "completion_evidence": {
+        "task": "skills-scholia-02-verify",
+        "prd_id": "skills-scholia-02-verify",
+        "provider": "claude",
+        "model": "claude-fable-5",
+        "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_18ce7g1n03_scholialan.md",
+        "post_status": "invalid",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "bff92e7d86194f95a6b1acf17027e16e",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
+    },
+    "completion_evidence": {
+      "task": "skills-scholia-02-verify",
+      "prd_id": "skills-scholia-02-verify",
+      "provider": "claude",
+      "model": "claude-fable-5",
+      "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_18ce7g1n03_scholialan.md",
+      "post_status": "invalid",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "bff92e7d86194f95a6b1acf17027e16e",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion_history": [
+    {
+      "run_id": "bff92e7d86194f95a6b1acf17027e16e",
+      "task": "skills-scholia-02-verify",
+      "completed_at": "2026-08-20T03:36:21+00:00",
+      "branch": "feat/skills-scholia-02-verify",
+      "commit": "f447c7718a4f426bc75016071f2782736146a12a",
+      "final_status": "success",
+      "previous_status": "approved",
+      "lifecycle": {
+        "run_status": "completed",
+        "last_successful_run_id": "bff92e7d86194f95a6b1acf17027e16e",
+        "last_successful_branch": "feat/skills-scholia-02-verify",
+        "last_successful_commit": "f447c7718a4f426bc75016071f2782736146a12a",
+        "completed_at": "2026-08-20T03:36:21+00:00",
+        "completion_evidence": {
+          "task": "skills-scholia-02-verify",
+          "prd_id": "skills-scholia-02-verify",
+          "provider": "claude",
+          "model": "claude-fable-5",
+          "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_18ce7g1n03_scholialan.md",
+          "post_status": "invalid",
+          "test_gate": {
+            "all_passed": true,
+            "commands": [],
+            "run_id": "bff92e7d86194f95a6b1acf17027e16e",
+            "skipped": true,
+            "skipped_reason": "no machine-runnable commands in success_metrics"
+          }
+        }
+      },
+      "completion_evidence": {
+        "task": "skills-scholia-02-verify",
+        "prd_id": "skills-scholia-02-verify",
+        "provider": "claude",
+        "model": "claude-fable-5",
+        "post_path": "/home/horselover/projects/scholialang-mcp/.opentalon/kb/posts/2026_08_19_POST_18ce7g1n03_scholialan.md",
+        "post_status": "invalid",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "bff92e7d86194f95a6b1acf17027e16e",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
     }
   ]
 }
