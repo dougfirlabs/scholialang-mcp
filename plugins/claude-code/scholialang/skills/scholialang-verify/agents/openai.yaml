@@ -1,0 +1,3 @@
+interface:
+  display_name: "Scholialang Verify"
+  short_description: "Isolated verification of the public Scholialang contract"

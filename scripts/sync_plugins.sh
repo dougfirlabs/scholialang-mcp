@@ -25,11 +25,14 @@ for dst in "${targets[@]}"; do
 done
 
 # Skills: the claude-code copies are canonical; the Codex copies are generated
-# artifacts (enforced by tests/test_scholia_doctor.py for scholialang-doctor).
-canonical_skill="$repo_root/plugins/claude-code/scholialang/skills/scholialang-doctor"
-codex_skill="$repo_root/plugins/codex/scholialang/skills/scholialang-doctor"
-rm -rf "$codex_skill"
-cp -R "$canonical_skill" "$codex_skill"
-find "$codex_skill" -type d -name __pycache__ -prune -exec rm -rf {} +
-echo "synced -> ${codex_skill#"$repo_root/"}"
+# artifacts (enforced by tests/test_scholia_doctor.py and
+# tests/test_scholia_verify.py).
+for skill in scholialang-doctor scholialang-verify; do
+  canonical_skill="$repo_root/plugins/claude-code/scholialang/skills/$skill"
+  codex_skill="$repo_root/plugins/codex/scholialang/skills/$skill"
+  rm -rf "$codex_skill"
+  cp -R "$canonical_skill" "$codex_skill"
+  find "$codex_skill" -type d -name __pycache__ -prune -exec rm -rf {} +
+  echo "synced -> ${codex_skill#"$repo_root/"}"
+done
 echo "done"
