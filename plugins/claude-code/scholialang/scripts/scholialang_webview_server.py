@@ -3066,6 +3066,55 @@ def load_snapshot(dag_id=None, project_path=None, limit=80):
     }
 
 
+def snapshot_revision(dag_id=None, project_path=None):
+    """Cheap change-detector for the SSE poll loop.
+
+    Answers "has anything moved?" with aggregate queries only, mirroring the
+    inputs of :func:`snapshot_fingerprint` without materializing anything. The
+    loop previously built a whole snapshot — every DAG in the project, every
+    node and edge — on each tick just to notice nothing had changed, which at
+    ``DEFAULT_POLL_SECONDS`` and a few open tabs pinned several cores and made
+    unrelated requests queue for tens of seconds behind it.
+
+    ``MAX(rowid)`` is an O(1) index lookup and, paired with the counts, catches
+    appends that land inside the same clock second as the previous tick — which
+    a second-resolution ``updated_at`` alone would miss.
+    """
+    conn = scholia.connect()
+    try:
+        params = []
+        where = ""
+        if project_path:
+            where = "WHERE project_key = ?"
+            params.append(scholia.project_info(project_path)["project_key"])
+        dag_count, project_updated = conn.execute(
+            f"SELECT COUNT(*), MAX(updated_at) FROM dags {where}", params
+        ).fetchone()
+        high_water = conn.execute("SELECT MAX(rowid) FROM nodes").fetchone()[0]
+        base = (dag_count, project_updated, high_water)
+
+        if not dag_id:
+            # No explicit selection: load_snapshot picks a default DAG that can
+            # change as DAGs arrive, so fall back to project-wide staleness.
+            return (None, None, None, None) + base
+
+        selected = conn.execute(
+            "SELECT updated_at FROM dags WHERE dag_id = ?", (dag_id,)
+        ).fetchone()
+        if selected is None:
+            # Stale dag_id from a bookmarked URL — still a valid revision.
+            return (dag_id, None, None, None) + base
+        node_count = conn.execute(
+            "SELECT COUNT(*) FROM nodes WHERE dag_id = ?", (dag_id,)
+        ).fetchone()[0]
+        edge_count = conn.execute(
+            "SELECT COUNT(*) FROM edges WHERE dag_id = ?", (dag_id,)
+        ).fetchone()[0]
+        return (dag_id, selected[0], node_count, edge_count) + base
+    finally:
+        conn.close()
+
+
 def snapshot_fingerprint(snapshot):
     dag = snapshot.get("dag") or {}
     return (
@@ -3392,7 +3441,7 @@ class ScholialangWebviewHandler(BaseHTTPRequestHandler):
         interval = max(0.1, parse_float(query_one(query, "interval"), getattr(self.server, "poll_interval", DEFAULT_POLL_SECONDS)))
         once = query_one(query, "once") == "1"
         started_at = time.monotonic()
-        last_fingerprint = None
+        last_revision = None
 
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
@@ -3402,11 +3451,13 @@ class ScholialangWebviewHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
         while time.monotonic() - started_at < MAX_STREAM_SECONDS:
-            snapshot = self.snapshot(query)
-            fingerprint = snapshot_fingerprint(snapshot)
-            if fingerprint != last_fingerprint or once:
-                last_fingerprint = fingerprint
-                self.write_event("snapshot", snapshot)
+            revision = snapshot_revision(
+                dag_id=query_one(query, "dag_id"),
+                project_path=self.project_path(query),
+            )
+            if revision != last_revision or once:
+                last_revision = revision
+                self.write_event("snapshot", self.snapshot(query))
                 if once:
                     break
             else:
