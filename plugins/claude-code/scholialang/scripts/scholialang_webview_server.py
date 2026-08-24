@@ -723,6 +723,33 @@ WEBVIEW_HTML = """<!doctype html>
       font-variant-numeric: tabular-nums;
     }
 
+    /* Provenance strip at the top of the atoms pane: which model produced
+       this trace, on which host, and when it opened. */
+    .atoms-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px 16px;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .atoms-meta[hidden] {
+      display: none;
+    }
+
+    .atoms-meta .meta-key {
+      opacity: 0.6;
+      margin-right: 6px;
+    }
+
+    .atoms-meta .meta-value {
+      color: var(--text);
+    }
+
     .panel-body {
       overflow: auto;
       max-height: calc(100vh - 94px);
@@ -1576,6 +1603,7 @@ WEBVIEW_HTML = """<!doctype html>
           <div class="panel-title">Atoms</div>
           <div id="atomCount" class="panel-meta">0</div>
         </div>
+        <div id="atomsMeta" class="atoms-meta" hidden></div>
         <div id="feed" class="panel-body feed trace-region"></div>
       </section>
 
@@ -2252,6 +2280,7 @@ WEBVIEW_HTML = """<!doctype html>
         $("summary").textContent = "";
         $("dagCount").textContent = "0";
         $("atomCount").textContent = "0";
+        renderAtomsMeta(null);
         $("frontierCount").textContent = "0";
         $("edgeCount").textContent = "0";
         $("astCount").textContent = "0";
@@ -2282,6 +2311,7 @@ WEBVIEW_HTML = """<!doctype html>
       renderAstConnections(snapshot.ast_connections || [], newNodeIds);
       $("summary").textContent = snapshot.summary || "";
       $("atomCount").textContent = `${snapshot.dag.node_count || 0}`;
+      renderAtomsMeta(snapshot.dag);
       $("frontierCount").textContent = `${frontier.length}`;
       $("edgeCount").textContent = `${snapshot.dag.edge_count || 0}`;
       $("astCount").textContent = `${(snapshot.ast_connections || []).length}`;
@@ -2322,6 +2352,27 @@ WEBVIEW_HTML = """<!doctype html>
       document.querySelectorAll(".dag-item").forEach((button) => {
         button.addEventListener("click", () => selectDag(button.dataset.dagId));
       });
+    }
+
+    function renderAtomsMeta(dag) {
+      const host = $("atomsMeta");
+      if (!host) return;
+      const bits = [];
+      const cell = (key, valueHtml, ts) =>
+        `<span${ts ? ` data-ts="${escapeText(ts)}" title="${escapeText(ts)}"` : ""}>` +
+        `<span class="meta-key">${key}</span><span class="meta-value">${valueHtml}</span></span>`;
+      if (dag && dag.model) bits.push(cell("model", escapeText(dag.model)));
+      if (dag && dag.host) bits.push(cell("host", escapeText(dag.host)));
+      const started = dag ? parseStamp(dag.created_at) : null;
+      if (started) {
+        bits.push(cell(
+          "started",
+          `${escapeText(clockText(started))} <span class="rel">\u00b7 ${escapeText(relativeAge(started))}</span>`,
+          dag.created_at,
+        ));
+      }
+      host.innerHTML = bits.join("");
+      host.hidden = bits.length === 0;
     }
 
     function renderAtoms(nodes, newNodeIds = state.newNodeIds) {
