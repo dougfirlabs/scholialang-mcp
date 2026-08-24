@@ -723,6 +723,33 @@ WEBVIEW_HTML = """<!doctype html>
       font-variant-numeric: tabular-nums;
     }
 
+    /* Provenance strip at the top of the atoms pane: which model produced
+       this trace, on which host, and when it opened. */
+    .atoms-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px 16px;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .atoms-meta[hidden] {
+      display: none;
+    }
+
+    .atoms-meta .meta-key {
+      opacity: 0.6;
+      margin-right: 6px;
+    }
+
+    .atoms-meta .meta-value {
+      color: var(--text);
+    }
+
     .panel-body {
       overflow: auto;
       max-height: calc(100vh - 94px);
@@ -920,6 +947,26 @@ WEBVIEW_HTML = """<!doctype html>
       font-family: var(--mono);
       font-size: 10.5px;
       overflow-wrap: anywhere;
+    }
+
+    /* Timestamps get their own class: .atom-id sets overflow-wrap:anywhere,
+       which breaks an ISO-8601 stamp mid-token across two lines. */
+    .atom-time {
+      margin-top: 4px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .atom-time .rel {
+      opacity: 0.7;
+    }
+
+    .dag-sub.dag-time {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
     }
 
     .atom-summary {
@@ -1556,6 +1603,7 @@ WEBVIEW_HTML = """<!doctype html>
           <div class="panel-title">Atoms</div>
           <div id="atomCount" class="panel-meta">0</div>
         </div>
+        <div id="atomsMeta" class="atoms-meta" hidden></div>
         <div id="feed" class="panel-body feed trace-region"></div>
       </section>
 
@@ -2056,6 +2104,46 @@ WEBVIEW_HTML = """<!doctype html>
       renderGraphLoading();
     }
 
+    function parseStamp(value) {
+      if (!value) return null;
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function clockText(date) {
+      return date.toLocaleTimeString([], { hour12: false });
+    }
+
+    function relativeAge(date, now = Date.now()) {
+      const secs = Math.round((now - date.getTime()) / 1000);
+      if (secs < 0) return "just now";
+      if (secs < 45) return `${secs}s ago`;
+      const mins = Math.round(secs / 60);
+      if (mins < 60) return `${mins}m ago`;
+      const hours = Math.round(mins / 60);
+      if (hours < 24) return `${hours}h ago`;
+      return `${Math.round(hours / 24)}d ago`;
+    }
+
+    // Absolute clock + relative age, full ISO on hover. data-ts lets the 30s
+    // tick below refresh the age in place without re-rendering a live pane.
+    function timeMarkup(iso, className = "atom-time") {
+      const date = parseStamp(iso);
+      if (!date) return "";
+      return `<div class="${className}" data-ts="${escapeText(iso)}" title="${escapeText(iso)}">${escapeText(clockText(date))} <span class="rel">\u00b7 ${escapeText(relativeAge(date))}</span></div>`;
+    }
+
+    function refreshRelativeAges() {
+      const now = Date.now();
+      document.querySelectorAll("[data-ts]").forEach((host) => {
+        const rel = host.querySelector(".rel");
+        const date = parseStamp(host.dataset.ts);
+        if (rel && date) rel.textContent = `\u00b7 ${relativeAge(date, now)}`;
+      });
+    }
+
+    setInterval(refreshRelativeAges, 30000);
+
     function escapeText(value) {
       return String(value ?? "").replace(/[&<>"']/g, (char) => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -2192,6 +2280,7 @@ WEBVIEW_HTML = """<!doctype html>
         $("summary").textContent = "";
         $("dagCount").textContent = "0";
         $("atomCount").textContent = "0";
+        renderAtomsMeta(null);
         $("frontierCount").textContent = "0";
         $("edgeCount").textContent = "0";
         $("astCount").textContent = "0";
@@ -2222,6 +2311,7 @@ WEBVIEW_HTML = """<!doctype html>
       renderAstConnections(snapshot.ast_connections || [], newNodeIds);
       $("summary").textContent = snapshot.summary || "";
       $("atomCount").textContent = `${snapshot.dag.node_count || 0}`;
+      renderAtomsMeta(snapshot.dag);
       $("frontierCount").textContent = `${frontier.length}`;
       $("edgeCount").textContent = `${snapshot.dag.edge_count || 0}`;
       $("astCount").textContent = `${(snapshot.ast_connections || []).length}`;
@@ -2256,11 +2346,33 @@ WEBVIEW_HTML = """<!doctype html>
           <div class="dag-sub">${escapeText(dag.dag_id)}</div>
           <div class="dag-sub">${escapeText(dag.trace_view_mode || "checkpoint")}</div>
           <div class="dag-sub">${dag.node_count || 0} atoms / ${dag.edge_count || 0} edges</div>
+          ${timeMarkup(dag.updated_at, "dag-sub dag-time")}
         </button>
       `).join("");
       document.querySelectorAll(".dag-item").forEach((button) => {
         button.addEventListener("click", () => selectDag(button.dataset.dagId));
       });
+    }
+
+    function renderAtomsMeta(dag) {
+      const host = $("atomsMeta");
+      if (!host) return;
+      const bits = [];
+      const cell = (key, valueHtml, ts) =>
+        `<span${ts ? ` data-ts="${escapeText(ts)}" title="${escapeText(ts)}"` : ""}>` +
+        `<span class="meta-key">${key}</span><span class="meta-value">${valueHtml}</span></span>`;
+      if (dag && dag.model) bits.push(cell("model", escapeText(dag.model)));
+      if (dag && (dag.harness || dag.host)) bits.push(cell("harness", escapeText(dag.harness || dag.host)));
+      const started = dag ? parseStamp(dag.created_at) : null;
+      if (started) {
+        bits.push(cell(
+          "started",
+          `${escapeText(clockText(started))} <span class="rel">\u00b7 ${escapeText(relativeAge(started))}</span>`,
+          dag.created_at,
+        ));
+      }
+      host.innerHTML = bits.join("");
+      host.hidden = bits.length === 0;
     }
 
     function renderAtoms(nodes, newNodeIds = state.newNodeIds) {
@@ -2282,7 +2394,7 @@ WEBVIEW_HTML = """<!doctype html>
               <div class="category-chip">${categoryLabel(category)}</div>
             </div>
             <div class="atom-id">${escapeText(node.id)}</div>
-            <div class="atom-id">${escapeText(node.created_at || "")}</div>
+            ${timeMarkup(node.created_at)}
           </div>
           <div>
             <div class="atom-summary">${escapeText(node.summary)}</div>
@@ -2308,6 +2420,7 @@ WEBVIEW_HTML = """<!doctype html>
           </div>
           <div class="atom-summary" style="margin-top:6px">${escapeText(node.summary)}</div>
           <div class="atom-id">${escapeText(node.id)}</div>
+          ${timeMarkup(node.created_at)}
         </div>
       `;
       }).join("") : '<div class="empty">No frontier nodes.</div>';
@@ -2953,6 +3066,55 @@ def load_snapshot(dag_id=None, project_path=None, limit=80):
     }
 
 
+def snapshot_revision(dag_id=None, project_path=None):
+    """Cheap change-detector for the SSE poll loop.
+
+    Answers "has anything moved?" with aggregate queries only, mirroring the
+    inputs of :func:`snapshot_fingerprint` without materializing anything. The
+    loop previously built a whole snapshot — every DAG in the project, every
+    node and edge — on each tick just to notice nothing had changed, which at
+    ``DEFAULT_POLL_SECONDS`` and a few open tabs pinned several cores and made
+    unrelated requests queue for tens of seconds behind it.
+
+    ``MAX(rowid)`` is an O(1) index lookup and, paired with the counts, catches
+    appends that land inside the same clock second as the previous tick — which
+    a second-resolution ``updated_at`` alone would miss.
+    """
+    conn = scholia.connect()
+    try:
+        params = []
+        where = ""
+        if project_path:
+            where = "WHERE project_key = ?"
+            params.append(scholia.project_info(project_path)["project_key"])
+        dag_count, project_updated = conn.execute(
+            f"SELECT COUNT(*), MAX(updated_at) FROM dags {where}", params
+        ).fetchone()
+        high_water = conn.execute("SELECT MAX(rowid) FROM nodes").fetchone()[0]
+        base = (dag_count, project_updated, high_water)
+
+        if not dag_id:
+            # No explicit selection: load_snapshot picks a default DAG that can
+            # change as DAGs arrive, so fall back to project-wide staleness.
+            return (None, None, None, None) + base
+
+        selected = conn.execute(
+            "SELECT updated_at FROM dags WHERE dag_id = ?", (dag_id,)
+        ).fetchone()
+        if selected is None:
+            # Stale dag_id from a bookmarked URL — still a valid revision.
+            return (dag_id, None, None, None) + base
+        node_count = conn.execute(
+            "SELECT COUNT(*) FROM nodes WHERE dag_id = ?", (dag_id,)
+        ).fetchone()[0]
+        edge_count = conn.execute(
+            "SELECT COUNT(*) FROM edges WHERE dag_id = ?", (dag_id,)
+        ).fetchone()[0]
+        return (dag_id, selected[0], node_count, edge_count) + base
+    finally:
+        conn.close()
+
+
 def snapshot_fingerprint(snapshot):
     dag = snapshot.get("dag") or {}
     return (
@@ -3279,7 +3441,7 @@ class ScholialangWebviewHandler(BaseHTTPRequestHandler):
         interval = max(0.1, parse_float(query_one(query, "interval"), getattr(self.server, "poll_interval", DEFAULT_POLL_SECONDS)))
         once = query_one(query, "once") == "1"
         started_at = time.monotonic()
-        last_fingerprint = None
+        last_revision = None
 
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
@@ -3289,11 +3451,13 @@ class ScholialangWebviewHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
         while time.monotonic() - started_at < MAX_STREAM_SECONDS:
-            snapshot = self.snapshot(query)
-            fingerprint = snapshot_fingerprint(snapshot)
-            if fingerprint != last_fingerprint or once:
-                last_fingerprint = fingerprint
-                self.write_event("snapshot", snapshot)
+            revision = snapshot_revision(
+                dag_id=query_one(query, "dag_id"),
+                project_path=self.project_path(query),
+            )
+            if revision != last_revision or once:
+                last_revision = revision
+                self.write_event("snapshot", self.snapshot(query))
                 if once:
                     break
             else:
