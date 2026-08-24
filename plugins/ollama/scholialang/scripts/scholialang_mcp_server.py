@@ -337,6 +337,22 @@ def upsert_project(conn, info):
 
 
 MODEL_TAG_PREFIX = "model:"
+EXHAUST_HOST_SUFFIX = "-exhaust"
+
+
+def dag_harness(dag):
+    """The harness that produced a trace, independent of stream kind.
+
+    ``session_key`` hosts encode both facts at once: ``claude-code`` for the
+    checkpoint stream and ``claude-code-exhaust`` for its paired event stream.
+    Exhaust-ness is a view mode (see the viewer's ``trace_view_mode``), not a
+    different harness, so anything asking "who produced this" wants the bare
+    name — both halves of a pair answer ``claude-code``.
+    """
+    host = (dag.get("session_key") or "").split(":", 1)[0]
+    if host.endswith(EXHAUST_HOST_SUFFIX):
+        host = host[: -len(EXHAUST_HOST_SUFFIX)]
+    return host or None
 
 
 def dag_model(dag):
@@ -383,6 +399,7 @@ def dag_metadata(dag):
         "session_key": dag.get("session_key"),
         "model": dag_model(dag),
         "host": (dag.get("session_key") or "").split(":", 1)[0] or None,
+        "harness": dag_harness(dag),
         "project_path": dag.get("project_path"),
         "project_name": dag.get("project_name"),
         "project_key": dag.get("project_key"),

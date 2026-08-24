@@ -152,3 +152,55 @@ def test_model_from_lines_returns_none_when_no_assistant_turn_exists():
     cc = _load("cc_exhaust")
     # This is the SessionStart case: the transcript exists but has no answer yet.
     assert cc.model_from_lines(['{"type": "user", "message": {"role": "user"}}']) is None
+
+
+# --- harness (stream kind stripped) -----------------------------------------
+
+def test_harness_strips_the_exhaust_suffix(server):
+    assert server.dag_harness({"session_key": "claude-code-exhaust:abc"}) == "claude-code"
+
+
+def test_harness_leaves_a_checkpoint_host_alone(server):
+    assert server.dag_harness({"session_key": "claude-code:abc"}) == "claude-code"
+
+
+def test_paired_streams_report_the_same_harness(server):
+    checkpoint = server.dag_harness({"session_key": "codex:s1"})
+    exhaust = server.dag_harness({"session_key": "codex-exhaust:s1"})
+    assert checkpoint == exhaust == "codex"
+
+
+def test_harness_is_none_without_a_session_key(server):
+    assert server.dag_harness({}) is None
+    assert server.dag_harness({"session_key": ""}) is None
+
+
+def test_metadata_carries_both_host_and_harness(server, conn):
+    dag_id = _make_dag(server, conn)
+    conn.execute(
+        "UPDATE dags SET session_key = ? WHERE dag_id = ?", ("claude-code-exhaust:s1", dag_id)
+    )
+    conn.commit()
+    meta = server.dag_metadata(server.load_dag_conn(conn, dag_id))
+    # host stays truthful to storage; harness answers "who produced this".
+    assert meta["host"] == "claude-code-exhaust"
+    assert meta["harness"] == "claude-code"
+
+
+# --- placeholder models -----------------------------------------------------
+
+def test_model_from_lines_skips_synthetic_placeholder():
+    cc = _load("cc_exhaust")
+    lines = [
+        '{"type": "assistant", "message": {"role": "assistant", "model": "<synthetic>"}}',
+        '{"type": "assistant", "message": {"role": "assistant", "model": "claude-opus-5"}}',
+    ]
+    assert cc.model_from_lines(lines) == "claude-opus-5"
+
+
+def test_model_from_lines_returns_none_when_only_placeholders_exist():
+    cc = _load("cc_exhaust")
+    assert cc.model_from_lines(
+        ['{"type": "assistant", "message": {"role": "assistant", "model": "<synthetic>"}}']
+    ) is None
+

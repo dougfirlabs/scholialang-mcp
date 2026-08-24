@@ -284,8 +284,13 @@ def model_from_lines(lines):
             continue
         message = obj.get("message") if isinstance(obj.get("message"), dict) else {}
         model = message.get("model")
-        if isinstance(model, str) and model.strip():
-            return model.strip()
+        if not isinstance(model, str):
+            continue
+        value = model.strip()
+        # Claude Code stamps placeholders like "<synthetic>" on messages it
+        # generated itself rather than sampled; those name no real model.
+        if value and not (value.startswith("<") and value.endswith(">")):
+            return value
     return None
 
 

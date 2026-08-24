@@ -2362,7 +2362,7 @@ WEBVIEW_HTML = """<!doctype html>
         `<span${ts ? ` data-ts="${escapeText(ts)}" title="${escapeText(ts)}"` : ""}>` +
         `<span class="meta-key">${key}</span><span class="meta-value">${valueHtml}</span></span>`;
       if (dag && dag.model) bits.push(cell("model", escapeText(dag.model)));
-      if (dag && dag.host) bits.push(cell("host", escapeText(dag.host)));
+      if (dag && (dag.harness || dag.host)) bits.push(cell("harness", escapeText(dag.harness || dag.host)));
       const started = dag ? parseStamp(dag.created_at) : null;
       if (started) {
         bits.push(cell(
