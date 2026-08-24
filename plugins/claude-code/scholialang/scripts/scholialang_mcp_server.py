@@ -3,6 +3,7 @@ import hashlib
 import html
 import json
 import os
+import platform
 import re
 import secrets
 import sqlite3
@@ -279,6 +280,7 @@ def init_db(conn):
     # Migrate pre-0.3.0 databases and back the idempotent session lookup.
     _ensure_column(conn, "dags", "session_key", "TEXT")
     _ensure_column(conn, "dags", "model", "TEXT")
+    _ensure_column(conn, "dags", "orchestrator", "TEXT")
     _ensure_column(conn, "nodes", "attrs_json", "TEXT NOT NULL DEFAULT '{}'")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_dags_session ON dags(project_key, session_key)")
     conn.execute(
@@ -337,6 +339,64 @@ def upsert_project(conn, info):
 
 
 MODEL_TAG_PREFIX = "model:"
+ORCHESTRATOR_TAG_PREFIX = "orchestrator:"
+
+
+def _is_machine_identity(value):
+    """True when ``value`` is just this machine's name.
+
+    A hostname says where something ran, never what ran it. Callers given one
+    slot for two facts have put a machine name in ``host`` before, which reads
+    as a harness named after a laptop and silently loses the real one.
+    Recording nothing beats recording that, so identity fields drop it.
+    """
+    if not value:
+        return False
+    node = platform.node() or ""
+    candidates = {node.lower(), node.split(".", 1)[0].lower()} - {""}
+    return value.strip().lower() in candidates
+
+
+def dag_orchestrator(dag):
+    """What drove the harness, when something else did.
+
+    ``harness`` is what ran the model (``claude-code``); this is whatever
+    invoked the harness — a CI job, a scheduler, an outer agent framework. It
+    is declared, never guessed: a wrapper exports ``SCHOLIA_ORCHESTRATOR`` or
+    passes ``orchestrator=``, and an ``orchestrator:<id>`` tag is the fallback
+    for externally-ingested traces. Absent means nobody claimed it, which is a
+    truthful answer rather than a guessed one.
+    """
+    stored = dag.get("orchestrator")
+    if stored:
+        return stored
+    for tag in dag.get("tags", []) or []:
+        if isinstance(tag, str) and tag.startswith(ORCHESTRATOR_TAG_PREFIX):
+            value = tag[len(ORCHESTRATOR_TAG_PREFIX):].strip()
+            if value and not _is_machine_identity(value):
+                return value
+    return None
+
+
+def requested_orchestrator(args):
+    """Resolve a declared orchestrator from the call or the environment."""
+    value = args.get("orchestrator") or os.environ.get("SCHOLIA_ORCHESTRATOR")
+    if not value or _is_machine_identity(value):
+        return None
+    return compact_text(value, 120)
+
+
+def set_dag_orchestrator(conn, dag_id, orchestrator, *, overwrite=False):
+    """Stamp the orchestrator on a DAG. First writer wins unless ``overwrite``."""
+    if not orchestrator or _is_machine_identity(orchestrator):
+        return None
+    value = compact_text(orchestrator, 120)
+    if not overwrite:
+        row = conn.execute("SELECT orchestrator FROM dags WHERE dag_id = ?", (dag_id,)).fetchone()
+        if row is not None and ("orchestrator" in row.keys()) and row["orchestrator"]:
+            return row["orchestrator"]
+    conn.execute("UPDATE dags SET orchestrator = ? WHERE dag_id = ?", (value, dag_id))
+    return value
 EXHAUST_HOST_SUFFIX = "-exhaust"
 
 
@@ -400,6 +460,7 @@ def dag_metadata(dag):
         "model": dag_model(dag),
         "host": (dag.get("session_key") or "").split(":", 1)[0] or None,
         "harness": dag_harness(dag),
+        "orchestrator": dag_orchestrator(dag),
         "project_path": dag.get("project_path"),
         "project_name": dag.get("project_name"),
         "project_key": dag.get("project_key"),
@@ -459,6 +520,7 @@ def row_to_dag(conn, row):
         "tags": json_loads(row["tags_json"], []),
         "session_key": row["session_key"] if "session_key" in row.keys() else None,
         "model": row["model"] if "model" in row.keys() else None,
+        "orchestrator": row["orchestrator"] if "orchestrator" in row.keys() else None,
         "project_key": row["project_key"],
         "project_path": row["project_path"],
         "project_name": row["project_name"],
@@ -689,6 +751,7 @@ def tool_dag_start(args):
             ),
         )
         set_dag_model(conn, dag_id, args.get("model"))
+        set_dag_orchestrator(conn, dag_id, requested_orchestrator(args))
         conn.commit()
         goal_summary = compact_text(args.get("objective") or args.get("title") or "Trace objective", 500)
         goal_content = compact_text(args.get("objective") or goal_summary, MAX_TEXT)
@@ -844,10 +907,12 @@ def runtime_scope_id():
 
 def requested_session_identity(args):
     """Resolve identity supplied by a caller or host environment."""
-    host = compact_text(
-        args.get("host") or os.environ.get("SCHOLIA_HOST") or "mcp",
-        60,
-    )
+    requested_host = args.get("host") or os.environ.get("SCHOLIA_HOST")
+    if _is_machine_identity(requested_host):
+        # A caller naming the machine has not named a harness. Fall back to the
+        # generic default rather than minting a harness called after a laptop.
+        requested_host = None
+    host = compact_text(requested_host or "mcp", 60)
     raw_session_id = (
         args.get("session_id")
         or os.environ.get("SCHOLIA_SESSION_ID")
@@ -990,6 +1055,7 @@ def tool_dag_ensure_session(args):
                 if requested_session_id is not None:
                     bind_runtime_session(conn, info["project_key"], host, session_key)
                 set_dag_model(conn, dag_id, args.get("model"))
+                set_dag_orchestrator(conn, dag_id, requested_orchestrator(args))
                 conn.commit()
             except sqlite3.IntegrityError:
                 # Another host/process created the same session DAG concurrently.
@@ -2462,6 +2528,7 @@ def tool_schema(name):
             "objective": {"type": "string"},
             "tags": {"type": "array", "items": {"type": "string"}},
             "model": {"type": "string"},
+            "orchestrator": {"type": "string", "description": "What drove the harness, e.g. a CI job or agent framework."},
         })
     if name.endswith("dag_add_atom") or name.endswith("trace_append"):
         return schema({
@@ -2491,6 +2558,7 @@ def tool_schema(name):
             "objective": {"type": "string"},
             "tags": {"type": "array", "items": {"type": "string"}},
             "model": {"type": "string"},
+            "orchestrator": {"type": "string", "description": "What drove the harness, e.g. a CI job or agent framework."},
         })
     if name.endswith("dag_finish_session"):
         return schema({
