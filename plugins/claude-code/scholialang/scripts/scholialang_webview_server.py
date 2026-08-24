@@ -922,6 +922,26 @@ WEBVIEW_HTML = """<!doctype html>
       overflow-wrap: anywhere;
     }
 
+    /* Timestamps get their own class: .atom-id sets overflow-wrap:anywhere,
+       which breaks an ISO-8601 stamp mid-token across two lines. */
+    .atom-time {
+      margin-top: 4px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10.5px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .atom-time .rel {
+      opacity: 0.7;
+    }
+
+    .dag-sub.dag-time {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
     .atom-summary {
       color: var(--text);
       font-weight: 560;
@@ -2056,6 +2076,46 @@ WEBVIEW_HTML = """<!doctype html>
       renderGraphLoading();
     }
 
+    function parseStamp(value) {
+      if (!value) return null;
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function clockText(date) {
+      return date.toLocaleTimeString([], { hour12: false });
+    }
+
+    function relativeAge(date, now = Date.now()) {
+      const secs = Math.round((now - date.getTime()) / 1000);
+      if (secs < 0) return "just now";
+      if (secs < 45) return `${secs}s ago`;
+      const mins = Math.round(secs / 60);
+      if (mins < 60) return `${mins}m ago`;
+      const hours = Math.round(mins / 60);
+      if (hours < 24) return `${hours}h ago`;
+      return `${Math.round(hours / 24)}d ago`;
+    }
+
+    // Absolute clock + relative age, full ISO on hover. data-ts lets the 30s
+    // tick below refresh the age in place without re-rendering a live pane.
+    function timeMarkup(iso, className = "atom-time") {
+      const date = parseStamp(iso);
+      if (!date) return "";
+      return `<div class="${className}" data-ts="${escapeText(iso)}" title="${escapeText(iso)}">${escapeText(clockText(date))} <span class="rel">\u00b7 ${escapeText(relativeAge(date))}</span></div>`;
+    }
+
+    function refreshRelativeAges() {
+      const now = Date.now();
+      document.querySelectorAll("[data-ts]").forEach((host) => {
+        const rel = host.querySelector(".rel");
+        const date = parseStamp(host.dataset.ts);
+        if (rel && date) rel.textContent = `\u00b7 ${relativeAge(date, now)}`;
+      });
+    }
+
+    setInterval(refreshRelativeAges, 30000);
+
     function escapeText(value) {
       return String(value ?? "").replace(/[&<>"']/g, (char) => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -2256,6 +2316,7 @@ WEBVIEW_HTML = """<!doctype html>
           <div class="dag-sub">${escapeText(dag.dag_id)}</div>
           <div class="dag-sub">${escapeText(dag.trace_view_mode || "checkpoint")}</div>
           <div class="dag-sub">${dag.node_count || 0} atoms / ${dag.edge_count || 0} edges</div>
+          ${timeMarkup(dag.updated_at, "dag-sub dag-time")}
         </button>
       `).join("");
       document.querySelectorAll(".dag-item").forEach((button) => {
@@ -2282,7 +2343,7 @@ WEBVIEW_HTML = """<!doctype html>
               <div class="category-chip">${categoryLabel(category)}</div>
             </div>
             <div class="atom-id">${escapeText(node.id)}</div>
-            <div class="atom-id">${escapeText(node.created_at || "")}</div>
+            ${timeMarkup(node.created_at)}
           </div>
           <div>
             <div class="atom-summary">${escapeText(node.summary)}</div>
@@ -2308,6 +2369,7 @@ WEBVIEW_HTML = """<!doctype html>
           </div>
           <div class="atom-summary" style="margin-top:6px">${escapeText(node.summary)}</div>
           <div class="atom-id">${escapeText(node.id)}</div>
+          ${timeMarkup(node.created_at)}
         </div>
       `;
       }).join("") : '<div class="empty">No frontier nodes.</div>';
