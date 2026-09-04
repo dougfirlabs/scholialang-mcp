@@ -188,6 +188,12 @@ Each plugin's tool surface is identical:
 - `scholia_codex_import_thread` — import Codex rollout JSONL as an
   event-sourced exhaust DAG
 
+`scholia_dag_finish_session` distinguishes lifecycle completion from goal
+attainment. With no `outcome`, it records an `Observation` that the session
+ended. Supply `outcome=met`, `unmet`, or `partially_met` only when the caller
+can truthfully close the session Goal; that creates the corresponding
+`Concluding` atom.
+
 The validator prefers the installed `scholialang` Python package and
 falls back to the vendored snapshot at
 `<plugin>/scripts/_scholia_vendored/`. Check the `lint_engine` field
@@ -252,6 +258,9 @@ MVP v0.6 LSP scope:
 - Definition resolution order: workspace-relative file path,
   `path.py::symbol` path prefix, then Scholia atom id in the current document
   when that atom has a `location` attribute.
+- Full-document `didChange` synchronization with monotonically increasing
+  document versions; `didClose` drops the in-memory buffer so later reads use
+  the file on disk.
 - Version alignment with the v0.6 language/runtime stack; full v0.6 grammar
   validation is exposed through the MCP lint tools rather than the LSP MVP.
 

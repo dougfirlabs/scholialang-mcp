@@ -30,6 +30,7 @@ ATTR_RE = re.compile(r"""\b(?P<name>location|target)\s*=\s*(?P<quote>['"])(?P<va
 class LspState:
     workspace_root: Path
     documents: dict[str, str] = field(default_factory=dict)
+    document_versions: dict[str, int] = field(default_factory=dict)
     shutdown: bool = False
 
 
@@ -226,7 +227,7 @@ def handle_request(state: LspState, payload: dict[str, Any]) -> Optional[dict[st
                 "capabilities": {
                     "hoverProvider": True,
                     "definitionProvider": True,
-                    "textDocumentSync": 1,
+                    "textDocumentSync": {"openClose": True, "change": 1},
                 },
                 "serverInfo": {"name": "scholialang-lsp", "version": SERVER_VERSION},
             },
@@ -245,6 +246,48 @@ def handle_request(state: LspState, payload: dict[str, Any]) -> Optional[dict[st
         text = doc.get("text")
         if isinstance(uri, str) and isinstance(text, str):
             state.documents[uri] = text
+            version = doc.get("version")
+            if isinstance(version, int):
+                state.document_versions[uri] = version
+        return None
+
+    if method == "textDocument/didChange":
+        doc = params.get("textDocument", {})
+        uri = doc.get("uri")
+        version = doc.get("version")
+        current_version = state.document_versions.get(uri) if isinstance(uri, str) else None
+        if (
+            isinstance(uri, str)
+            and not (
+                isinstance(version, int)
+                and isinstance(current_version, int)
+                and version <= current_version
+            )
+        ):
+            changes = params.get("contentChanges")
+            if isinstance(changes, list):
+                full_text = next(
+                    (
+                        change.get("text")
+                        for change in reversed(changes)
+                        if isinstance(change, dict)
+                        and "range" not in change
+                        and isinstance(change.get("text"), str)
+                    ),
+                    None,
+                )
+                if full_text is not None:
+                    state.documents[uri] = full_text
+                    if isinstance(version, int):
+                        state.document_versions[uri] = version
+        return None
+
+    if method == "textDocument/didClose":
+        doc = params.get("textDocument", {})
+        uri = doc.get("uri")
+        if isinstance(uri, str):
+            state.documents.pop(uri, None)
+            state.document_versions.pop(uri, None)
         return None
 
     if method == "textDocument/hover":
