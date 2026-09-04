@@ -73,6 +73,18 @@ def stamp_model(*dag_ids, project_path, model, log=None):
 
 def sync_state(state, *, transcript_path, project_path, max_events, log=None):
     """Run one capture pass and fold the result into ``state`` (mutated + returned)."""
+    reason = server.autoemit_disabled_reason(project_path)
+    if reason is not None:
+        if callable(log):
+            log(f"exhaust opted out for {project_path} ({reason}); capture paused")
+        last_line = int(state.get("last_line", 0))
+        return state, cc.CaptureResult(
+            0,
+            last_line,
+            False,
+            state.get("last_atom_id"),
+            last_line,
+        )
     start_line = int(state.get("last_line", 0)) + 1
     result = cc.capture_once(
         server,
