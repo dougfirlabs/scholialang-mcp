@@ -1,0 +1,140 @@
+{
+  "kind": "prd",
+  "schema_version": 1,
+  "status": "draft",
+  "group_id": "scholialang-073-convergence-20260904",
+  "run_policy": "gated_stack",
+  "approval": {
+    "approved": false,
+    "execution_authorized": false,
+    "merge_authorized": false,
+    "release_authorized": false
+  },
+  "authority": "Overnight implementation authorized by operator in the program; this specific draft remains receipt-gated. Activate only when PM records accepted dependencies. Only this isolated repository workbranch may change. No protected-branch integration, original PR changes, release, deployment, global installation or Cloud work.",
+  "evidence_contract": "Acceptance binds to full source SHA(s), pinned dependency/spec revisions, clean isolated environment, exact commands and exit codes, required scenario counts with zero skips, artifact hashes, independent verdict, preserved behavior matrix, and rollback notes. Existing green CI does not override a reproducible contract violation.",
+  "id": "sch073-04-capability-contract-scholialang-mcp",
+  "title": "Freeze MCP capability, identity and durable-state contracts",
+  "sequence": 4,
+  "depends_on_prds": [
+    "sch073-02-integrity-repair-scholialang-mcp"
+  ],
+  "repositories": [
+    "scholialang-mcp"
+  ],
+  "problem": "Package versions, semantic vocabulary and transport extensions can drift independently. Existing OT code and prototypes cannot be promoted based on names or version numbers.",
+  "outcome": "An executable, pinned capability/identity/security contract and MCP semantic parity baseline underpin independently gated Events, Tasks and Heartbeat adapters.",
+  "key_files": [
+    "MCP initialize/capability negotiation",
+    "extension adapter interfaces",
+    "catalog/lint/import/export/DAG surfaces",
+    "vendoring/materialization scripts",
+    "portable consumer contract fixtures for the separately owned OpenTalon integration",
+    "shared conformance fixtures"
+  ],
+  "hard_constraints": [
+    "Pin authoritative protocol/extension revisions, upstream schemas and client/SDK versions for every supported era. Label draft/vendor adapters honestly; proposed method names such as subscriptions/listen must be validated against that contract, not invented or advertised as universal standard.",
+    "Negotiate Events, Tasks and Heartbeat independently. Never infer support from package name, version, HTTP 200, viewer SSE, or presence of Event/Task atoms.",
+    "Define off/observe/enforce semantics per extension; default new behavior off. Observe cannot execute tasks or grant approval, and policy downgrade cannot falsely certify support.",
+    "Bind task/subscription/resource access to authenticated principal plus project/tenant. Keep MCP task IDs, OT run IDs, A2A IDs, approval IDs and DAG/atom IDs distinct with explicit correlation and idempotency scopes.",
+    "Specify authoritative durable stores, transaction boundaries, notifications-after-commit behavior, reconnect/refetch, retention/expiry, bounded payloads, time sources and error contracts.",
+    "Bring core 0.7.3 parity to MCP catalogs, lint, persistence, imports/exports and generated vendored fallback across artifacts. Audit GOAT and Tasks/MRTR prototypes at exact SHAs; reuse only conforming pieces.",
+    "Modify only this repository; OT/core/spec are pinned read-only dependencies. No shared checkout movement or modification. All test environments, DBs, task effects and servers must be synthetic/disposable. Never pip install into host/runner venv or use real operator tasks/trace databases. No broad git add.",
+    "Follow .ralph/contracts/protocol-contract-pins.md: dated2026-07-28 subscriptions and stable Tasks, exact SDK audit and vendor Heartbeat0.1. Never invent a standard replay/cursor/event-ack RPC or inherit legacy Task shapes. Report protocol/package/grammar/capabilities independently; all new behavior defaults off.",
+    "Maintain accepted j01/j02 preservation and exact j04 semantic parity. No fake premises, all-graph hydration, weakened validator, dropped primitive/legacy catalog behavior or required skip/xfail. Any report-only trace diagnostic discrepancy is evidence, not a product gate waiver.",
+    "OT consumer acceptance is separately owned and receipt-gated; create portable contract fixtures for its consumer but do not edit OT or claim its future consumer tests already pass. Final combined artifact gate binds all exact producer/consumer SHAs.",
+    "Contract-first slice may supply test adapters to prove all eight independent combinations, but discovery on shipped server must advertise no unfinished Events/Tasks/Heartbeat implementation. Later feature jobs activate only their independently conformance-tested facets. Do not mistake mocked adapter parity for shipped real transport support.",
+    "Principal/project authority must come from trusted transport/session configuration or an injected authorization boundary, never a caller-supplied owner/project field accepted as proof. Stdio is a configured local principal, not an authenticated network peer by implication. Unknown/unbound/revoked contexts fail closed; test forged IDs, cache reuse across principals and revoked subscriptions. No new credential infrastructure.",
+    "Use a single authoritative transaction for resource/task state and notification intent where the contract promises durability. Synthetic fault injection must prove before/after commit behavior, not merely assert a method named durable. Scope revision/cursor/idempotency to owner and project, bound queues/storage retention, and document unsupported transports.",
+    "Core0.7.3 is an unreleased accepted candidate, not assumed available from an index. Build/install its exact accepted wheel in isolated test environments and supply an explicit hashed wheelhouse/input receipt to nested Verify/release-gate environments if needed. Do not publish to satisfy dependency resolution, relax the >=0.7.3 floor, import sibling source accidentally, or replace the installed-artifact arm with mocks.",
+    "Write an agent-authored POST with canonical headings exactly: ## What worked, ## What didn't, ## Per-story status, ## Next steps. Record actual observed UTC timestamps and measured test counts; never estimate future completion times or claim tests not collected. Distinguish requested/served model attestation from incidental commit co-author labels. Include exact candidate SHA, source/fixture hashes and unresolved evidence caveats; independent PM acceptance is separate.",
+    "Read the pinned upstream oracle README and source receipts in upstream_oracle_inputs. Both schemas are definition libraries: validating their roots accepts nonsense. Select exact named $defs and compose core request metadata, Tasks method/filter shapes and original tool result projections without flattening overlapping definition names. Retain upstream bytes and full matching licenses if copying into repository conformance fixtures.",
+    "The 71 upstream schema outcomes include 15 explicitly accepted-but-semantically-invalid blind spots. They are not implementation passes. Add runtime assertions for capability declaration on each request, ack-first ordering per subscription, supported filter subset and JSON-type-correct subscription correlation, error classification, sane duration/time policy, authorization, and durable-before-handle behavior. Do not amend upstream schemas or count a permissive root check as conformance.",
+    "Existing Verify installed-wheel probing uses --no-deps and can exercise an Atlas path without importing core. Close that artifact evidence gap: explicitly install the accepted hashed core wheel and dependencies into every relevant private nested environment; assert actual scholialang import origin/version and execute the semantic corpus. Passing the old installed arm alone does not prove core0.7.3 parity.",
+    "Current offline vendoring contains atoms/parser/validator only; core serializer and its PyYAML dependency are absent. Plugin snippet lint is XML-only and DAG JSON is not the core trace schema; current XML export stringifies attribute values. Implement the approved semantic-format parity through genuine raw decoders and typed serializers, with source-generated vendoring and exact dependency/license provenance as needed. Never transcode malformed raw inputs before testing their decoder, call a missing decoder a valid negative, infer trace-format support from graph JSON, or depend on ambient packages in an offline arm. Preserve legacy tool defaults and explicit format distinctions.",
+    "Read independent_acceptance_preflight/HANDOFF.md by its pinned read-only root/hash. Preserve the old zero-dependency XML plugin controls while adding genuine typed/raw-format parity. A forced-vendor arm excludes installed scholialang; explicitly installed pinned PyYAML in a private environment is a declared dependency, not ambient leakage. Do not accidentally make legacy XML startup depend on undeclared packages, and do not claim dependency-free YAML unless its full licensed dependency closure is actually shipped."
+  ],
+  "stories": [
+    {
+      "id": "SCH073-04-S1",
+      "title": "Audit reusable implementations and pin contracts",
+      "description": "Classify historical branches/current GOAT code and SDK features; record accepted/rejected reuse, protocol pins and version axes. Document unsupported combinations.",
+      "priority": 1,
+      "passes": 0
+    },
+    {
+      "id": "SCH073-04-S2",
+      "title": "Implement negotiation and semantic parity",
+      "description": "Add independent capability handling, safe configuration modes, adapter/store interfaces, and canonical 0.7.3 dependency/vendoring across plugins.",
+      "priority": 2,
+      "passes": 0
+    },
+    {
+      "id": "SCH073-04-S3",
+      "title": "Establish shared negative and identity fixtures",
+      "description": "Create supported/unsupported/mixed-mode matrix, foreign-project denial, malformed payload, old-consumer and capability-advertisement tests.",
+      "priority": 3,
+      "passes": 0
+    }
+  ],
+  "acceptance": [
+    "Fixture matrix covers all eight supported/unsupported combinations of three independent capabilities, plus incompatible protocol and per-extension rollout modes.",
+    "Disabling one capability does not disable or advertise the others; unsupported peers use explicit fallback without false success.",
+    "No unauthorized project/tenant can discover or mutate another's task, subscription, result or correlation data.",
+    "Source/package/plugins validate the same new and old semantic fixtures with identical declared capability contracts.",
+    "Exact protocol/schema/SDK pins and feature-gap decisions are present; unresolved wire-contract choices block downstream acceptance."
+  ],
+  "verification": "Implement a machine-runnable shared conformance runner and contract-manifest validator in this slice; run full MCP tests, fingerprint corpus, core-kind parity and capability/security matrix. Record exact commands for downstream reuse.",
+  "out_of_scope": [
+    "External federation v2",
+    "New credential infrastructure",
+    "Production capability activation"
+  ],
+  "rollback": "Default flags remain off; retain prior artifact pins. Any migration must be additive and have a tested backup/restore procedure.",
+  "success_metrics": [
+    "Fixture matrix covers all eight supported/unsupported combinations of three independent capabilities, plus incompatible protocol and per-extension rollout modes.",
+    "Disabling one capability does not disable or advertise the others; unsupported peers use explicit fallback without false success.",
+    "No unauthorized project/tenant can discover or mutate another's task, subscription, result or correlation data.",
+    "Source/package/plugins validate the same new and old semantic fixtures with identical declared capability contracts.",
+    "Exact protocol/schema/SDK pins and feature-gap decisions are present; unresolved wire-contract choices block downstream acceptance."
+  ],
+  "target_repo": "scholialang-mcp",
+  "target_root": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control",
+  "allowed_drivers": [
+    "claude"
+  ],
+  "coordination_metadata": {
+    "job_id": "sch073-j05",
+    "requires_receipts": [
+      "sch073-j02",
+      "sch073-j04"
+    ],
+    "enforcement": "manual_PM_immutable_SHA_artifact_corpus_gate",
+    "launch_ready": false
+  },
+  "protocol_pins": {
+    "core": "modelcontextprotocol/modelcontextprotocol@e76e9c572c6f2bfcb730357101acc90f2f802e02",
+    "tasks": "modelcontextprotocol/experimental-ext-tasks@9263312d11a682ac83f83fe84794d4627efd22f5",
+    "sdk": "modelcontextprotocol/python-sdk@0921d94a74db900dccd2d534842aa7b6160542d2",
+    "heartbeat_source": "opentalon@cb87379bbe4e26a8e59bab9cc18dc51ef4079bff:packages/mcp-heartbeat",
+    "audit_sha256": "f2e491a016a9d6c46a5bbff0d34c939de81f6121214a436df09298a4dea972b0"
+  },
+  "upstream_oracle_inputs": {
+    "read_only_root": "/home/horselover/projects/backups/sch073-preflight-20260904.VKrsy3/upstream-oracles.v7aZrN",
+    "core_schema_sha256": "ef70b61f99b6d2e5e3b46863822eab08dff6a45bedc7a08914e0e5b133f40203",
+    "tasks_schema_sha256": "bf30afb7ac251e3e22c037b7a685f60ef6603031b5484c0d08b1fa0bbe86d460",
+    "fixture_sha256": "1b0c7aaec377477f201182999629cc52868971210d9427b6ed8c90f336c701bf",
+    "probe_sha256": "54a7c5162f0a52c6e29322d12f1a4639becbd83d45f67e143ad708d84c5c246d",
+    "expected_schema_outcomes": 71,
+    "semantic_blind_spots": 15,
+    "status": "upstream oracle preparation only; future implementation must pass separate behavioral conformance"
+  },
+  "independent_acceptance_preflight": {
+    "read_only_root": "/home/horselover/projects/backups/sch073-preflight-20260904.VKrsy3/j05-acceptance-prep.qdhaMW",
+    "handoff_sha256": "b8d28c3a3cf5574695328be85e33aa694812c6ac892aa4693a547a56fb16574a",
+    "baseline_sha": "19aef56b75f17ba387721cf16dccc6402a4dcf42",
+    "baseline_wire_checks_passed": 137,
+    "support_combinations_prepared": 8,
+    "policy_combinations_prepared": 27,
+    "status": "preparation_only_not_candidate_acceptance"
+  }
+}
