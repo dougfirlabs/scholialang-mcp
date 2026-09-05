@@ -265,15 +265,45 @@ def parse_transcript_lines(lines, *, max_events=DEFAULT_MAX_EVENTS, start_line=1
 # --------------------------------------------------------------------------- #
 # Capture (append to a local SQLite exhaust DAG via the server write path)
 # --------------------------------------------------------------------------- #
-class CaptureResult:
-    __slots__ = ("appended", "scanned", "truncated", "last_atom_id", "last_line")
+def model_from_lines(lines):
+    """First model id seen on an assistant record, or ``None``.
 
-    def __init__(self, appended, scanned, truncated, last_atom_id, last_line):
+    Claude Code stamps the model on every assistant message. SessionStart runs
+    before any assistant turn exists, so the transcript is the earliest place
+    provenance becomes knowable — hence backfill rather than capture-at-start.
+    """
+    for raw in lines:
+        text = raw.strip()
+        if not text:
+            continue
+        try:
+            obj = json.loads(text)
+        except (ValueError, TypeError):
+            continue
+        if not isinstance(obj, dict) or obj.get("type") != "assistant":
+            continue
+        message = obj.get("message") if isinstance(obj.get("message"), dict) else {}
+        model = message.get("model")
+        if not isinstance(model, str):
+            continue
+        value = model.strip()
+        # Claude Code stamps placeholders like "<synthetic>" on messages it
+        # generated itself rather than sampled; those name no real model.
+        if value and not (value.startswith("<") and value.endswith(">")):
+            return value
+    return None
+
+
+class CaptureResult:
+    __slots__ = ("appended", "scanned", "truncated", "last_atom_id", "last_line", "model")
+
+    def __init__(self, appended, scanned, truncated, last_atom_id, last_line, model=None):
         self.appended = appended
         self.scanned = scanned
         self.truncated = truncated
         self.last_atom_id = last_atom_id
         self.last_line = last_line
+        self.model = model
 
 
 def append_atoms(server, dag_id, project_path, atoms, previous_atom_id=None):
@@ -326,6 +356,7 @@ def capture_once(
         lines = path.read_text(errors="replace").splitlines()
     except OSError:
         return CaptureResult(0, start_line - 1, False, previous_atom_id, start_line - 1)
+    model = model_from_lines(lines)
     parsed = parse_transcript_lines(lines, max_events=max_events, start_line=start_line, source=str(path))
     if parsed.truncated and callable(log):
         log(f"exhaust capture stopped at max_events={max_events}; {len(lines) - max_events} later events skipped")
@@ -336,6 +367,7 @@ def capture_once(
         truncated=parsed.truncated,
         last_atom_id=last,
         last_line=parsed.scanned,
+        model=model,
     )
 
 
