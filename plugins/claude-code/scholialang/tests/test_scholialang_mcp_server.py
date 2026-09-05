@@ -567,6 +567,9 @@ class PublicDagContractRegressionTests(unittest.TestCase):
                 "objective": "Close this session canonically.",
             }
         )["structuredContent"]
+        premise = self.add(
+            created["dag_id"], "Observation", "Synthetic review completed successfully."
+        )
         finished = server.tool_dag_finish_session(
             {
                 "project_path": self.project_path,
@@ -579,6 +582,9 @@ class PublicDagContractRegressionTests(unittest.TestCase):
         self.assertEqual(finished["atom"]["kind"], "Concluding")
         self.assertEqual(finished["atom"]["attributes"]["for_goal"], created["goal_atom"]["id"])
         self.assertEqual(finished["atom"]["attributes"]["status"], "met")
+        dag = server.load_dag(created["dag_id"], self.project_path)
+        self.assertTrue(any(edge["from"] == finished["atom"]["id"] and
+                            edge["to"] == premise["id"] for edge in dag["edges"]))
 
     def test_xml_export_is_grammar_valid_and_preserves_goal_closure(self):
         started = self.start()
@@ -881,6 +887,10 @@ class AutoEmitSessionTests(unittest.TestCase):
 
     def test_finish_session_records_non_success_outcome_without_claiming_met(self):
         created = self.ensure(session_id="cancelled")
+        premise = server.tool_dag_add_atom({
+            "dag_id": created["dag_id"], "project_path": self.project_path,
+            "kind": "Observation", "summary": "Synthetic work was cancelled before execution.",
+        })["structuredContent"]["atom"]
         fin = server.tool_dag_finish_session(
             {
                 "project_path": self.project_path,
@@ -895,6 +905,9 @@ class AutoEmitSessionTests(unittest.TestCase):
             fin["atom"]["attributes"],
             {"for_goal": created["goal_atom"]["id"], "status": "unmet"},
         )
+        dag = server.load_dag(created["dag_id"], self.project_path)
+        self.assertTrue(any(edge["from"] == fin["atom"]["id"] and
+                            edge["to"] == premise["id"] for edge in dag["edges"]))
 
     def test_finish_session_rejects_concluding_without_outcome(self):
         self.ensure(session_id="ambiguous")
