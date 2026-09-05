@@ -2363,6 +2363,7 @@ WEBVIEW_HTML = """<!doctype html>
         `<span class="meta-key">${key}</span><span class="meta-value">${valueHtml}</span></span>`;
       if (dag && dag.model) bits.push(cell("model", escapeText(dag.model)));
       if (dag && (dag.harness || dag.host)) bits.push(cell("harness", escapeText(dag.harness || dag.host)));
+      if (dag && dag.orchestrator) bits.push(cell("via", escapeText(dag.orchestrator)));
       const started = dag ? parseStamp(dag.created_at) : null;
       if (started) {
         bits.push(cell(
