@@ -34,6 +34,7 @@ def server(tmp_path, monkeypatch):
     monkeypatch.setenv("SCHOLIALANG_HOME", str(tmp_path))
     monkeypatch.delenv("SCHOLIA_ORCHESTRATOR", raising=False)
     monkeypatch.delenv("SCHOLIA_HOST", raising=False)
+    monkeypatch.delenv("SCHOLIA_AUTOEMIT", raising=False)
     return _load("scholialang_mcp_server")
 
 

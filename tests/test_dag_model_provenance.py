@@ -203,4 +203,3 @@ def test_model_from_lines_returns_none_when_only_placeholders_exist():
     assert cc.model_from_lines(
         ['{"type": "assistant", "message": {"role": "assistant", "model": "<synthetic>"}}']
     ) is None
-
