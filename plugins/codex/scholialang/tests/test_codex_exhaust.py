@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import os
 import socket
 import sqlite3
@@ -446,6 +447,35 @@ class WatcherTests(_HomeCase):
         finally:
             os.environ.pop("SCHOLIA_EXHAUST", None)
         self.assertFalse(watcher.watcher_state_path(self.tempdir.name).exists())
+
+
+class JsonlBufferingTests(unittest.TestCase):
+    """A poll can land midway through a multibyte UTF-8 sequence.
+
+    Byte-first splitting must buffer the torn suffix for retry — never decode
+    a partial character into replacement text or hand it to the JSON parser.
+    """
+
+    def test_chunk_split_inside_a_multibyte_character_round_trips(self):
+        tempdir = tempfile.TemporaryDirectory()
+        self.addCleanup(tempdir.cleanup)
+        rollout = Path(tempdir.name) / "rollout.jsonl"
+        owl = "\U0001f989".encode("utf-8")  # 4 bytes
+        record = json.dumps({"note": "owl \U0001f989 intact"}, ensure_ascii=False).encode("utf-8")
+        split_at = record.index(owl) + 2  # torn inside the owl
+
+        rollout.write_bytes(b'{"first": true}\n' + record[:split_at])
+        lines, partial = cx.read_complete_jsonl_lines(rollout)
+        self.assertEqual(lines, ['{"first": true}'])
+        self.assertTrue(partial)
+        self.assertNotIn("�", "".join(lines))
+
+        with rollout.open("ab") as stream:
+            stream.write(record[split_at:] + b"\n")
+        lines, partial = cx.read_complete_jsonl_lines(rollout)
+        self.assertFalse(partial)
+        self.assertEqual(json.loads(lines[1])["note"], "owl \U0001f989 intact")
+        self.assertNotIn("�", lines[1])
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import os
 import socket
 import tempfile
@@ -244,6 +245,35 @@ class PairingTests(unittest.TestCase):
         (Path(self.project) / ".scholia-off").write_text("")
         info = cc.ensure_exhaust_dag(server, project_path=self.project, session_id="sess-1")
         self.assertIsNone(info)
+
+
+class JsonlBufferingTests(unittest.TestCase):
+    """A poll can land midway through a multibyte UTF-8 sequence.
+
+    Byte-first splitting must buffer the torn suffix for retry — never decode
+    a partial character into replacement text or hand it to the JSON parser.
+    """
+
+    def test_chunk_split_inside_a_multibyte_character_round_trips(self):
+        tempdir = tempfile.TemporaryDirectory()
+        self.addCleanup(tempdir.cleanup)
+        transcript = Path(tempdir.name) / "transcript.jsonl"
+        owl = "\U0001f989".encode("utf-8")  # 4 bytes
+        record = json.dumps({"note": "owl \U0001f989 intact"}, ensure_ascii=False).encode("utf-8")
+        split_at = record.index(owl) + 2  # torn inside the owl
+
+        transcript.write_bytes(b'{"first": true}\n' + record[:split_at])
+        lines, partial = cc.read_complete_jsonl_lines(transcript)
+        self.assertEqual(lines, ['{"first": true}'])
+        self.assertTrue(partial)
+        self.assertNotIn("�", "".join(lines))
+
+        with transcript.open("ab") as stream:
+            stream.write(record[split_at:] + b"\n")
+        lines, partial = cc.read_complete_jsonl_lines(transcript)
+        self.assertFalse(partial)
+        self.assertEqual(json.loads(lines[1])["note"], "owl \U0001f989 intact")
+        self.assertNotIn("�", lines[1])
 
 
 if __name__ == "__main__":
