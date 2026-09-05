@@ -71,6 +71,10 @@ def test_lsp_hover_and_definition() -> None:
         )
         init = _recv(proc)
         assert init["result"]["capabilities"]["hoverProvider"] is True
+        assert init["result"]["capabilities"]["textDocumentSync"] == {
+            "openClose": True,
+            "change": 1,
+        }
 
         trace_uri = _uri(TRACE)
         _send(
@@ -78,7 +82,7 @@ def test_lsp_hover_and_definition() -> None:
             {
                 "jsonrpc": "2.0",
                 "method": "textDocument/didOpen",
-                "params": {"textDocument": {"uri": trace_uri, "text": text}},
+                "params": {"textDocument": {"uri": trace_uri, "text": text, "version": 1}},
             },
         )
 
@@ -97,6 +101,47 @@ def test_lsp_hover_and_definition() -> None:
         )
         hover = _recv(proc)
         assert "return \"sample\"" in hover["result"]["contents"]["value"]
+
+        changed = text.replace("src/sample.py:1:2", "src/sample.py:2:2")
+        _send(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didChange",
+                "params": {
+                    "textDocument": {"uri": trace_uri, "version": 2},
+                    "contentChanges": [{"text": changed}],
+                },
+            },
+        )
+        _send(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "textDocument/hover",
+                "params": {
+                    "textDocument": {"uri": trace_uri},
+                    "position": {"line": 0, "character": hover_char},
+                },
+            },
+        )
+        changed_hover = _recv(proc)
+        assert "return \"sample\"" in changed_hover["result"]["contents"]["value"]
+        assert "def thing" not in changed_hover["result"]["contents"]["value"]
+
+        # A stale full-sync notification must not roll the open buffer back.
+        _send(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didChange",
+                "params": {
+                    "textDocument": {"uri": trace_uri, "version": 1},
+                    "contentChanges": [{"text": text}],
+                },
+            },
+        )
 
         ref_char = text.splitlines()[1].index("Obs_01")
         _send(
@@ -129,7 +174,29 @@ def test_lsp_hover_and_definition() -> None:
         )
         file_definition = _recv(proc)
         assert file_definition["result"][0]["uri"].endswith("/src/sample.py")
+
+        _send(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didClose",
+                "params": {"textDocument": {"uri": trace_uri}},
+            },
+        )
+        _send(
+            proc,
+            {
+                "jsonrpc": "2.0",
+                "id": 6,
+                "method": "textDocument/hover",
+                "params": {
+                    "textDocument": {"uri": trace_uri},
+                    "position": {"line": 0, "character": hover_char},
+                },
+            },
+        )
+        closed_hover = _recv(proc)
+        assert "def thing" in closed_hover["result"]["contents"]["value"]
     finally:
         proc.terminate()
         proc.wait(timeout=5)
-

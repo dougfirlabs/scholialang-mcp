@@ -195,7 +195,11 @@ Capture rides on the shared auto-emit opt-out: `SCHOLIA_AUTOEMIT=0` or a
 emission. `SCHOLIA_EXHAUST=0` disables *only* live exhaust (keeping checkpoint).
 It honors `CODEX_HOME` and `SCHOLIALANG_HOME`. It is idempotent: each rollout line
 maps to a stable per-line atom id (`cxline_<line>`) and the watcher resumes from
-the last imported line, so a restart mid-session never duplicates atoms. The cap
+the last imported line, so a restart mid-session never duplicates atoms. The
+opt-out is checked on every pass, including after a DAG has been cached; the
+cursor remains parked while disabled and resumes if the marker is removed.
+Only newline-terminated JSONL records advance the cursor, so a split write or
+partial UTF-8 sequence is retried after the producer completes it. The cap
 is enforced via `SCHOLIA_EXHAUST_MAX_EVENTS`, there are no DB schema changes, and
 **all capture failures are swallowed — live exhaust never breaks a Codex session.**
 

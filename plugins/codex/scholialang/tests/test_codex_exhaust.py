@@ -178,6 +178,37 @@ class CaptureTests(_HomeCase):
         cxline_ids = [nid for nid in nodes if nid.startswith("cxline_")]
         self.assertEqual(len(cxline_ids), 11)
 
+    def test_trailing_partial_record_is_retried_after_newline_completion(self):
+        dag_id = self._exhaust_dag(session_id="partial-record")
+        rollout = Path(self.tempdir.name) / "partial-rollout.jsonl"
+        second = _lines()[1].encode("utf-8")
+        split_at = len(second) // 2
+        rollout.write_bytes(_lines()[0].encode("utf-8") + b"\n" + second[:split_at])
+
+        first = cx.capture_once(
+            server,
+            rollout_path=str(rollout),
+            dag_id=dag_id,
+            project_path=self.project,
+        )
+        self.assertEqual(first.appended, 1)
+        self.assertEqual(first.last_line, 1)
+
+        with rollout.open("ab") as stream:
+            stream.write(second[split_at:] + b"\n")
+        second_pass = cx.capture_once(
+            server,
+            rollout_path=str(rollout),
+            dag_id=dag_id,
+            project_path=self.project,
+            start_line=first.last_line + 1,
+            previous_atom_id=first.last_atom_id,
+        )
+        self.assertEqual(second_pass.appended, 1)
+        self.assertEqual(second_pass.last_line, 2)
+        nodes = server.load_dag(dag_id, self.project)["nodes"]
+        self.assertNotIn("JSON parse error", nodes[cx.atom_id_for(2)]["summary"])
+
     def test_truncation_is_logged(self):
         dag_id = self._exhaust_dag()
         logged = []
@@ -372,6 +403,38 @@ class WatcherTests(_HomeCase):
             max_events=2000,
         )
         self.assertEqual(appended, 0)
+
+    def test_cached_rollout_pauses_on_live_optout_and_resumes_without_skipping(self):
+        rollout_path = Path(self.tempdir.name) / "live-optout.jsonl"
+        rollout_path.write_text(_lines()[0] + "\n", encoding="utf-8")
+        rollout = {
+            "session_id": "live-optout",
+            "project_path": self.project,
+            "rollout_path": str(rollout_path),
+        }
+        self.assertEqual(
+            watcher.sync_rollout(self.tempdir.name, rollout, max_events=2000),
+            1,
+        )
+        state_path = watcher.rollout_state_path(self.tempdir.name, "live-optout")
+        before = watcher.load_state(state_path)
+        self.assertEqual(before["last_line"], 1)
+
+        (Path(self.project) / ".scholia-off").write_text("", encoding="utf-8")
+        with rollout_path.open("a", encoding="utf-8") as stream:
+            stream.write(_lines()[1] + "\n")
+        self.assertEqual(
+            watcher.sync_rollout(self.tempdir.name, rollout, max_events=2000),
+            0,
+        )
+        self.assertEqual(watcher.load_state(state_path)["last_line"], 1)
+
+        (Path(self.project) / ".scholia-off").unlink()
+        self.assertEqual(
+            watcher.sync_rollout(self.tempdir.name, rollout, max_events=2000),
+            1,
+        )
+        self.assertEqual(watcher.load_state(state_path)["last_line"], 2)
 
     def test_entrypoint_trigger_never_raises(self):
         # The Codex entrypoint boot trigger is best-effort; disabled -> no spawn,

@@ -306,6 +306,25 @@ class CaptureResult:
         self.model = model
 
 
+def read_complete_jsonl_lines(path):
+    """Return only newline-terminated transcript records from ``path``.
+
+    Claude Code may be midway through appending the final JSON object when a
+    poll fires. Keep that suffix out of parsing and out of ``last_line`` so it
+    is retried once complete. Byte-first splitting also prevents a partial
+    UTF-8 sequence from being decoded as replacement text.
+    """
+    data = Path(path).read_bytes()
+    lines = []
+    partial = False
+    for chunk in data.splitlines(keepends=True):
+        if chunk.endswith((b"\n", b"\r")):
+            lines.append(chunk.rstrip(b"\r\n").decode("utf-8", errors="replace"))
+        else:
+            partial = True
+    return lines, partial
+
+
 def append_atoms(server, dag_id, project_path, atoms, previous_atom_id=None):
     """Append parsed atoms to the exhaust DAG, skipping any already present.
 
@@ -353,9 +372,11 @@ def capture_once(
     """Read the transcript once, parse from ``start_line``, append new atoms."""
     path = Path(transcript_path)
     try:
-        lines = path.read_text(errors="replace").splitlines()
+        lines, partial = read_complete_jsonl_lines(path)
     except OSError:
         return CaptureResult(0, start_line - 1, False, previous_atom_id, start_line - 1)
+    if partial and callable(log):
+        log("buffering trailing incomplete transcript record")
     model = model_from_lines(lines)
     parsed = parse_transcript_lines(lines, max_events=max_events, start_line=start_line, source=str(path))
     if parsed.truncated and callable(log):

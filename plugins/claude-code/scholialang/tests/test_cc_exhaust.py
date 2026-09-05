@@ -139,6 +139,37 @@ class CaptureTests(unittest.TestCase):
         ccline_ids = [nid for nid in nodes if nid.startswith("ccline_")]
         self.assertEqual(len(ccline_ids), 10)
 
+    def test_trailing_partial_record_is_retried_after_newline_completion(self):
+        dag_id = self._exhaust_dag()
+        transcript = Path(self.tempdir.name) / "partial-transcript.jsonl"
+        second = _lines()[1].encode("utf-8")
+        split_at = len(second) // 2
+        transcript.write_bytes(_lines()[0].encode("utf-8") + b"\n" + second[:split_at])
+
+        first = cc.capture_once(
+            server,
+            transcript_path=str(transcript),
+            dag_id=dag_id,
+            project_path=self.project,
+        )
+        self.assertEqual(first.appended, 1)
+        self.assertEqual(first.last_line, 1)
+
+        with transcript.open("ab") as stream:
+            stream.write(second[split_at:] + b"\n")
+        second_pass = cc.capture_once(
+            server,
+            transcript_path=str(transcript),
+            dag_id=dag_id,
+            project_path=self.project,
+            start_line=first.last_line + 1,
+            previous_atom_id=first.last_atom_id,
+        )
+        self.assertEqual(second_pass.appended, 1)
+        self.assertEqual(second_pass.last_line, 2)
+        nodes = server.load_dag(dag_id, self.project)["nodes"]
+        self.assertNotIn("JSON parse error", nodes[cc.atom_id_for(2)]["summary"])
+
     def test_truncation_is_logged(self):
         dag_id = self._exhaust_dag()
         logged = []
