@@ -1,7 +1,7 @@
 {
   "kind": "prd",
   "schema_version": 1,
-  "status": "approved",
+  "status": "completed",
   "group_id": "scholialang-073-convergence-20260904",
   "run_policy": "gated_stack",
   "approval": {
@@ -98,5 +98,121 @@
     "pr43": "9767917514c7c2a5437af3a62c82949fd719a1c4",
     "pr46_held": "b39c2b84e4e213a572eb96e6320bff7feb6cbe69",
     "spec_fingerprint": "9c1fcfa46059c8b461a92922bb65519b2b6bd5fe"
-  }
+  },
+  "lifecycle": {
+    "run_status": "completed",
+    "last_successful_run_id": "998f05326f2c4f57996ccc5cc78f3874",
+    "last_successful_branch": "feat/sch073-mcp-control-20260905",
+    "last_successful_commit": "fe2c91d64f428e6c372adec416ad7f4ba62fb6b2",
+    "completed_at": "2026-09-05T08:27:28+00:00",
+    "completion_evidence": {
+      "task": "sch073-01-reconcile-baseline-scholialang-mcp",
+      "prd_id": "sch073-01-reconcile-baseline-scholialang-mcp",
+      "provider": "claude",
+      "model": "claude-fable-5",
+      "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_br7twx3830_reconcile_.md",
+      "post_status": "present",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "998f05326f2c4f57996ccc5cc78f3874",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion": {
+    "run_id": "998f05326f2c4f57996ccc5cc78f3874",
+    "task": "sch073-01-reconcile-baseline-scholialang-mcp",
+    "completed_at": "2026-09-05T08:27:28+00:00",
+    "branch": "feat/sch073-mcp-control-20260905",
+    "commit": "fe2c91d64f428e6c372adec416ad7f4ba62fb6b2",
+    "final_status": "success",
+    "previous_status": "approved",
+    "lifecycle": {
+      "run_status": "completed",
+      "last_successful_run_id": "998f05326f2c4f57996ccc5cc78f3874",
+      "last_successful_branch": "feat/sch073-mcp-control-20260905",
+      "last_successful_commit": "fe2c91d64f428e6c372adec416ad7f4ba62fb6b2",
+      "completed_at": "2026-09-05T08:27:28+00:00",
+      "completion_evidence": {
+        "task": "sch073-01-reconcile-baseline-scholialang-mcp",
+        "prd_id": "sch073-01-reconcile-baseline-scholialang-mcp",
+        "provider": "claude",
+        "model": "claude-fable-5",
+        "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_br7twx3830_reconcile_.md",
+        "post_status": "present",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "998f05326f2c4f57996ccc5cc78f3874",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
+    },
+    "completion_evidence": {
+      "task": "sch073-01-reconcile-baseline-scholialang-mcp",
+      "prd_id": "sch073-01-reconcile-baseline-scholialang-mcp",
+      "provider": "claude",
+      "model": "claude-fable-5",
+      "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_br7twx3830_reconcile_.md",
+      "post_status": "present",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "998f05326f2c4f57996ccc5cc78f3874",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion_history": [
+    {
+      "run_id": "998f05326f2c4f57996ccc5cc78f3874",
+      "task": "sch073-01-reconcile-baseline-scholialang-mcp",
+      "completed_at": "2026-09-05T08:27:28+00:00",
+      "branch": "feat/sch073-mcp-control-20260905",
+      "commit": "fe2c91d64f428e6c372adec416ad7f4ba62fb6b2",
+      "final_status": "success",
+      "previous_status": "approved",
+      "lifecycle": {
+        "run_status": "completed",
+        "last_successful_run_id": "998f05326f2c4f57996ccc5cc78f3874",
+        "last_successful_branch": "feat/sch073-mcp-control-20260905",
+        "last_successful_commit": "fe2c91d64f428e6c372adec416ad7f4ba62fb6b2",
+        "completed_at": "2026-09-05T08:27:28+00:00",
+        "completion_evidence": {
+          "task": "sch073-01-reconcile-baseline-scholialang-mcp",
+          "prd_id": "sch073-01-reconcile-baseline-scholialang-mcp",
+          "provider": "claude",
+          "model": "claude-fable-5",
+          "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_br7twx3830_reconcile_.md",
+          "post_status": "present",
+          "test_gate": {
+            "all_passed": true,
+            "commands": [],
+            "run_id": "998f05326f2c4f57996ccc5cc78f3874",
+            "skipped": true,
+            "skipped_reason": "no machine-runnable commands in success_metrics"
+          }
+        }
+      },
+      "completion_evidence": {
+        "task": "sch073-01-reconcile-baseline-scholialang-mcp",
+        "prd_id": "sch073-01-reconcile-baseline-scholialang-mcp",
+        "provider": "claude",
+        "model": "claude-fable-5",
+        "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_br7twx3830_reconcile_.md",
+        "post_status": "present",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "998f05326f2c4f57996ccc5cc78f3874",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
+    }
+  ]
 }
