@@ -194,6 +194,17 @@ ended. Supply `outcome=met`, `unmet`, or `partially_met` only when the caller
 can truthfully close the session Goal; that creates the corresponding
 `Concluding` atom.
 
+Explicit closure is fail-closed. A goal-closing `Concluding` must cite a
+genuine in-trace premise — at least one `Finding`, `Observation`, or
+`Evidence` atom recorded before the finish call (`refer_at_least_one`). If
+the trace holds none, the finish call is rejected before any atom, edge,
+counter, or session-binding mutation; the session stays bound. To remediate,
+record the supporting atom via `scholia_dag_add_atom` and finish again, or
+finish without an `outcome` to record the lifecycle `Observation`. The server
+never fabricates a premise or rewrites a declared outcome. (This supersedes
+the pre-0.7.2-hardening behavior, where a premise-free explicit closure could
+persist a `Concluding` that failed the bundled validator.)
+
 The validator prefers the installed `scholialang` Python package and
 falls back to the vendored snapshot at
 `<plugin>/scripts/_scholia_vendored/`. Check the `lint_engine` field

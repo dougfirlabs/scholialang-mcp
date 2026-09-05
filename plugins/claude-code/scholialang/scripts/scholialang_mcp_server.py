@@ -449,6 +449,19 @@ def set_dag_model(conn, dag_id, model, *, overwrite=False):
     return value
 
 
+def dag_listing_row(row):
+    """Bounded normalization of a raw ``dags`` row for public metadata.
+
+    Decodes the stored ``tags_json`` column into ``tags`` so listings preserve
+    tags — and the tag-derived model/orchestrator fallbacks — with list/read
+    parity. Deliberately does NOT hydrate nodes/edges/counters: stored columns
+    keep precedence and counts arrive via SQL aggregates on the listing query.
+    """
+    dag = dict(row)
+    dag["tags"] = json_loads(dag.pop("tags_json", None), [])
+    return dag
+
+
 def dag_metadata(dag):
     node_count = dag.get("node_count")
     if node_count is None:
@@ -1121,6 +1134,13 @@ def tool_dag_finish_session(args):
     attainment: callers must supply outcome=met|unmet|partially_met to create
     a goal-closing Concluding atom. Without an outcome, the default is an
     Observation that records only that the session ended.
+
+    Explicit closure is fail-closed: a Concluding must cite a genuine in-trace
+    Finding, Observation, or Evidence premise. When the trace holds none, the
+    call raises ValueError before any atom, edge, counter, or session-binding
+    mutation. Remediation: record the supporting atom (scholia_dag_add_atom)
+    and finish again, or finish without an outcome for a plain lifecycle
+    Observation. Premises are never fabricated and outcomes never rewritten.
     """
     project_path = args.get("project_path")
     host, _ = requested_session_identity(args)
@@ -1154,16 +1174,29 @@ def tool_dag_finish_session(args):
     goal_ids = [node_id for node_id in dag.get("order", []) if dag["nodes"][node_id].get("kind") == "Goal"]
     attributes = {}
     links = []
-    if kind == "Concluding" and goal_ids:
-        attributes = {"for_goal": goal_ids[0], "status": outcome}
-        links.append({"to": goal_ids[0], "relation": "derived_from", "label": "session goal closure"})
+    if kind == "Concluding":
+        # Fail closed: a goal-closing Concluding must cite genuine in-trace
+        # support (refer_at_least_one). Reject before any atom, edge, counter,
+        # or session-binding mutation — never fabricate a premise or downgrade
+        # the caller's declared outcome.
         premise_ids = [
             node_id
             for node_id in dag.get("order", [])
             if dag["nodes"][node_id].get("kind") in {"Finding", "Observation", "Evidence"}
         ]
-        if premise_ids:
-            links.append({"to": premise_ids[-1], "relation": "derived_from", "label": "session closing premise"})
+        if not premise_ids:
+            raise ValueError(
+                f"cannot close the session goal with outcome={outcome}: trace {dag_id} "
+                "has no Finding, Observation, or Evidence atom to support a Concluding "
+                "(refer_at_least_one). Nothing was written and the session stays bound. "
+                "Record the supporting atom first (scholia_dag_add_atom), then finish "
+                "again — or finish without an outcome to record a lifecycle Observation."
+            )
+        attributes = {"status": outcome}
+        if goal_ids:
+            attributes["for_goal"] = goal_ids[0]
+            links.append({"to": goal_ids[0], "relation": "derived_from", "label": "session goal closure"})
+        links.append({"to": premise_ids[-1], "relation": "derived_from", "label": "session closing premise"})
     atom = tool_dag_add_atom(
         {
             "dag_id": dag_id,
@@ -1231,7 +1264,7 @@ def tool_dag_list(args):
             """,
             params,
         ).fetchall()
-        items = [dag_metadata(dict(row)) for row in rows]
+        items = [dag_metadata(dag_listing_row(row)) for row in rows]
     finally:
         conn.close()
     structured = {"dags": items, "database_path": str(database_path())}
@@ -2683,7 +2716,7 @@ def list_tools():
         "scholia_dag_set_model": "Record the model that produced a DAG (first writer wins unless overwrite).",
         "scholia_dag_link": "Create an explicit acyclic edge between two atoms.",
         "scholia_dag_ensure_session": "Idempotently find-or-create this session's per-project DAG (host-tagged, opt-out aware). Safe to call repeatedly.",
-        "scholia_dag_finish_session": "Record session termination; provide outcome to append a goal-closing Concluding atom.",
+        "scholia_dag_finish_session": "Record session termination; provide outcome to append a goal-closing Concluding atom. Fail-closed: an outcome needs an in-trace Finding/Observation/Evidence premise, else the call rejects without writing — add the premise and retry, or omit outcome for a lifecycle Observation.",
         "scholia_dag_list": "List recent local DAGs.",
         "scholia_dag_summary": "Return a compact graph summary for token-efficient recall.",
         "scholia_dag_read": "Read bounded DAG metadata, nodes, and edges.",
