@@ -168,7 +168,10 @@ switches between the two traces for that session — no viewer changes required.
 Capture honors the shared opt-out (`SCHOLIA_AUTOEMIT=0` or a `.scholia-off`
 marker) and `SCHOLIALANG_HOME`. It is idempotent: each transcript line maps to a
 stable per-line atom id, and the tailer resumes from the last imported line, so a
-restart mid-session never duplicates atoms. With `SCHOLIA_EXHAUST=0` (or auto-emit
+restart mid-session never duplicates atoms. The opt-out is checked on every
+capture pass, and the cursor does not move while capture is disabled. Only
+newline-terminated JSONL records advance the cursor, so split writes and partial
+UTF-8 sequences are retried after completion. With `SCHOLIA_EXHAUST=0` (or auto-emit
 opted out), no exhaust DAG or tailer is created. All capture failures exit
 0 — exhaust capture never breaks the session.
 

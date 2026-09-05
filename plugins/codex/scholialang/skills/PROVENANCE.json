@@ -18,7 +18,7 @@
       "files": {
         "SKILL.md": "3bcfd29409252de729e79d3b71af187e7d80e27b007abcc7da44596be27014d6",
         "agents/openai.yaml": "c8c3f42d2defba0acc168256b45deecbb9225d609811bad66903683dbb34f739",
-        "scripts/scholia_verify.py": "dbdb284cb651cacd4380f7c50371b491025236bf8e3e0dc598c562e13969c451"
+        "scripts/scholia_verify.py": "d8ef735786561b685aa901eeb160c8633d88ad0c6357c1e5860d724144cfa768"
       }
     }
   }

@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import os
 import socket
 import tempfile
@@ -139,6 +140,37 @@ class CaptureTests(unittest.TestCase):
         ccline_ids = [nid for nid in nodes if nid.startswith("ccline_")]
         self.assertEqual(len(ccline_ids), 10)
 
+    def test_trailing_partial_record_is_retried_after_newline_completion(self):
+        dag_id = self._exhaust_dag()
+        transcript = Path(self.tempdir.name) / "partial-transcript.jsonl"
+        second = _lines()[1].encode("utf-8")
+        split_at = len(second) // 2
+        transcript.write_bytes(_lines()[0].encode("utf-8") + b"\n" + second[:split_at])
+
+        first = cc.capture_once(
+            server,
+            transcript_path=str(transcript),
+            dag_id=dag_id,
+            project_path=self.project,
+        )
+        self.assertEqual(first.appended, 1)
+        self.assertEqual(first.last_line, 1)
+
+        with transcript.open("ab") as stream:
+            stream.write(second[split_at:] + b"\n")
+        second_pass = cc.capture_once(
+            server,
+            transcript_path=str(transcript),
+            dag_id=dag_id,
+            project_path=self.project,
+            start_line=first.last_line + 1,
+            previous_atom_id=first.last_atom_id,
+        )
+        self.assertEqual(second_pass.appended, 1)
+        self.assertEqual(second_pass.last_line, 2)
+        nodes = server.load_dag(dag_id, self.project)["nodes"]
+        self.assertNotIn("JSON parse error", nodes[cc.atom_id_for(2)]["summary"])
+
     def test_truncation_is_logged(self):
         dag_id = self._exhaust_dag()
         logged = []
@@ -213,6 +245,35 @@ class PairingTests(unittest.TestCase):
         (Path(self.project) / ".scholia-off").write_text("")
         info = cc.ensure_exhaust_dag(server, project_path=self.project, session_id="sess-1")
         self.assertIsNone(info)
+
+
+class JsonlBufferingTests(unittest.TestCase):
+    """A poll can land midway through a multibyte UTF-8 sequence.
+
+    Byte-first splitting must buffer the torn suffix for retry — never decode
+    a partial character into replacement text or hand it to the JSON parser.
+    """
+
+    def test_chunk_split_inside_a_multibyte_character_round_trips(self):
+        tempdir = tempfile.TemporaryDirectory()
+        self.addCleanup(tempdir.cleanup)
+        transcript = Path(tempdir.name) / "transcript.jsonl"
+        owl = "\U0001f989".encode("utf-8")  # 4 bytes
+        record = json.dumps({"note": "owl \U0001f989 intact"}, ensure_ascii=False).encode("utf-8")
+        split_at = record.index(owl) + 2  # torn inside the owl
+
+        transcript.write_bytes(b'{"first": true}\n' + record[:split_at])
+        lines, partial = cc.read_complete_jsonl_lines(transcript)
+        self.assertEqual(lines, ['{"first": true}'])
+        self.assertTrue(partial)
+        self.assertNotIn("�", "".join(lines))
+
+        with transcript.open("ab") as stream:
+            stream.write(record[split_at:] + b"\n")
+        lines, partial = cc.read_complete_jsonl_lines(transcript)
+        self.assertFalse(partial)
+        self.assertEqual(json.loads(lines[1])["note"], "owl \U0001f989 intact")
+        self.assertNotIn("�", lines[1])
 
 
 if __name__ == "__main__":

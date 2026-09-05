@@ -159,6 +159,14 @@ def sync_rollout(home, rollout, *, max_events, log=None):
     if not project_path or not rollout_path:
         return 0
 
+    # Opt-out is a live control, not just a creation-time gate. Do this before
+    # loading or mutating cached state so the cursor remains parked while
+    # disabled and capture can resume without loss if the marker is removed.
+    reason = server.autoemit_disabled_reason(project_path)
+    if reason is not None:
+        log(f"exhaust opted out for {project_path} ({reason}); skipping {rollout_path}")
+        return 0
+
     path = rollout_state_path(home, session_id)
     state = load_state(path)
     if not state.get("dag_id"):

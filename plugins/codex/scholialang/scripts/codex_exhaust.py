@@ -323,6 +323,26 @@ class CaptureResult:
         self.last_line = last_line
 
 
+def read_complete_jsonl_lines(path):
+    """Return only newline-terminated JSONL records from ``path``.
+
+    Rollout writers append records incrementally. Treating the trailing bytes
+    as a complete line can persist a parse-error atom and advance the line
+    cursor before the producer finishes the record. Reading bytes first also
+    avoids decoding a split UTF-8 sequence at EOF. The incomplete suffix is
+    retried unchanged on the next capture pass.
+    """
+    data = Path(path).read_bytes()
+    lines = []
+    partial = False
+    for chunk in data.splitlines(keepends=True):
+        if chunk.endswith((b"\n", b"\r")):
+            lines.append(chunk.rstrip(b"\r\n").decode("utf-8", errors="replace"))
+        else:
+            partial = True
+    return lines, partial
+
+
 def append_atoms(server, dag_id, project_path, atoms, previous_atom_id=None):
     """Append parsed atoms to the exhaust DAG, skipping any already present.
 
@@ -369,9 +389,11 @@ def capture_once(
     """Read the rollout once, parse from ``start_line``, append new atoms."""
     path = Path(rollout_path)
     try:
-        lines = path.read_text(errors="replace").splitlines()
+        lines, partial = read_complete_jsonl_lines(path)
     except OSError:
         return CaptureResult(0, start_line - 1, False, previous_atom_id, start_line - 1)
+    if partial and callable(log):
+        log("buffering trailing incomplete rollout record")
     parsed = parse_rollout_lines(server, lines, max_events=max_events, start_line=start_line, source=str(path))
     if parsed.truncated and callable(log):
         log(f"exhaust capture stopped at max_events={max_events}; {len(lines) - max_events} later events skipped")

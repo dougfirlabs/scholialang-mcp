@@ -86,6 +86,7 @@ def main():
             "project_path": cwd,
             "session_id": session_id,
             "host": HOST,
+            "kind": "Observation",
             "summary": f"Claude Code session ended ({reason}).",
         }
     ).get("structuredContent", {})
