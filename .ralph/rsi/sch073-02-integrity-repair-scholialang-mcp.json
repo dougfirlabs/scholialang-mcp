@@ -1,0 +1,116 @@
+{
+  "kind": "prd",
+  "schema_version": 1,
+  "status": "approved",
+  "group_id": "scholialang-073-convergence-20260904",
+  "run_policy": "gated_stack",
+  "approval": {
+    "approved": true,
+    "execution_authorized": true,
+    "merge_authorized": false,
+    "release_authorized": false
+  },
+  "authority": "Operator authorized overnight implementation on 2026-09-05; j01 independently accepted at c62ca17a0db8d961fbc3b218932c4fa21f76849b, cumulatively integrated at 383490e2c101d438e7aabf084a22161a126aea83. Only this repository on an isolated work branch. No shared branch movement, protected integration, release, deployment, global installation or original PR changes. Cloud belongs to its maintainer and is excluded.",
+  "evidence_contract": "Acceptance binds to full source SHA(s), pinned dependency/spec revisions, clean isolated environment, exact commands and exit codes, required scenario counts with zero skips, artifact hashes, independent verdict, preserved behavior matrix, and rollback notes. Existing green CI does not override a reproducible contract violation.",
+  "id": "sch073-02-integrity-repair-scholialang-mcp",
+  "title": "Integrate #46 and repair metadata/closure regressions",
+  "sequence": 2,
+  "depends_on_prds": [
+    "sch073-01-reconcile-baseline-scholialang-mcp"
+  ],
+  "repositories": [
+    "scholialang-mcp"
+  ],
+  "problem": "#46's authored suite passes, but independent probes show listings omit tags/tag-derived provenance and premise-free explicit closure persists Concluding atoms that fail the bundled validator.",
+  "outcome": "All of #46's intended hardening is retained on the reconciled baseline, with both public-contract regressions repaired and permanently tested across the three server bundles.",
+  "key_files": [
+    "plugins/{claude-code,codex,ollama}/scholialang/scripts/scholialang_mcp_server.py",
+    "plugins/claude-code/scholialang/scripts/cc_exhaust.py",
+    "plugins/claude-code/scholialang/scripts/hooks/",
+    "plugins/codex/scholialang/scripts/codex_exhaust*.py",
+    "src/scholialang_mcp/lsp/server.py",
+    "tests/",
+    "plugins/*/scholialang/tests/"
+  ],
+  "hard_constraints": [
+    "Decode tags_json into public metadata without restoring all-graph hydration. Preserve tags, model/orchestrator fallback, column precedence, counts, ordering, project filter and limit behavior.",
+    "Without an outcome, session finish remains a lifecycle Observation. With an outcome, a Concluding must cite genuine in-trace Finding/Observation/Evidence support. When no eligible premise exists, reject before any atom, edge, counter or session-binding mutation.",
+    "Never fabricate a premise, silently change an outcome, or weaken refer_at_least_one to make tests pass. Keep met/unmet/partially_met explicit and validate invalid combinations.",
+    "Preserve SQLite serialization/cycle prevention and atomic IDs, provenance resume backfill, live opt-out, newline/UTF-8 buffering, empty-atom lint rejection, and versioned LSP synchronization.",
+    "The review's nine metadata probes remain positive parity tests. The nine premise-free closure probes become explicit rejection/no-mutation tests under the safer contract; add supported-closure export/lint tests. Document this contract change rather than disguising it as a passing old test.",
+    "Preserve every j01 migration/provenance/viewer/skills regression, including synthetic populated old-schema migration across all three bundles. Original PR42/43/46 refs are immutable. Reconcile merge conflicts explicitly, no blanket ours/theirs.",
+    "All test DBs must be synthetic and disposable; do not inspect/copy an operator database or transcript. Never pip install into the host/runner venv; use your own isolated venv. Shared checkout and other repos are read-only. No broad git add.",
+    "Independent acceptance requires the 36-case synthetic probe across all three standalone hosts. Contract and probe live in .ralph/contracts; run each host with python -I -S .ralph/contracts/probe_integrity.py --source <exact-clean-export> --host <codex|claude-code|ollama> --enforce. This is additive to full canonical/adversarial tests, not a replacement.",
+    "Provenance/Scholia diagnostic enforcement is report_only. Do not weaken product tests, validator semantics, required fixture counts, auth or correctness gates. Preserve truthful trace evidence even if diagnostic discrepancies occur.",
+    "Independent inventory found missing/weak adversarial coverage: explicitly test concurrent atom unique IDs/ordinals, opposite links in all three bundles, UTF-8 chunks split inside a multibyte character, and LSP stale edit keeping exact latest content/ranges (URI-only assertion insufficient). Add tests that fail if those guarantees regress."
+  ],
+  "stories": [
+    {
+      "id": "SCH073-02-S1",
+      "title": "Bring hardening onto the cumulative base",
+      "description": "Integrate exact #46 tip and preserve PRD01 behavior. Reproduce both review findings against the pinned parent and original PR tip before correction.",
+      "priority": 1,
+      "passes": 0
+    },
+    {
+      "id": "SCH073-02-S2",
+      "title": "Repair public metadata and closure transaction boundaries",
+      "description": "Implement bounded metadata normalization and fail-closed premise checks; document caller remediation for rejected closure. Synchronize canonical server copies mechanically.",
+      "priority": 2,
+      "passes": 0
+    },
+    {
+      "id": "SCH073-02-S3",
+      "title": "Promote regression and adversarial tests",
+      "description": "Exercise every plugin, supported outcomes with real evidence, premise-free cancellation, invalid kind/outcome, rollback/no-mutation, concurrent writes, live opt-out/resume, split UTF-8 and JSONL writes, LSP stale edits and close.",
+      "priority": 3,
+      "passes": 0
+    }
+  ],
+  "acceptance": [
+    "All prior canonical tests pass on the cumulative candidate; required pinned fingerprint fixtures run with zero skips.",
+    "Tags and tag-derived provenance survive list/read parity in Codex, Claude Code and Ollama without graph hydration.",
+    "Premise-free explicit closure fails without changing DB graph state or session binding; supported closures for all three outcomes export and lint successfully.",
+    "Concurrent opposite links cannot persist a cycle; concurrent atom creation yields unique IDs and ordinals, with rollback on rejected mutation.",
+    "Three standalone servers remain byte-identical; updated documentation and all stage-skill gates pass."
+  ],
+  "verification": "Reproduce the original 255-test clean run at b39c2b8 and 18 review probes at parent/current tips; then run the expanded full suite, unit entrypoint and adversarial cases against the corrected cumulative SHA. Test totals may increase; no required failures may be hidden by skip/xfail. Independent expanded probe now has 36 cases: 9 metadata, 9 no-premise rejection+no mutation, 9 supported outcomes with genuine Observation and lint, 3 no-outcome lifecycle, 6 invalid outcome/kind combinations. Parent passes 12/36 and original PR46 18/36; corrected must pass 36/36. Use a clean Git-aware disposable clone for release-gate tests requiring rev-parse; archive-only missing-.git errors are not waivers.",
+  "out_of_scope": [
+    "Adding 0.7.3 atoms",
+    "Changing the validator's semantic rules to permit unsupported conclusions"
+  ],
+  "rollback": "Revert corrective/integration commits only inside the sanctioned candidate or discard it; never rewrite Barry's original evidence.",
+  "success_metrics": [
+    "All prior canonical tests pass on the cumulative candidate; required pinned fingerprint fixtures run with zero skips.",
+    "Tags and tag-derived provenance survive list/read parity in Codex, Claude Code and Ollama without graph hydration.",
+    "Premise-free explicit closure fails without changing DB graph state or session binding; supported closures for all three outcomes export and lint successfully.",
+    "Concurrent opposite links cannot persist a cycle; concurrent atom creation yields unique IDs and ordinals, with rollback on rejected mutation.",
+    "Three standalone servers remain byte-identical; updated documentation and all stage-skill gates pass."
+  ],
+  "target_repo": "scholialang-mcp",
+  "target_root": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control",
+  "allowed_drivers": [
+    "claude"
+  ],
+  "source_pins": {
+    "pr46": "b39c2b84e4e213a572eb96e6320bff7feb6cbe69",
+    "pr46_parent": "9767917514c7c2a5437af3a62c82949fd719a1c4",
+    "spec_fingerprint": "9c1fcfa46059c8b461a92922bb65519b2b6bd5fe",
+    "j01_corrected_candidate": "c62ca17a0db8d961fbc3b218932c4fa21f76849b",
+    "cumulative_base": "383490e2c101d438e7aabf084a22161a126aea83"
+  },
+  "predecessor_receipt": {
+    "job_id": "sch073-j01",
+    "run_id": "998f05326f2c4f57996ccc5cc78f3874",
+    "accepted_sha": "c62ca17a0db8d961fbc3b218932c4fa21f76849b",
+    "verdict": "pass_with_caveats",
+    "tests": {
+      "canonical_passed": 331,
+      "skipped": 0,
+      "codex_unittest_passed": 28,
+      "independent_controls_passed": 10,
+      "browser_viewports_passed": 2
+    },
+    "caveat": "Report-only trace lint has three duplicate IDs despite recorded DAG validation success. Product gates pass independently."
+  }
+}
