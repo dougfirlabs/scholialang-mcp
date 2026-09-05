@@ -1,0 +1,102 @@
+{
+  "kind": "prd",
+  "schema_version": 1,
+  "status": "approved",
+  "group_id": "scholialang-073-convergence-20260904",
+  "run_policy": "gated_stack",
+  "approval": {
+    "approved": true,
+    "execution_authorized": true,
+    "merge_authorized": false,
+    "release_authorized": false
+  },
+  "authority": "Operator authorized overnight implementation and independent merge-readiness review on 2026-09-05. Only this repository on isolated work branches. Final integration to stage/master/main, release, deployment and original PR alteration remain prohibited; operator reviews in morning.",
+  "evidence_contract": "Acceptance binds to full source SHA(s), pinned dependency/spec revisions, clean isolated environment, exact commands and exit codes, required scenario counts with zero skips, artifact hashes, independent verdict, preserved behavior matrix, and rollback notes. Existing green CI does not override a reproducible contract violation.",
+  "id": "sch073-01-reconcile-baseline-scholialang-mcp",
+  "title": "Reconcile stage and Barry's viewer/provenance stack",
+  "sequence": 1,
+  "depends_on_prds": [],
+  "repositories": [
+    "scholialang-mcp"
+  ],
+  "problem": "master, the stage-only public-skills work, and Barry's stacked PRs are not one tested product baseline. Merging only the latest PR into its declared base neither releases the stack nor preserves stage by itself.",
+  "outcome": "One sanctioned cumulative MCP work branch contains stage plus the exact reviewed #42 and #43 behavior, with a full lineage and preservation ledger. #46 remains the next corrective slice, not silently accepted here.",
+  "key_files": [
+    "plugins/{claude-code,codex,ollama}/scholialang/",
+    "plugins/claude-desktop/scholialang/",
+    "tests/test_dag_model_provenance.py",
+    "tests/test_dag_orchestrator.py",
+    "tests/test_viewer_snapshot_revision.py",
+    "skills/",
+    "scripts/",
+    "integration evidence manifest"
+  ],
+  "hard_constraints": [
+    "Re-resolve all remote tips before execution. Snapshot master, stage, #42, #43, #46 and the core/spec/host release targets. Record remote URL, merge base, head, PR base, tree identity and dirty-state constraints. Do not move the shared checkout.",
+    "Preserve #42 timestamps, relative-age refresh, model provenance and fallback, harness/stream distinction, placeholder filtering, session-end backfill, and revision-based polling. Preserve #43 declared orchestrator, fallback and hostname guard.",
+    "Preserve stage Doctor, isolated Verify, deterministic skill materialization, Desktop capability honesty, and the existing no-publish artifact gate. Inventory actual paths and test commands; do not infer acceptance from historical lifecycle status.",
+    "Review exact #42/#43 source and database migration behavior independently before integration. Resolve overlaps explicitly; do not blanket-select ours/theirs. Use sanctioned isolation and preserve author commits or documented tree-equivalent mapping.",
+    "Do not merge #46 without the repairs in PRD02. Do not merge any intermediate wave to stage/master. No public PR rebase/retarget/closure is authorized by this draft; propose the eventual PR disposition.",
+    "Do not touch other repositories or shared checkouts. This candidate's branch and its isolated execution worktree are the only git mutation surfaces. Keep all local control-plane records outside shipped package surfaces. No broad git add.",
+    "Use disposable test databases and isolated test environment. Never pip install into a shared host or runner venv. Fetch pinned spec into a clean scratch export if needed; all fingerprint fixtures required.",
+    "Produce a structured preservation ledger with exact commands/results. Independent PM adjudication follows your authored tests; do not self-authorize acceptance or advance PRD02.",
+    "Do not run or replay any Cloud work. Cloud propagation belongs to its existing maintainer after our package handoff."
+  ],
+  "stories": [
+    {
+      "id": "SCH073-01-S1",
+      "title": "Pin sources and construct preservation ledger",
+      "description": "Map every accepted feature and stage-only skill to source SHA, owning repository, concrete regression command and integration disposition. Inventory historical host Events/Tasks branches as reusable, stale or superseded; do not promote them yet.",
+      "priority": 1,
+      "passes": 0
+    },
+    {
+      "id": "SCH073-01-S2",
+      "title": "Review and integrate viewer/provenance baseline",
+      "description": "Build on the approved stage snapshot, integrate #42/#43 in dependency order and resolve conflicts while retaining both behavior sets. Verify schema migration on disposable copies of old databases and same-second viewer update detection.",
+      "priority": 2,
+      "passes": 0
+    },
+    {
+      "id": "SCH073-01-S3",
+      "title": "Independently accept the reconciled baseline",
+      "description": "Run MCP suites and stage-skill gates in clean environments, plus browser checks for timestamps/provenance and bounded polling. Record cumulative tip and proposed next base for #46.",
+      "priority": 3,
+      "passes": 0
+    }
+  ],
+  "acceptance": [
+    "Every #42/#43 and stage-only preservation row has a test and passes on the same cumulative SHA; no accepted feature disappears.",
+    "Listing, reading and viewer metadata agree on stored values and tag fallback; first-writer policy and legacy databases are exercised.",
+    "Unchanged viewer polling cannot call full graph hydration; appends within one clock second trigger refresh. Desktop/mobile viewer evidence has no console or request errors.",
+    "Doctor stays read-only; Verify stays isolated; two materializations of supported skills are byte-identical. Desktop native-skill support is reported honestly.",
+    "Clean full tests and repository-defined static/hygiene gates pass; rollback refs and conflict decisions are recorded. #46 is explicitly pending."
+  ],
+  "verification": "Run the repository's full PYTHONPATH=src python -m pytest -ra suite with exact pinned fingerprint fixtures required; python -m unittest plugins.codex.scholialang.tests.test_scholialang_mcp_server; repository skill/materialization gates discovered in this PRD; browser evidence through the real viewer.",
+  "out_of_scope": [
+    "Implementing MCP extensions",
+    "Repairing historical provenance by guessing models or orchestrators",
+    "Merging to protected/release branches"
+  ],
+  "rollback": "Abandon the isolated cumulative candidate; retained source refs and operator data remain unchanged.",
+  "success_metrics": [
+    "Every #42/#43 and stage-only preservation row has a test and passes on the same cumulative SHA; no accepted feature disappears.",
+    "Listing, reading and viewer metadata agree on stored values and tag fallback; first-writer policy and legacy databases are exercised.",
+    "Unchanged viewer polling cannot call full graph hydration; appends within one clock second trigger refresh. Desktop/mobile viewer evidence has no console or request errors.",
+    "Doctor stays read-only; Verify stays isolated; two materializations of supported skills are byte-identical. Desktop native-skill support is reported honestly.",
+    "Clean full tests and repository-defined static/hygiene gates pass; rollback refs and conflict decisions are recorded. #46 is explicitly pending."
+  ],
+  "target_repo": "scholialang-mcp",
+  "target_root": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control",
+  "allowed_drivers": [
+    "claude"
+  ],
+  "source_pins": {
+    "stage": "f08062fb9f3ea56645ab1ba1c75a177e21c29e9f",
+    "master": "d3bde04bc18d80ee9f504adbf4279343d59e513e",
+    "pr42": "76785bcc074ce7f984885659882ff193a1b61cb1",
+    "pr43": "9767917514c7c2a5437af3a62c82949fd719a1c4",
+    "pr46_held": "b39c2b84e4e213a572eb96e6320bff7feb6cbe69",
+    "spec_fingerprint": "9c1fcfa46059c8b461a92922bb65519b2b6bd5fe"
+  }
+}
