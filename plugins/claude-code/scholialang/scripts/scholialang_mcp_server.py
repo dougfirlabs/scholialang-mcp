@@ -278,6 +278,7 @@ def init_db(conn):
     )
     # Migrate pre-0.3.0 databases and back the idempotent session lookup.
     _ensure_column(conn, "dags", "session_key", "TEXT")
+    _ensure_column(conn, "dags", "model", "TEXT")
     _ensure_column(conn, "nodes", "attrs_json", "TEXT NOT NULL DEFAULT '{}'")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_dags_session ON dags(project_key, session_key)")
     conn.execute(
@@ -335,6 +336,59 @@ def upsert_project(conn, info):
     )
 
 
+MODEL_TAG_PREFIX = "model:"
+EXHAUST_HOST_SUFFIX = "-exhaust"
+
+
+def dag_harness(dag):
+    """The harness that produced a trace, independent of stream kind.
+
+    ``session_key`` hosts encode both facts at once: ``claude-code`` for the
+    checkpoint stream and ``claude-code-exhaust`` for its paired event stream.
+    Exhaust-ness is a view mode (see the viewer's ``trace_view_mode``), not a
+    different harness, so anything asking "who produced this" wants the bare
+    name — both halves of a pair answer ``claude-code``.
+    """
+    host = (dag.get("session_key") or "").split(":", 1)[0]
+    if host.endswith(EXHAUST_HOST_SUFFIX):
+        host = host[: -len(EXHAUST_HOST_SUFFIX)]
+    return host or None
+
+
+def dag_model(dag):
+    """Resolve the model that produced ``dag``.
+
+    The stored column wins. A ``model:<id>`` tag is the fallback so traces
+    ingested from outside the hook path — imports, other harnesses, manual
+    replays — can declare provenance without a schema write.
+    """
+    stored = dag.get("model")
+    if stored:
+        return stored
+    for tag in dag.get("tags", []) or []:
+        if isinstance(tag, str) and tag.startswith(MODEL_TAG_PREFIX):
+            value = tag[len(MODEL_TAG_PREFIX):].strip()
+            if value:
+                return value
+    return None
+
+
+def set_dag_model(conn, dag_id, model, *, overwrite=False):
+    """Stamp the model on a DAG. Idempotent: first writer wins unless
+    ``overwrite``, so a mid-session model switch does not rewrite the
+    provenance of atoms already recorded under the earlier model.
+    """
+    value = compact_text(model or "", 120)
+    if not value:
+        return None
+    if not overwrite:
+        row = conn.execute("SELECT model FROM dags WHERE dag_id = ?", (dag_id,)).fetchone()
+        if row is not None and ("model" in row.keys()) and row["model"]:
+            return row["model"]
+    conn.execute("UPDATE dags SET model = ? WHERE dag_id = ?", (value, dag_id))
+    return value
+
+
 def dag_metadata(dag):
     return {
         "dag_id": dag["dag_id"],
@@ -343,7 +397,9 @@ def dag_metadata(dag):
         "objective": dag.get("objective", ""),
         "tags": dag.get("tags", []),
         "session_key": dag.get("session_key"),
+        "model": dag_model(dag),
         "host": (dag.get("session_key") or "").split(":", 1)[0] or None,
+        "harness": dag_harness(dag),
         "project_path": dag.get("project_path"),
         "project_name": dag.get("project_name"),
         "project_key": dag.get("project_key"),
@@ -402,6 +458,7 @@ def row_to_dag(conn, row):
         "objective": row["objective"],
         "tags": json_loads(row["tags_json"], []),
         "session_key": row["session_key"] if "session_key" in row.keys() else None,
+        "model": row["model"] if "model" in row.keys() else None,
         "project_key": row["project_key"],
         "project_path": row["project_path"],
         "project_name": row["project_name"],
@@ -631,6 +688,7 @@ def tool_dag_start(args):
                 timestamp,
             ),
         )
+        set_dag_model(conn, dag_id, args.get("model"))
         conn.commit()
         goal_summary = compact_text(args.get("objective") or args.get("title") or "Trace objective", 500)
         goal_content = compact_text(args.get("objective") or goal_summary, MAX_TEXT)
@@ -647,6 +705,25 @@ def tool_dag_start(args):
         structured = dag_metadata(dag)
         structured["goal_atom"] = goal_atom
         return content_result(f"Started Scholialang SQLite DAG {dag_id} for {info['project_name']}.", structured)
+    finally:
+        conn.close()
+
+
+def tool_dag_set_model(args):
+    """Record the model that produced a DAG.
+
+    Separate from dag_start because a Claude Code transcript carries no
+    assistant message at SessionStart — the model only becomes knowable once
+    the first assistant turn lands, so the tailer backfills it then.
+    """
+    dag_id = dag_id_arg(args)
+    conn = connect()
+    try:
+        dag = load_dag_conn(conn, dag_id, args.get("project_path"))
+        value = set_dag_model(conn, dag_id, require_str(args, "model"), overwrite=bool(args.get("overwrite")))
+        conn.commit()
+        structured = {"dag_id": dag_id, "trace_id": dag_id, "model": value or dag_model(dag)}
+        return content_result(f"Model for {dag_id} is {structured['model']}.", structured)
     finally:
         conn.close()
 
@@ -912,6 +989,7 @@ def tool_dag_ensure_session(args):
                 )
                 if requested_session_id is not None:
                     bind_runtime_session(conn, info["project_key"], host, session_key)
+                set_dag_model(conn, dag_id, args.get("model"))
                 conn.commit()
             except sqlite3.IntegrityError:
                 # Another host/process created the same session DAG concurrently.
@@ -2280,6 +2358,7 @@ def tool_codex_import_thread(args):
 CANONICAL_TOOLS = {
     "scholia_dag_start": tool_dag_start,
     "scholia_dag_add_atom": tool_dag_add_atom,
+    "scholia_dag_set_model": tool_dag_set_model,
     "scholia_dag_link": tool_dag_link,
     "scholia_dag_ensure_session": tool_dag_ensure_session,
     "scholia_dag_finish_session": tool_dag_finish_session,
@@ -2309,6 +2388,7 @@ CANONICAL_TOOLS = {
 LEGACY_TOOL_ALIASES = {
     "scholia.dag_start": "scholia_dag_start",
     "scholia.dag_add_atom": "scholia_dag_add_atom",
+    "scholia.dag_set_model": "scholia_dag_set_model",
     "scholia.dag_link": "scholia_dag_link",
     "scholia.dag_ensure_session": "scholia_dag_ensure_session",
     "scholia.dag_finish_session": "scholia_dag_finish_session",
@@ -2369,12 +2449,19 @@ def legacy_protocol_version(params):
 
 def tool_schema(name):
     common_dag = {"dag_id": {"type": "string"}, "trace_id": {"type": "string"}, "project_path": {"type": "string"}}
+    if name.endswith("dag_set_model"):
+        return schema({
+            **common_dag,
+            "model": {"type": "string", "description": "Model identifier that produced this DAG."},
+            "overwrite": {"type": "boolean", "description": "Replace an already-recorded model instead of keeping the first."},
+        }, ["model"])
     if name.endswith("dag_start") or name.endswith("trace_start"):
         return schema({
             "project_path": {"type": "string"},
             "title": {"type": "string"},
             "objective": {"type": "string"},
             "tags": {"type": "array", "items": {"type": "string"}},
+            "model": {"type": "string"},
         })
     if name.endswith("dag_add_atom") or name.endswith("trace_append"):
         return schema({
@@ -2403,6 +2490,7 @@ def tool_schema(name):
             "title": {"type": "string"},
             "objective": {"type": "string"},
             "tags": {"type": "array", "items": {"type": "string"}},
+            "model": {"type": "string"},
         })
     if name.endswith("dag_finish_session"):
         return schema({
@@ -2459,6 +2547,7 @@ def list_tools():
     descriptions = {
         "scholia_dag_start": "Start a project-aware local Scholialang DAG in SQLite.",
         "scholia_dag_add_atom": "Add an atom node and optional edges to a local SQLite DAG.",
+        "scholia_dag_set_model": "Record the model that produced a DAG (first writer wins unless overwrite).",
         "scholia_dag_link": "Create an explicit acyclic edge between two atoms.",
         "scholia_dag_ensure_session": "Idempotently find-or-create this session's per-project DAG (host-tagged, opt-out aware). Safe to call repeatedly.",
         "scholia_dag_finish_session": "Append a goal-closing Concluding atom to this session's per-project DAG.",
