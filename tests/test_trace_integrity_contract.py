@@ -1,6 +1,7 @@
 """Trace-integrity contract promoted from the #46 review probes.
 
-The independent review ran 36 synthetic probes against each server bundle:
+The independent review ran 36 synthetic probes across all three bundles
+(12 per bundle):
 nine metadata list/read parity cases, nine premise-free closure cases, nine
 supported-closure cases, three no-outcome lifecycle cases, and six invalid
 outcome/kind combinations. This file keeps every one of them as a permanent
