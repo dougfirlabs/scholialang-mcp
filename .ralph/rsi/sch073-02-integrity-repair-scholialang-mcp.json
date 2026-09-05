@@ -1,7 +1,7 @@
 {
   "kind": "prd",
   "schema_version": 1,
-  "status": "approved",
+  "status": "completed",
   "group_id": "scholialang-073-convergence-20260904",
   "run_policy": "gated_stack",
   "approval": {
@@ -112,5 +112,121 @@
       "browser_viewports_passed": 2
     },
     "caveat": "Report-only trace lint has three duplicate IDs despite recorded DAG validation success. Product gates pass independently."
-  }
+  },
+  "lifecycle": {
+    "run_status": "completed",
+    "last_successful_run_id": "cdd2ddfbf6da46c59e8438bf86df429a",
+    "last_successful_branch": "feat/sch073-mcp-control-20260905",
+    "last_successful_commit": "a8109367bc611f40189384bddedbc46d449fcc88",
+    "completed_at": "2026-09-05T09:12:34+00:00",
+    "completion_evidence": {
+      "task": "sch073-02-integrity-repair-scholialang-mcp",
+      "prd_id": "sch073-02-integrity-repair-scholialang-mcp",
+      "provider": "claude",
+      "model": "claude-fable-5",
+      "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_1sqxv9pgbf_integrate_.md",
+      "post_status": "invalid",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "cdd2ddfbf6da46c59e8438bf86df429a",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion": {
+    "run_id": "cdd2ddfbf6da46c59e8438bf86df429a",
+    "task": "sch073-02-integrity-repair-scholialang-mcp",
+    "completed_at": "2026-09-05T09:12:34+00:00",
+    "branch": "feat/sch073-mcp-control-20260905",
+    "commit": "a8109367bc611f40189384bddedbc46d449fcc88",
+    "final_status": "success",
+    "previous_status": "approved",
+    "lifecycle": {
+      "run_status": "completed",
+      "last_successful_run_id": "cdd2ddfbf6da46c59e8438bf86df429a",
+      "last_successful_branch": "feat/sch073-mcp-control-20260905",
+      "last_successful_commit": "a8109367bc611f40189384bddedbc46d449fcc88",
+      "completed_at": "2026-09-05T09:12:34+00:00",
+      "completion_evidence": {
+        "task": "sch073-02-integrity-repair-scholialang-mcp",
+        "prd_id": "sch073-02-integrity-repair-scholialang-mcp",
+        "provider": "claude",
+        "model": "claude-fable-5",
+        "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_1sqxv9pgbf_integrate_.md",
+        "post_status": "invalid",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "cdd2ddfbf6da46c59e8438bf86df429a",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
+    },
+    "completion_evidence": {
+      "task": "sch073-02-integrity-repair-scholialang-mcp",
+      "prd_id": "sch073-02-integrity-repair-scholialang-mcp",
+      "provider": "claude",
+      "model": "claude-fable-5",
+      "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_1sqxv9pgbf_integrate_.md",
+      "post_status": "invalid",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "cdd2ddfbf6da46c59e8438bf86df429a",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion_history": [
+    {
+      "run_id": "cdd2ddfbf6da46c59e8438bf86df429a",
+      "task": "sch073-02-integrity-repair-scholialang-mcp",
+      "completed_at": "2026-09-05T09:12:34+00:00",
+      "branch": "feat/sch073-mcp-control-20260905",
+      "commit": "a8109367bc611f40189384bddedbc46d449fcc88",
+      "final_status": "success",
+      "previous_status": "approved",
+      "lifecycle": {
+        "run_status": "completed",
+        "last_successful_run_id": "cdd2ddfbf6da46c59e8438bf86df429a",
+        "last_successful_branch": "feat/sch073-mcp-control-20260905",
+        "last_successful_commit": "a8109367bc611f40189384bddedbc46d449fcc88",
+        "completed_at": "2026-09-05T09:12:34+00:00",
+        "completion_evidence": {
+          "task": "sch073-02-integrity-repair-scholialang-mcp",
+          "prd_id": "sch073-02-integrity-repair-scholialang-mcp",
+          "provider": "claude",
+          "model": "claude-fable-5",
+          "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_1sqxv9pgbf_integrate_.md",
+          "post_status": "invalid",
+          "test_gate": {
+            "all_passed": true,
+            "commands": [],
+            "run_id": "cdd2ddfbf6da46c59e8438bf86df429a",
+            "skipped": true,
+            "skipped_reason": "no machine-runnable commands in success_metrics"
+          }
+        }
+      },
+      "completion_evidence": {
+        "task": "sch073-02-integrity-repair-scholialang-mcp",
+        "prd_id": "sch073-02-integrity-repair-scholialang-mcp",
+        "provider": "claude",
+        "model": "claude-fable-5",
+        "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_1sqxv9pgbf_integrate_.md",
+        "post_status": "invalid",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "cdd2ddfbf6da46c59e8438bf86df429a",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
+    }
+  ]
 }
