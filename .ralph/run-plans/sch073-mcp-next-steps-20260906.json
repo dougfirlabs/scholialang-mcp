@@ -1,8 +1,8 @@
 {
   "kind": "run_plan",
   "schema_version": "1.0",
-  "id": "sch073-mcp-next-steps-20260906",
-  "title": "ScholiaLang MCP 0.7.3 next-step implementation stack",
+  "id": "sch073-mcp-next-steps-astra-20260906",
+  "title": "ScholiaLang MCP 0.7.3 next-step implementation stack (Astra)",
   "description": "Four sequential, receipt-gated MCP waves: exact core 0.7.3 rebinding, durable capability state, real Events/Tasks/Heartbeat adapters, and cumulative acceptance. PyPI and Cloud propagation remain held.",
   "created_at": "2026-09-06T02:05:00+00:00",
   "driver": "codex",
