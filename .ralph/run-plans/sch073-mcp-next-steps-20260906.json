@@ -1,0 +1,30 @@
+{
+  "kind": "run_plan",
+  "schema_version": "1.0",
+  "id": "sch073-mcp-next-steps-20260906",
+  "title": "ScholiaLang MCP 0.7.3 next-step implementation stack",
+  "description": "Four sequential, receipt-gated MCP waves: exact core 0.7.3 rebinding, durable capability state, real Events/Tasks/Heartbeat adapters, and cumulative acceptance. PyPI and Cloud propagation remain held.",
+  "created_at": "2026-09-06T02:05:00+00:00",
+  "driver": "claude",
+  "model": "claude-fable-5",
+  "source_branch": "feat/sch073-mcp-control-20260905",
+  "branch_freshness_mode": "current",
+  "cumulative_base_pivot": true,
+  "runtime_atlas": false,
+  "runtime_atlas_commit": "inline",
+  "live_artifact_eval": false,
+  "post_run_atlas_refresh": {"mode":"report_only","include_touched":true,"include_referenced":true,"include_neighbors":false,"neighbor_depth":0,"notify":true},
+  "authority": {"operator":"Darren","execution_authorized":true,"merge_authorized":true,"release_authorized":false,"cloud_authorized":false},
+  "project": "scholialang-mcp-sch073",
+  "gui_port": 7709,
+  "execution_mode": "skolem_worktree",
+  "validation_enforcement": "report_only",
+  "scholia_feedback_mode": "midstream_report_only",
+  "protected_constraints": ["No PyPI publication", "No Scholialang-cloud propagation", "No production activation", "No shared checkout mutation during live runs"],
+  "waves": [
+    {"wave_id":"w1-core073-vendoring","tracks":[{"track_id":"core073-vendoring","mode":"sequential","target_queue":"rsi","prds":["sch073-05-core073-vendoring"],"dependencies":["sch073-04-capability-contract-scholialang-mcp"],"source_branch":"feat/sch073-mcp-control-20260905","branch_freshness_mode":"current"}]},
+    {"wave_id":"w2-durable-store","tracks":[{"track_id":"durable-store","mode":"sequential","target_queue":"rsi","prds":["sch073-06-durable-store"],"dependencies":["sch073-05-core073-vendoring"],"source_branch":"feat/sch073-mcp-control-20260905","branch_freshness_mode":"current"}]},
+    {"wave_id":"w3-real-adapters","tracks":[{"track_id":"real-adapters","mode":"sequential","target_queue":"rsi","prds":["sch073-07-real-adapters"],"dependencies":["sch073-06-durable-store"],"source_branch":"feat/sch073-mcp-control-20260905","branch_freshness_mode":"current"}]},
+    {"wave_id":"w4-integrated-acceptance","tracks":[{"track_id":"integrated-acceptance","mode":"sequential","target_queue":"rsi","prds":["sch073-08-integrated-acceptance"],"dependencies":["sch073-07-real-adapters"],"source_branch":"feat/sch073-mcp-control-20260905","branch_freshness_mode":"current"}]}
+  ]
+}
