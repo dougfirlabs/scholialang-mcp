@@ -5,7 +5,7 @@
   "authority": "Darren approved execution and cumulative integration of the four next-step PRDs. PyPI publication, production activation, and Scholialang-cloud propagation remain prohibited.",
   "evidence_contract": "Bind evidence to the exact candidate SHA, accepted core artifact hashes, clean isolated environment, import origin, dependency/license closure, parity tests, independent review, and rollback ref. Preserve all historical records.",
   "id": "sch073-05-core073-vendoring", "title": "Rebind MCP to accepted Scholialang 0.7.3", "sequence": 5,
-  "depends_on_prds": ["sch073-04-capability-contract-scholialang-mcp"], "repositories": ["scholialang-mcp"],
+  "depends_on_prds": [], "repositories": ["scholialang-mcp"],
   "problem": "MCP still reports and packages the 0.7.2 engine while the accepted Scholialang core receipt is 0.7.3.",
   "outcome": "MCP consumes the exact accepted 0.7.3 artifact reproducibly without requiring PyPI.",
   "key_files": ["pyproject and package metadata", "vendored artifact/input receipt", "fingerprint and parity fixtures", "license/provenance record"],
