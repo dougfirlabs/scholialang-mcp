@@ -1,0 +1,5066 @@
+{
+  "schema_version": "1.0",
+  "suite_schema": "semantic-atoms.v1",
+  "spec_version": "0.7.0-proposed",
+  "package_version": "0.7.3-candidate",
+  "status": "proposed",
+  "title": "Scholia v0.7 proposed Map/Event/Task semantic conformance suite",
+  "description": "Self-describing positive and negative fixtures for the proposed additive Map/Event/Task contract (SCHOLIA_v0.7_SPEC.md). Each case declares its input format, payload, and — for negative cases — the expected failure phase (parse: the input never becomes an atom; validate: a constructed atom or trace is rejected) plus the proposed rule code and a required diagnostic subset. Positive cases declare round-trip (XML→JSON→YAML→XML semantic equality, IDs/canonical IDs/typed values retained, children empty) and repeated-canonical-JSON stability expectations, and optionally a canonical-identity relation between named atoms. Implementations claiming the proposed contract execute every case with zero skips; case counts are pinned in coverage and may not shrink silently. Nothing in this suite executes work: parsing or validating a Task never starts one, and opaque external/runtime correlators are never dereferenced.",
+  "case_fields": {
+    "id": "Stable suite-local case identifier.",
+    "family": "Coverage family (see coverage.families).",
+    "category": "positive (must pass) or negative (must fail as declared).",
+    "kinds": "New kinds exercised by the case.",
+    "format": "xml | json | yaml (payload is document text) or dict (payload is the in-memory mapping input).",
+    "payload": "The input document/text/mapping.",
+    "payload_b": "Optional second document for cross-trace identity probes.",
+    "profile": "Optional explicit grammar profile the case is evaluated under.",
+    "coverage": "Optional structured annotation of field→target-kind pairs the case covers.",
+    "identity": "Optional canonical-identity expectation: relation equal|distinct over atoms (same trace) or cross_trace_atom (payload vs payload_b).",
+    "expects": "outcome pass|fail; negative cases add phase (parse|validate), rule, diagnostic_must_mention; positive cases add roundtrip and canonical_json_stable."
+  },
+  "rule_codes": {
+    "unknown_kind": {
+      "phase": "parse",
+      "source": "existing",
+      "contract": "closed-set atom catalog; unknown kinds never parse."
+    },
+    "semantic_unknown_field": {
+      "phase": "parse",
+      "source": "proposed",
+      "contract": "closed per-kind field sets across XML/JSON/YAML/dict input."
+    },
+    "semantic_children_empty": {
+      "phase": "parse",
+      "source": "proposed",
+      "contract": "new kinds carry no nested child atoms."
+    },
+    "semantic_operators_list": {
+      "phase": "parse",
+      "source": "proposed",
+      "contract": "operators is a list of strings; no coercion."
+    },
+    "map_entries_shape": {
+      "phase": "parse",
+      "source": "proposed",
+      "contract": "entries is a real mapping with unique string keys; embedded-JSON and document duplicate keys are rejected while decoding."
+    },
+    "semantic_id_shape": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "required kind-prefixed trace-local ID with [A-Za-z0-9_]+ suffix."
+    },
+    "semantic_id_unique": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "no ID collision involving a new atom anywhere in the trace, including Steps and legacy atoms."
+    },
+    "map_required_fields": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "value_type and entries are required."
+    },
+    "map_value_type": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "value_type is exactly string|integer|boolean|atom_ref."
+    },
+    "map_entries_typed": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "homogeneous values matching value_type; empty keys, bool-as-integer, out-of-range integers, floats, nulls, arrays, nested objects, and mixed types rejected."
+    },
+    "map_ref_resolves": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "atom_ref values resolve to a declared non-Step atom other than the Map itself."
+    },
+    "event_required_fields": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "source, occurrence_id, event_type, and a nonempty body are required."
+    },
+    "event_type_token": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "event_type matches [A-Za-z][A-Za-z0-9_.-]*."
+    },
+    "event_timestamp_shape": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "RFC3339 with explicit timezone; impossible date/time rejected; excluded from canonical identity."
+    },
+    "event_occurrence_unique": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "(source, occurrence_id) unique per trace, even for identical bodies."
+    },
+    "task_required_fields": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "status and a nonempty body are required."
+    },
+    "task_status_enum": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "status is exactly open|satisfied|unsatisfied|withdrawn; runtime lifecycle states rejected."
+    },
+    "task_evidence_required": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "satisfied/unsatisfied require a resolving evidence_ref."
+    },
+    "semantic_ref_target_kind": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "declared reference fields resolve to their permitted target kinds; dangling or wrong-kind targets rejected."
+    },
+    "canonical_id_well_formed": {
+      "phase": "validate",
+      "source": "existing",
+      "contract": "unchanged: claimed canonical_id must be well-formed and match the recomputed value."
+    },
+    "grammar_profile_unsupported": {
+      "phase": "validate",
+      "source": "proposed",
+      "contract": "new kinds under an explicit legacy 0.6.2 profile, and unknown profiles, produce a structured unsupported-version diagnostic."
+    },
+    "goal_declared": {
+      "phase": "validate",
+      "source": "existing",
+      "contract": "A semantic Task does not close a required Goal; existing explicit Finding/Concluding closure rules remain authoritative."
+    },
+    "action_recorded": {
+      "phase": "validate",
+      "source": "existing",
+      "contract": "A semantic Task does not supply the explicit recorded result required for an Action."
+    }
+  },
+  "coverage": {
+    "total_cases": 204,
+    "positive": 36,
+    "negative": 168,
+    "families": {
+      "catalog": {
+        "positive": 3,
+        "negative": 15
+      },
+      "map_types": {
+        "positive": 10,
+        "negative": 55
+      },
+      "event_identity": {
+        "positive": 6,
+        "negative": 13
+      },
+      "task_declaration": {
+        "positive": 6,
+        "negative": 14
+      },
+      "relation_legality": {
+        "positive": 6,
+        "negative": 19
+      },
+      "local_ids": {
+        "positive": 1,
+        "negative": 15
+      },
+      "canonical_ids": {
+        "positive": 3,
+        "negative": 24
+      },
+      "serialization": {
+        "positive": 1,
+        "negative": 13
+      }
+    }
+  },
+  "runtime_obligations": [
+    {
+      "id": "v07-runtime-no-io",
+      "owner_gate": "reference-implementation-consumer",
+      "status": "pending_consumer_execution",
+      "required_assertions": [
+        "Deny filesystem writes, subprocess creation and network calls during construction, parsing, validation, canonical hashing and serialization for each new kind.",
+        "Load imports/fixtures before denial hooks. Do not replace the implementation or validator. Registry persistence is deliberately outside these pure-operation tests."
+      ],
+      "required_case_ids": [
+        "map-construct",
+        "map-parse",
+        "map-validate",
+        "map-hash",
+        "map-serialize",
+        "event-construct",
+        "event-parse",
+        "event-validate",
+        "event-hash",
+        "event-serialize",
+        "task-construct",
+        "task-parse",
+        "task-validate",
+        "task-hash",
+        "task-serialize"
+      ],
+      "receipt_fields": [
+        "obligation_id",
+        "case_id",
+        "node_id",
+        "candidate_sha",
+        "spec_sha",
+        "corpus_sha256",
+        "environment",
+        "import_origin",
+        "command",
+        "exit_code",
+        "outcome",
+        "evidence_sha256"
+      ]
+    },
+    {
+      "id": "v07-runtime-roundtrip-no-caller-mutation",
+      "owner_gate": "reference-implementation-consumer",
+      "status": "pending_consumer_execution",
+      "required_assertions": [
+        "Compare deep snapshots before/after serialization, including atom and Map entries/operators/children container identities.",
+        "Missing canonical_id is computed only on a validated copy; caller claim remains missing. Explicit mismatched claim is never repaired even on serialization failure.",
+        "Retain typed values and opaque strings through repeated round trips."
+      ],
+      "required_case_ids": [
+        "map-xml-missing-claim",
+        "map-xml-explicit-mismatch",
+        "map-json-missing-claim",
+        "map-json-explicit-mismatch",
+        "map-yaml-missing-claim",
+        "map-yaml-explicit-mismatch",
+        "map-dict-missing-claim",
+        "map-dict-explicit-mismatch",
+        "event-xml-missing-claim",
+        "event-xml-explicit-mismatch",
+        "event-json-missing-claim",
+        "event-json-explicit-mismatch",
+        "event-yaml-missing-claim",
+        "event-yaml-explicit-mismatch",
+        "event-dict-missing-claim",
+        "event-dict-explicit-mismatch",
+        "task-xml-missing-claim",
+        "task-xml-explicit-mismatch",
+        "task-json-missing-claim",
+        "task-json-explicit-mismatch",
+        "task-yaml-missing-claim",
+        "task-yaml-explicit-mismatch",
+        "task-dict-missing-claim",
+        "task-dict-explicit-mismatch"
+      ],
+      "receipt_fields": [
+        "obligation_id",
+        "case_id",
+        "node_id",
+        "candidate_sha",
+        "spec_sha",
+        "corpus_sha256",
+        "environment",
+        "import_origin",
+        "command",
+        "exit_code",
+        "outcome",
+        "evidence_sha256"
+      ]
+    },
+    {
+      "id": "v07-runtime-forced-canonical-collision",
+      "owner_gate": "reference-implementation-consumer",
+      "status": "pending_consumer_execution",
+      "required_assertions": [
+        "Force the real truncated hash seam for two different unpatched structural payloads; do not patch comparison or substitute the runtime.",
+        "Require an explicit collision diagnostic and unchanged first registry record, indexes and persisted bytes after refusal.",
+        "Reload disk state and verify the original record remains intact."
+      ],
+      "required_case_ids": [
+        "map-distinct-payloads",
+        "event-distinct-payloads",
+        "task-distinct-payloads"
+      ],
+      "receipt_fields": [
+        "obligation_id",
+        "case_id",
+        "node_id",
+        "candidate_sha",
+        "spec_sha",
+        "corpus_sha256",
+        "environment",
+        "import_origin",
+        "command",
+        "exit_code",
+        "outcome",
+        "evidence_sha256"
+      ]
+    },
+    {
+      "id": "v07-runtime-identical-payload-registry",
+      "owner_gate": "reference-implementation-consumer",
+      "status": "pending_consumer_execution",
+      "required_assertions": [
+        "Equal full canonical payloads with distinct local references may share identity; registration is idempotent, not a structural collision.",
+        "Preserve first record and verify disk reload.",
+        "Event same-trace occurrence-pair duplicate rules still apply; separate-trace registry controls do not waive them."
+      ],
+      "required_case_ids": [
+        "map-equal-payload",
+        "task-equal-payload",
+        "event-equal-payload-separate-traces"
+      ],
+      "receipt_fields": [
+        "obligation_id",
+        "case_id",
+        "node_id",
+        "candidate_sha",
+        "spec_sha",
+        "corpus_sha256",
+        "environment",
+        "import_origin",
+        "command",
+        "exit_code",
+        "outcome",
+        "evidence_sha256"
+      ]
+    },
+    {
+      "id": "v07-runtime-provenance-registry",
+      "owner_gate": "reference-implementation-consumer",
+      "status": "pending_consumer_execution",
+      "required_assertions": [
+        "Event timestamp-only provenance difference retains canonical identity and is not a structural collision.",
+        "Preserve intended provenance without replacing first structural content.",
+        "Existing legacy provenance behavior remains unchanged; no global hash/provenance rule change."
+      ],
+      "required_case_ids": [
+        "event-timestamp-only",
+        "legacy-provenance-control"
+      ],
+      "receipt_fields": [
+        "obligation_id",
+        "case_id",
+        "node_id",
+        "candidate_sha",
+        "spec_sha",
+        "corpus_sha256",
+        "environment",
+        "import_origin",
+        "command",
+        "exit_code",
+        "outcome",
+        "evidence_sha256"
+      ]
+    },
+    {
+      "id": "v07-runtime-in-memory-map-key-and-object-shapes",
+      "owner_gate": "reference-implementation-consumer",
+      "status": "pending_consumer_execution",
+      "required_assertions": [
+        "Pass true Python nonstring keys before serialization can stringify them; reject malformed mapping shape at parse.",
+        "Reject arbitrary objects without coercion; nonfinite values in legal in-memory/YAML objects remain validate-phase typed failures.",
+        "Directly constructed malformed new atoms fail validation with structural constraints, not just parser checks."
+      ],
+      "required_case_ids": [
+        "map-integer-key",
+        "map-boolean-key",
+        "map-object-key",
+        "map-arbitrary-value",
+        "map-nan-value",
+        "map-infinity-value",
+        "map-negative-infinity-value",
+        "map-bad-operators",
+        "map-nonempty-children",
+        "map-wrong-field-type",
+        "event-bad-operators",
+        "event-nonempty-children",
+        "event-wrong-field-type",
+        "task-bad-operators",
+        "task-nonempty-children",
+        "task-wrong-field-type"
+      ],
+      "receipt_fields": [
+        "obligation_id",
+        "case_id",
+        "node_id",
+        "candidate_sha",
+        "spec_sha",
+        "corpus_sha256",
+        "environment",
+        "import_origin",
+        "command",
+        "exit_code",
+        "outcome",
+        "evidence_sha256"
+      ]
+    },
+    {
+      "id": "v07-runtime-canonical-reference-resolution",
+      "owner_gate": "reference-implementation-consumer",
+      "status": "pending_consumer_execution",
+      "required_assertions": [
+        "Compute actual target canonical IDs and use them as exact references, including forward references.",
+        "Exercise all 35 permitted Map target kinds plus all 13 named typed field/target pairs, each canonical-prior and canonical-forward. Use a distinct target Map, never self-reference.",
+        "Preserve wrong-kind/dangling/self/Step rejection and never resolve opaque correlators."
+      ],
+      "required_case_ids": [
+        "Map.entries:Action:canonical-prior",
+        "Map.entries:Action:canonical-forward",
+        "Map.entries:Observation:canonical-prior",
+        "Map.entries:Observation:canonical-forward",
+        "Map.entries:Thinking:canonical-prior",
+        "Map.entries:Thinking:canonical-forward",
+        "Map.entries:Concluding:canonical-prior",
+        "Map.entries:Concluding:canonical-forward",
+        "Map.entries:Contradiction:canonical-prior",
+        "Map.entries:Contradiction:canonical-forward",
+        "Map.entries:Evidence:canonical-prior",
+        "Map.entries:Evidence:canonical-forward",
+        "Map.entries:Finding:canonical-prior",
+        "Map.entries:Finding:canonical-forward",
+        "Map.entries:Hypothesis:canonical-prior",
+        "Map.entries:Hypothesis:canonical-forward",
+        "Map.entries:Retract:canonical-prior",
+        "Map.entries:Retract:canonical-forward",
+        "Map.entries:Uncertainty:canonical-prior",
+        "Map.entries:Uncertainty:canonical-forward",
+        "Map.entries:Alternative:canonical-prior",
+        "Map.entries:Alternative:canonical-forward",
+        "Map.entries:Branch:canonical-prior",
+        "Map.entries:Branch:canonical-forward",
+        "Map.entries:Deciding:canonical-prior",
+        "Map.entries:Deciding:canonical-forward",
+        "Map.entries:Loop:canonical-prior",
+        "Map.entries:Loop:canonical-forward",
+        "Map.entries:Parallel:canonical-prior",
+        "Map.entries:Parallel:canonical-forward",
+        "Map.entries:Implication:canonical-prior",
+        "Map.entries:Implication:canonical-forward",
+        "Map.entries:Map:canonical-prior",
+        "Map.entries:Map:canonical-forward",
+        "Map.entries:Print:canonical-prior",
+        "Map.entries:Print:canonical-forward",
+        "Map.entries:Reference:canonical-prior",
+        "Map.entries:Reference:canonical-forward",
+        "Map.entries:Storing:canonical-prior",
+        "Map.entries:Storing:canonical-forward",
+        "Map.entries:Handoff:canonical-prior",
+        "Map.entries:Handoff:canonical-forward",
+        "Map.entries:Question:canonical-prior",
+        "Map.entries:Question:canonical-forward",
+        "Map.entries:Review:canonical-prior",
+        "Map.entries:Review:canonical-forward",
+        "Map.entries:Budget:canonical-prior",
+        "Map.entries:Budget:canonical-forward",
+        "Map.entries:Confidence:canonical-prior",
+        "Map.entries:Confidence:canonical-forward",
+        "Map.entries:Constraint:canonical-prior",
+        "Map.entries:Constraint:canonical-forward",
+        "Map.entries:Cost:canonical-prior",
+        "Map.entries:Cost:canonical-forward",
+        "Map.entries:Event:canonical-prior",
+        "Map.entries:Event:canonical-forward",
+        "Map.entries:EventRef:canonical-prior",
+        "Map.entries:EventRef:canonical-forward",
+        "Map.entries:Goal:canonical-prior",
+        "Map.entries:Goal:canonical-forward",
+        "Map.entries:Task:canonical-prior",
+        "Map.entries:Task:canonical-forward",
+        "Map.entries:Edge:canonical-prior",
+        "Map.entries:Edge:canonical-forward",
+        "Map.entries:Effect:canonical-prior",
+        "Map.entries:Effect:canonical-forward",
+        "Map.entries:Meta:canonical-prior",
+        "Map.entries:Meta:canonical-forward",
+        "Map.entries:Ref:canonical-prior",
+        "Map.entries:Ref:canonical-forward",
+        "Event.for_task:Task:canonical-prior",
+        "Event.for_task:Task:canonical-forward",
+        "Event.for_action:Action:canonical-prior",
+        "Event.for_action:Action:canonical-forward",
+        "Event.for_goal:Goal:canonical-prior",
+        "Event.for_goal:Goal:canonical-forward",
+        "Event.effect_ref:Effect:canonical-prior",
+        "Event.effect_ref:Effect:canonical-forward",
+        "Event.map_ref:Map:canonical-prior",
+        "Event.map_ref:Map:canonical-forward",
+        "Task.for_goal:Goal:canonical-prior",
+        "Task.for_goal:Goal:canonical-forward",
+        "Task.input_map:Map:canonical-prior",
+        "Task.input_map:Map:canonical-forward",
+        "Task.output_map:Map:canonical-prior",
+        "Task.output_map:Map:canonical-forward",
+        "Task.action_ref:Action:canonical-prior",
+        "Task.action_ref:Action:canonical-forward",
+        "Task.evidence_ref:Observation:canonical-prior",
+        "Task.evidence_ref:Observation:canonical-forward",
+        "Task.evidence_ref:Evidence:canonical-prior",
+        "Task.evidence_ref:Evidence:canonical-forward",
+        "Task.evidence_ref:Finding:canonical-prior",
+        "Task.evidence_ref:Finding:canonical-forward",
+        "Task.evidence_ref:Concluding:canonical-prior",
+        "Task.evidence_ref:Concluding:canonical-forward"
+      ],
+      "receipt_fields": [
+        "obligation_id",
+        "case_id",
+        "node_id",
+        "candidate_sha",
+        "spec_sha",
+        "corpus_sha256",
+        "environment",
+        "import_origin",
+        "command",
+        "exit_code",
+        "outcome",
+        "evidence_sha256"
+      ]
+    },
+    {
+      "id": "v07-runtime-new-field-canonical-identity",
+      "owner_gate": "reference-implementation-consumer",
+      "status": "pending_consumer_execution",
+      "required_assertions": [
+        "Structural field/content changes change canonical identity; insertion-order independence and timestamp exclusion remain unchanged.",
+        "Preserve claimed canonical IDs through every decoder and reject mismatches without silent repair."
+      ],
+      "required_case_ids": [
+        "map-value-type",
+        "map-key",
+        "map-value",
+        "map-content",
+        "event-source",
+        "event-occurrence-id",
+        "event-event-type",
+        "event-content",
+        "event-for-task",
+        "event-for-action",
+        "event-for-goal",
+        "event-effect-ref",
+        "event-map-ref",
+        "event-external-ref",
+        "task-status",
+        "task-content",
+        "task-for-goal",
+        "task-input-map",
+        "task-output-map",
+        "task-action-ref",
+        "task-evidence-ref",
+        "task-runtime-ref"
+      ],
+      "receipt_fields": [
+        "obligation_id",
+        "case_id",
+        "node_id",
+        "candidate_sha",
+        "spec_sha",
+        "corpus_sha256",
+        "environment",
+        "import_origin",
+        "command",
+        "exit_code",
+        "outcome",
+        "evidence_sha256"
+      ]
+    },
+    {
+      "id": "v07-runtime-opaque-correlators",
+      "owner_gate": "reference-implementation-consumer",
+      "status": "pending_consumer_execution",
+      "required_assertions": [
+        "URL-like and ID-like external_ref/runtime_ref remain opaque under denial hooks.",
+        "Neither Event creation nor satisfied Task validation sends notifications, starts work, authorizes runtime transitions or replaces required legacy closure/results."
+      ],
+      "required_case_ids": [
+        "event-url",
+        "event-local-id-like",
+        "task-url",
+        "task-local-id-like",
+        "task-satisfied-no-execution"
+      ],
+      "receipt_fields": [
+        "obligation_id",
+        "case_id",
+        "node_id",
+        "candidate_sha",
+        "spec_sha",
+        "corpus_sha256",
+        "environment",
+        "import_origin",
+        "command",
+        "exit_code",
+        "outcome",
+        "evidence_sha256"
+      ]
+    },
+    {
+      "id": "v07-runtime-legacy-artifact-probe",
+      "owner_gate": "reference-implementation-consumer",
+      "status": "pending_consumer_execution",
+      "required_assertions": [
+        "Use real separately installed 0.7.2 with artifact hash/import-origin evidence.",
+        "Execute preserved legacy corpus and report real unknown-kind errors on new kinds without patching old artifact.",
+        "Keep old parser errors distinct from new structured profile rejection; never silently rewrite kinds."
+      ],
+      "required_case_ids": [
+        "legacy-full-corpus",
+        "old-parser-map",
+        "old-parser-event",
+        "old-parser-task",
+        "new-legacy-profile",
+        "new-unknown-profile"
+      ],
+      "receipt_fields": [
+        "obligation_id",
+        "case_id",
+        "node_id",
+        "candidate_sha",
+        "spec_sha",
+        "corpus_sha256",
+        "environment",
+        "import_origin",
+        "command",
+        "exit_code",
+        "outcome",
+        "evidence_sha256"
+      ]
+    },
+    {
+      "id": "v07-runtime-packaging-parity",
+      "owner_gate": "reference-implementation-consumer",
+      "status": "pending_consumer_execution",
+      "required_assertions": [
+        "Separate source/wheel/sdist-installed environments execute exact full corpus and runtime obligations with no required skips.",
+        "Bind source/spec SHAs, corpus/artifact hashes, versions/catalog/fields, import origins, commands, exact node IDs and counts.",
+        "Installed artifacts run outside source roots; stale/missing corpus, import-origin leakage and generated drift fail."
+      ],
+      "required_case_ids": [
+        "source",
+        "wheel-installed",
+        "sdist-installed"
+      ],
+      "receipt_fields": [
+        "obligation_id",
+        "case_id",
+        "node_id",
+        "candidate_sha",
+        "spec_sha",
+        "corpus_sha256",
+        "environment",
+        "import_origin",
+        "command",
+        "exit_code",
+        "outcome",
+        "evidence_sha256"
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "id": "v07-catalog-all-three-new-kinds-with-legacy",
+      "family": "catalog",
+      "category": "positive",
+      "kinds": [
+        "Map",
+        "Event",
+        "Task"
+      ],
+      "format": "xml",
+      "description": "All three proposed kinds coexist with legacy atoms in one Step; legacy semantics unchanged.",
+      "payload": "<Step id=\"S_01\">\n  <Goal id=\"G_01\" scope=\"trace\">Ship the fixture change.</Goal>\n  <Action id=\"A_01\">Edited the fixture.<Finding id=\"F_01\">The fixture compiles.</Finding></Action>\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{&quot;format&quot;:&quot;xml&quot;}\">Inputs.</Map>\n  <Task id=\"Task_01\" status=\"open\" input_map=\"Map_inputs\" for_goal=\"G_01\">Review the fixture output.</Task>\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" for_task=\"Task_01\">The occurrence was recorded.</Event>\n  <Concluding id=\"C_01\" for_goal=\"G_01\" status=\"met\">REFER:F_01 closes the goal.</Concluding>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-catalog-map-atom-distinct-from-inline-map-primitive",
+      "family": "catalog",
+      "category": "positive",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "The Map atom coexists with prose mentioning the inline MAP primitive token; primitive parsing is unchanged.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{}\">Named mapping; unrelated to the inline MAP primitive.</Map>\n  <Storing id=\"St_01\" name=\"mode\" value=\"fixture\"/>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-catalog-event-and-eventref-coexist",
+      "family": "catalog",
+      "category": "positive",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Event and EventRef coexist; EventRef keeps instance/run_id/sequence/for/wall_clock and may point at the Event via its existing for relationship without reinterpretation.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">The occurrence was recorded.</Event>\n  <EventRef id=\"Ev_01\" instance=\"dashboard\" run_id=\"abc123\" sequence=\"7\" for=\"Event_01\" wall_clock=\"2026-09-05T12:00:00Z\"/>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-kind",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [],
+      "format": "xml",
+      "description": "An atom kind outside the closed 35-kind catalog is rejected at parse time (existing closed-set behavior).",
+      "payload": "<Step id=\"S_01\">\n  <Widget id=\"W_01\">Not a Scholia atom.</Widget>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "unknown_kind",
+        "diagnostic_must_mention": [
+          "Widget"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-field-xml",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "An unknown wire attribute on a new kind is rejected in XML input.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{}\" flavor=\"sweet\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_unknown_field",
+        "diagnostic_must_mention": [
+          "flavor"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-field-json",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "json",
+      "description": "An unknown key on a new kind is rejected in JSON input.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Task\",\n          \"id\": \"Task_01\",\n          \"content\": \"Review.\",\n          \"operators\": [],\n          \"status\": \"open\",\n          \"priority\": \"high\",\n          \"children\": []\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_unknown_field",
+        "diagnostic_must_mention": [
+          "priority"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-field-yaml",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "yaml",
+      "description": "An unknown key on a new kind is rejected in YAML input.",
+      "payload": "steps:\n- id: S_01\n  atoms:\n  - kind: Event\n    id: Event_01\n    content: Recorded.\n    operators: []\n    source: worker\n    occurrence_id: occ-1\n    event_type: unit.recorded\n    severity: high\n    children: []\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_unknown_field",
+        "diagnostic_must_mention": [
+          "severity"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-field-dict",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "dict",
+      "description": "An unknown key on a new kind is rejected in dictionary input.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Map",
+                "id": "Map_01",
+                "content": "",
+                "operators": [],
+                "value_type": "string",
+                "entries": {},
+                "topology": "ring",
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_unknown_field",
+        "diagnostic_must_mention": [
+          "topology"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-new-kind-under-legacy-profile",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A new kind under an explicitly selected legacy 0.6.2 grammar profile produces a structured unsupported-version diagnostic, never a silent rewrite.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"open\">Review the fixture output.</Task>\n</Step>",
+      "profile": "0.6.2",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "grammar_profile_unsupported",
+        "diagnostic_must_mention": [
+          "0.6.2",
+          "Task"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-future-profile",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "An unknown grammar profile is rejected with a structured unsupported-version diagnostic.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{}\">Inputs.</Map>\n</Step>",
+      "profile": "0.9",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "grammar_profile_unsupported",
+        "diagnostic_must_mention": [
+          "0.9"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-empty-string",
+      "family": "map_types",
+      "category": "positive",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "An empty entries mapping is valid for value_type=string.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_empty_string\" value_type=\"string\" entries=\"{}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-map-empty-integer",
+      "family": "map_types",
+      "category": "positive",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "An empty entries mapping is valid for value_type=integer.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_empty_integer\" value_type=\"integer\" entries=\"{}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-map-empty-boolean",
+      "family": "map_types",
+      "category": "positive",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "An empty entries mapping is valid for value_type=boolean.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_empty_boolean\" value_type=\"boolean\" entries=\"{}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-map-empty-atom-ref",
+      "family": "map_types",
+      "category": "positive",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "An empty entries mapping is valid for value_type=atom_ref.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_empty_atom_ref\" value_type=\"atom_ref\" entries=\"{}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-map-populated-string",
+      "family": "map_types",
+      "category": "positive",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "String values including the empty string are valid.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{&quot;format&quot;:&quot;xml&quot;,&quot;note&quot;:&quot;&quot;,&quot;target&quot;:&quot;fixture&quot;}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-map-populated-integer-bounds",
+      "family": "map_types",
+      "category": "positive",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "True integers within the interoperable exact range ±(2^53−1) are valid, including the bounds, zero, and negatives.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"integer\" entries=\"{&quot;max&quot;:9007199254740991,&quot;min&quot;:-9007199254740991,&quot;neg&quot;:-12,&quot;zero&quot;:0}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-map-populated-boolean",
+      "family": "map_types",
+      "category": "positive",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Exactly bool values are valid for value_type=boolean.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"boolean\" entries=\"{&quot;strict&quot;:true,&quot;verbose&quot;:false}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-map-populated-atom-ref",
+      "family": "map_types",
+      "category": "positive",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "atom_ref values resolve to declared non-Step atoms of any kind, including legacy kinds and other new kinds.",
+      "payload": "<Step id=\"S_01\">\n  <Goal id=\"G_01\" scope=\"trace\">Ship the fixture change.</Goal>\n  <Task id=\"Task_01\" status=\"open\">Review the fixture output.</Task>\n  <Map id=\"Map_inputs\" value_type=\"atom_ref\" entries=\"{&quot;goal&quot;:&quot;G_01&quot;,&quot;task&quot;:&quot;Task_01&quot;}\">Inputs.</Map>\n</Step>",
+      "coverage": {
+        "atom_ref_targets": [
+          "Goal",
+          "Task"
+        ]
+      },
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-map-unicode-and-escaping",
+      "family": "map_types",
+      "category": "positive",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Unicode keys/values and XML-escapable characters survive canonical-JSON attribute encoding with original bytes preserved.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{&quot;emoji&quot;:&quot;🌲&quot;,&quot;gruß&quot;:&quot;straße&quot;,&quot;quote\\&quot;amp&amp;lt&quot;:&quot;a&lt;b&amp;c\\&quot;d&quot;}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-map-missing-value-type",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "A Map without value_type is an incomplete instance rejected at validation.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_01\" entries=\"{}\">No declared type.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_required_fields",
+        "diagnostic_must_mention": [
+          "value_type"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-missing-entries",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "A Map without entries is an incomplete instance rejected at validation.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_01\" value_type=\"string\">No entries attribute.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_required_fields",
+        "diagnostic_must_mention": [
+          "entries"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-invalid-value-type-enum",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "value_type outside the closed four-value set is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"float\" entries=\"{}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_value_type",
+        "diagnostic_must_mention": [
+          "float"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-entries-not-json-object",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "An entries attribute that decodes to a non-object is a parse-time shape failure.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_01\" value_type=\"string\" entries=\"[1,2]\">List, not object.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "entries"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-entries-duplicate-keys-embedded-json",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Duplicate keys inside the embedded JSON attribute are rejected while decoding, before information is destroyed.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_01\" value_type=\"string\" entries=\"{&quot;a&quot;:&quot;x&quot;,&quot;a&quot;:&quot;y&quot;}\">Duplicate keys.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "duplicate"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-entries-duplicate-keys-json-document",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "A full-trace JSON loader detects duplicate mapping keys in the document text before they are silently overwritten.",
+      "payload": "{\"steps\": [{\"id\": \"S_01\", \"atoms\": [{\"kind\": \"Map\", \"id\": \"Map_01\", \"content\": \"\", \"operators\": [], \"value_type\": \"string\", \"entries\": {\"a\": \"x\", \"a\": \"y\"}, \"children\": []}]}]}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "duplicate"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-entries-encoded-string-in-json",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "JSON/YAML must carry entries as an actual mapping; a JSON-encoded string is rejected.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"\",\n          \"operators\": [],\n          \"value_type\": \"string\",\n          \"entries\": \"{\\\"a\\\":\\\"x\\\"}\",\n          \"children\": []\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "mapping"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-nonstring-key-yaml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "A nonstring entry key (YAML integer key) is rejected.",
+      "payload": "steps:\n- id: S_01\n  atoms:\n  - kind: Map\n    id: Map_01\n    content: ''\n    operators: []\n    value_type: integer\n    entries:\n      1: 2\n    children: []\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "key"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-empty-key",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "An empty string key is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{&quot;&quot;:&quot;x&quot;}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "key"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-mixed-types",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Mixed value types under one declared value_type are rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{&quot;a&quot;:&quot;x&quot;,&quot;b&quot;:1}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "b"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-bool-as-integer",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "bool is not an integer: true under value_type=integer is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"integer\" entries=\"{&quot;flag&quot;:true}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "flag"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-integer-out-of-range",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "An integer beyond +(2^53−1) is outside the interoperable exact range.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"integer\" entries=\"{&quot;big&quot;:9007199254740992}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "big"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-float-value",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Float values are rejected under every value_type.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"integer\" entries=\"{&quot;ratio&quot;:1.5}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "ratio"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-null-value",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Null values are rejected under every value_type.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{&quot;gone&quot;:null}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "gone"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-list-value",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Array values are rejected under every value_type.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{&quot;items&quot;:[&quot;a&quot;,&quot;b&quot;]}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "items"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-object-value",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Nested object values are rejected under every value_type.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{&quot;nested&quot;:{&quot;a&quot;:&quot;b&quot;}}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "nested"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-dangling-atom-ref",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "An atom_ref value that resolves to no declared atom is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"atom_ref\" entries=\"{&quot;missing&quot;:&quot;G_99&quot;}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_ref_resolves",
+        "diagnostic_must_mention": [
+          "G_99"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-self-ref",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "A Map must not refer to itself.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_self\" value_type=\"atom_ref\" entries=\"{&quot;me&quot;:&quot;Map_self&quot;}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_ref_resolves",
+        "diagnostic_must_mention": [
+          "Map_self"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-atom-ref-to-step",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "An atom_ref value resolving to a Step is rejected (any kind except Step).",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"atom_ref\" entries=\"{&quot;container&quot;:&quot;S_01&quot;}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_ref_resolves",
+        "diagnostic_must_mention": [
+          "S_01"
+        ]
+      }
+    },
+    {
+      "id": "v07-event-same-prose-different-occurrence-ids",
+      "family": "event_identity",
+      "category": "positive",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Identical prose with distinct occurrence_id values yields two valid Events with distinct canonical IDs.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_a\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">The occurrence was recorded.</Event>\n  <Event id=\"Event_b\" source=\"worker\" occurrence_id=\"occ-2\" event_type=\"unit.recorded\">The occurrence was recorded.</Event>\n</Step>",
+      "identity": {
+        "relation": "distinct",
+        "atoms": [
+          "Event_a",
+          "Event_b"
+        ]
+      },
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-event-same-occurrence-id-different-source",
+      "family": "event_identity",
+      "category": "positive",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "The occurrence key is the (source, occurrence_id) pair: the same occurrence_id under different sources is legal.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_a\" source=\"worker-a\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">The occurrence was recorded.</Event>\n  <Event id=\"Event_b\" source=\"worker-b\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-event-optional-links-absent",
+      "family": "event_identity",
+      "category": "positive",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "A minimal Event with only required fields is valid.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-event-optional-links-present",
+      "family": "event_identity",
+      "category": "positive",
+      "kinds": [
+        "Event",
+        "Map",
+        "Task"
+      ],
+      "format": "xml",
+      "description": "All optional links present and resolving to their permitted kinds.",
+      "payload": "<Step id=\"S_01\">\n  <Goal id=\"G_01\" scope=\"trace\">Ship the fixture change.</Goal>\n  <Action id=\"A_01\">Edited the fixture.<Finding id=\"F_01\">The fixture compiles.</Finding></Action>\n  <Observation id=\"Obs_01\">Ran the step.<Effect id=\"Ef_01\" kind=\"io_write\"/></Observation>\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{}\">Inputs.</Map>\n  <Task id=\"Task_01\" status=\"open\">Review the fixture output.</Task>\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" timestamp=\"2026-09-05T08:30:00-07:00\" for_task=\"Task_01\" for_action=\"A_01\" for_goal=\"G_01\" effect_ref=\"Ef_01\" map_ref=\"Map_inputs\" external_ref=\"urn:example:evt/17\">The occurrence was recorded.</Event>\n  <Concluding id=\"C_01\" for_goal=\"G_01\" status=\"met\">REFER:F_01 closes the goal.</Concluding>\n</Step>",
+      "coverage": {
+        "field_targets": {
+          "for_task": "Task",
+          "for_action": "Action",
+          "for_goal": "Goal",
+          "effect_ref": "Effect",
+          "map_ref": "Map"
+        }
+      },
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-event-timestamp-offset",
+      "family": "event_identity",
+      "category": "positive",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "An RFC3339 timestamp with an explicit numeric offset is valid.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" timestamp=\"2026-09-05T08:30:00-07:00\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-event-timestamp-zulu",
+      "family": "event_identity",
+      "category": "positive",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "An RFC3339 timestamp with Z timezone is valid.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" timestamp=\"2026-09-05T15:30:00Z\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-event-missing-source",
+      "family": "event_identity",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "A missing source is rejected at validation.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">Recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "event_required_fields",
+        "diagnostic_must_mention": [
+          "source"
+        ]
+      }
+    },
+    {
+      "id": "v07-event-missing-occurrence-id",
+      "family": "event_identity",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "A missing occurrence_id is rejected at validation.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" event_type=\"unit.recorded\">Recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "event_required_fields",
+        "diagnostic_must_mention": [
+          "occurrence_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-event-missing-event-type",
+      "family": "event_identity",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "A missing event_type is rejected at validation.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\">Recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "event_required_fields",
+        "diagnostic_must_mention": [
+          "event_type"
+        ]
+      }
+    },
+    {
+      "id": "v07-event-empty-content",
+      "family": "event_identity",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "An Event body must be nonempty: it records what occurred.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\"></Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "event_required_fields",
+        "diagnostic_must_mention": [
+          "content"
+        ]
+      }
+    },
+    {
+      "id": "v07-event-invalid-type-token",
+      "family": "event_identity",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "event_type must match [A-Za-z][A-Za-z0-9_.-]*; a leading digit fails.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"9review\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "event_type_token",
+        "diagnostic_must_mention": [
+          "9review"
+        ]
+      }
+    },
+    {
+      "id": "v07-event-duplicate-occurrence-pair",
+      "family": "event_identity",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Two Events with the same (source, occurrence_id) pair are rejected even when their bodies match; transport deduplication belongs upstream.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_a\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">The occurrence was recorded.</Event>\n  <Event id=\"Event_b\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "event_occurrence_unique",
+        "diagnostic_must_mention": [
+          "occ-1"
+        ]
+      }
+    },
+    {
+      "id": "v07-event-duplicate-pair-contradictory-content",
+      "family": "event_identity",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Reusing an occurrence pair with contradictory content is rejected, not silent last-write-wins.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_a\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">The check passed.</Event>\n  <Event id=\"Event_b\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">The check failed.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "event_occurrence_unique",
+        "diagnostic_must_mention": [
+          "occ-1"
+        ]
+      }
+    },
+    {
+      "id": "v07-event-naive-timestamp",
+      "family": "event_identity",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "A timestamp without an explicit timezone is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" timestamp=\"2026-09-05T08:30:00\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "event_timestamp_shape",
+        "diagnostic_must_mention": [
+          "timestamp"
+        ]
+      }
+    },
+    {
+      "id": "v07-event-impossible-timestamp",
+      "family": "event_identity",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "An impossible calendar date/time is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" timestamp=\"2026-02-30T08:30:00Z\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "event_timestamp_shape",
+        "diagnostic_must_mention": [
+          "2026-02-30"
+        ]
+      }
+    },
+    {
+      "id": "v07-task-open-minimal",
+      "family": "task_declaration",
+      "category": "positive",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "An open Task needs no verdict evidence and no runtime handle.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"open\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-task-open-with-opaque-runtime-ref",
+      "family": "task_declaration",
+      "category": "positive",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "runtime_ref is an opaque correlator: recording it neither creates nor controls any runtime task.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"open\" runtime_ref=\"opaque-task-handle\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-task-satisfied-with-evidence",
+      "family": "task_declaration",
+      "category": "positive",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A satisfied verdict carries an explicit evidence_ref; validation checks shape/resolution/kind, not truth.",
+      "payload": "<Step id=\"S_01\">\n  <Observation id=\"Obs_01\">Command output captured.</Observation>\n  <Task id=\"Task_01\" status=\"satisfied\" evidence_ref=\"Obs_01\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-task-unsatisfied-with-evidence",
+      "family": "task_declaration",
+      "category": "positive",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "An unsatisfied verdict carries an explicit evidence_ref.",
+      "payload": "<Step id=\"S_01\">\n  <Finding id=\"F_01\" status=\"unmet\">The check failed.</Finding>\n  <Task id=\"Task_01\" status=\"unsatisfied\" evidence_ref=\"F_01\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-task-withdrawn",
+      "family": "task_declaration",
+      "category": "positive",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A withdrawn obligation needs no evidence reference.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"withdrawn\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-task-all-optional-references",
+      "family": "task_declaration",
+      "category": "positive",
+      "kinds": [
+        "Task",
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Every optional Task reference present and resolving to its permitted kind; a satisfied Task never closes the required Goal by itself.",
+      "payload": "<Step id=\"S_01\">\n  <Goal id=\"G_01\" scope=\"trace\">Ship the fixture change.</Goal>\n  <Action id=\"A_01\">Edited the fixture.<Finding id=\"F_01\">The fixture compiles.</Finding></Action>\n  <Map id=\"Map_in\" value_type=\"string\" entries=\"{}\">Inputs.</Map>\n  <Map id=\"Map_out\" value_type=\"string\" entries=\"{}\">Inputs.</Map>\n  <Task id=\"Task_01\" status=\"satisfied\" for_goal=\"G_01\" input_map=\"Map_in\" output_map=\"Map_out\" action_ref=\"A_01\" evidence_ref=\"F_01\" runtime_ref=\"opaque-99\">Review the fixture output.</Task>\n  <Concluding id=\"C_01\" for_goal=\"G_01\" status=\"met\">REFER:F_01 closes the goal.</Concluding>\n</Step>",
+      "coverage": {
+        "field_targets": {
+          "for_goal": "Goal",
+          "input_map": "Map",
+          "output_map": "Map",
+          "action_ref": "Action",
+          "evidence_ref": "Finding"
+        }
+      },
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-task-missing-status",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A Task without status is an incomplete instance.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\">No verdict enum.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "task_required_fields",
+        "diagnostic_must_mention": [
+          "status"
+        ]
+      }
+    },
+    {
+      "id": "v07-task-empty-content",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A Task body must be nonempty: it records the work obligation.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"open\"></Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "task_required_fields",
+        "diagnostic_must_mention": [
+          "content"
+        ]
+      }
+    },
+    {
+      "id": "v07-task-runtime-status-substituted",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A runtime lifecycle state is never a semantic verdict: status=working is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"working\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "task_status_enum",
+        "diagnostic_must_mention": [
+          "working"
+        ]
+      }
+    },
+    {
+      "id": "v07-task-satisfied-without-evidence",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A satisfied verdict without evidence_ref is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"satisfied\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "task_evidence_required",
+        "diagnostic_must_mention": [
+          "satisfied"
+        ]
+      }
+    },
+    {
+      "id": "v07-task-unsatisfied-without-evidence",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "An unsatisfied verdict without evidence_ref is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"unsatisfied\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "task_evidence_required",
+        "diagnostic_must_mention": [
+          "unsatisfied"
+        ]
+      }
+    },
+    {
+      "id": "v07-task-evidence-wrong-kind",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "evidence_ref must land on Observation/Evidence/Finding/Concluding; a Goal target is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Goal id=\"G_01\" scope=\"trace\">Ship the fixture change.</Goal>\n  <Task id=\"Task_01\" status=\"satisfied\" evidence_ref=\"G_01\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "evidence_ref"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-forward-references",
+      "family": "relation_legality",
+      "category": "positive",
+      "kinds": [
+        "Event",
+        "Task",
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Local references resolve against the complete trace: forward references are legal.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" for_task=\"Task_01\" map_ref=\"Map_inputs\">The occurrence was recorded.</Event>\n  <Task id=\"Task_01\" status=\"open\" input_map=\"Map_inputs\">Review the fixture output.</Task>\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-relations-task-evidence-observation",
+      "family": "relation_legality",
+      "category": "positive",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "evidence_ref resolves to a Observation.",
+      "payload": "<Step id=\"S_01\">\n  <Observation id=\"Obs_01\">Command output captured.</Observation>\n  <Task id=\"Task_01\" status=\"satisfied\" evidence_ref=\"Obs_01\">Review the fixture output.</Task>\n</Step>",
+      "coverage": {
+        "field_targets": {
+          "evidence_ref": "Observation"
+        }
+      },
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-relations-task-evidence-evidence",
+      "family": "relation_legality",
+      "category": "positive",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "evidence_ref resolves to a Evidence.",
+      "payload": "<Step id=\"S_01\">\n  <Hypothesis id=\"H_01\">The fixture is complete.</Hypothesis>\n  <Observation id=\"Obs_01\">The fixture completeness check passed.</Observation>\n  <Evidence id=\"E_01\" for=\"H_01\" polarity=\"supports\">REFER:Obs_01 shows completeness.</Evidence>\n  <Task id=\"Task_01\" status=\"satisfied\" evidence_ref=\"E_01\">Review the fixture output.</Task>\n</Step>",
+      "coverage": {
+        "field_targets": {
+          "evidence_ref": "Evidence"
+        }
+      },
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-relations-task-evidence-finding",
+      "family": "relation_legality",
+      "category": "positive",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "evidence_ref resolves to a Finding.",
+      "payload": "<Step id=\"S_01\">\n  <Finding id=\"F_01\" status=\"met\">The check passed.</Finding>\n  <Task id=\"Task_01\" status=\"satisfied\" evidence_ref=\"F_01\">Review the fixture output.</Task>\n</Step>",
+      "coverage": {
+        "field_targets": {
+          "evidence_ref": "Finding"
+        }
+      },
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-relations-task-evidence-concluding",
+      "family": "relation_legality",
+      "category": "positive",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "evidence_ref resolves to a Concluding.",
+      "payload": "<Step id=\"S_01\">\n  <Goal id=\"G_01\" scope=\"trace\">Ship the fixture change.</Goal>\n  <Finding id=\"F_01\">The fixture check passed.</Finding>\n  <Concluding id=\"C_01\" for_goal=\"G_01\" status=\"met\">REFER:F_01 closes the goal.</Concluding>\n  <Task id=\"Task_01\" status=\"satisfied\" evidence_ref=\"C_01\">Review the fixture output.</Task>\n</Step>",
+      "coverage": {
+        "field_targets": {
+          "evidence_ref": "Concluding"
+        }
+      },
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-relations-opaque-refs-stay-opaque",
+      "family": "relation_legality",
+      "category": "positive",
+      "kinds": [
+        "Event",
+        "Task"
+      ],
+      "format": "xml",
+      "description": "external_ref and runtime_ref values that merely look like local atom IDs stay accepted opaque strings: no resolution, no dereference, no authority.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" external_ref=\"Goal_01\">The occurrence was recorded.</Event>\n  <Task id=\"Task_01\" status=\"open\" runtime_ref=\"Task_99\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-relations-event-for-task-dangling",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "A dangling Event for_task is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" for_task=\"Task_99\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "for_task"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-event-for-action-dangling",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "A dangling Event for_action is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" for_action=\"A_99\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "for_action"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-event-for-goal-dangling",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "A dangling Event for_goal is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" for_goal=\"G_99\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "for_goal"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-event-effect-ref-dangling",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "A dangling Event effect_ref is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" effect_ref=\"Ef_99\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "effect_ref"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-event-map-ref-dangling",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "A dangling Event map_ref is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" map_ref=\"Map_99\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "map_ref"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-task-for-goal-dangling",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A dangling Task for_goal is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"open\" for_goal=\"G_99\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "for_goal"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-task-input-map-dangling",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A dangling Task input_map is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"open\" input_map=\"Map_99\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "input_map"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-task-output-map-dangling",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A dangling Task output_map is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"open\" output_map=\"Map_99\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "output_map"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-task-action-ref-dangling",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A dangling Task action_ref is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"open\" action_ref=\"A_99\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "action_ref"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-task-evidence-ref-dangling",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A dangling Task evidence_ref is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"satisfied\" evidence_ref=\"Obs_99\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "evidence_ref"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-event-for-task-wrong-kind",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Event for_task resolving to a Goal is a wrong-kind target.",
+      "payload": "<Step id=\"S_01\">\n  <Goal id=\"G_01\" scope=\"trace\">Ship the fixture change.</Goal>\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" for_task=\"G_01\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "for_task"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-event-for-action-wrong-kind",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Event for_action resolving to a Finding is a wrong-kind target.",
+      "payload": "<Step id=\"S_01\">\n  <Finding id=\"F_01\" status=\"met\">Done.</Finding>\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" for_action=\"F_01\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "for_action"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-event-for-goal-wrong-kind",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Event for_goal resolving to a Map is a wrong-kind target.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_x\" value_type=\"string\" entries=\"{}\">Inputs.</Map>\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" for_goal=\"Map_x\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "for_goal"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-event-effect-ref-wrong-kind",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Event effect_ref resolving to a Observation is a wrong-kind target.",
+      "payload": "<Step id=\"S_01\">\n  <Observation id=\"Obs_01\">Command output captured.</Observation>\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" effect_ref=\"Obs_01\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "effect_ref"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-event-map-ref-wrong-kind",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Event map_ref resolving to a Storing is a wrong-kind target.",
+      "payload": "<Step id=\"S_01\">\n  <Storing id=\"St_01\" name=\"k\" value=\"v\"/>\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" map_ref=\"St_01\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "map_ref"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-task-for-goal-wrong-kind",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Task for_goal resolving to a Observation is a wrong-kind target.",
+      "payload": "<Step id=\"S_01\">\n  <Observation id=\"Obs_01\">Command output captured.</Observation>\n  <Task id=\"Task_01\" status=\"open\" for_goal=\"Obs_01\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "for_goal"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-task-input-map-wrong-kind",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Task input_map resolving to a Storing is a wrong-kind target.",
+      "payload": "<Step id=\"S_01\">\n  <Storing id=\"St_01\" name=\"k\" value=\"v\"/>\n  <Task id=\"Task_01\" status=\"open\" input_map=\"St_01\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "input_map"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-task-output-map-wrong-kind",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Task output_map resolving to a Event is a wrong-kind target.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_x\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">The occurrence was recorded.</Event>\n  <Task id=\"Task_01\" status=\"open\" output_map=\"Event_x\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "output_map"
+        ]
+      }
+    },
+    {
+      "id": "v07-relations-task-action-ref-wrong-kind",
+      "family": "relation_legality",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Task action_ref resolving to a Observation is a wrong-kind target.",
+      "payload": "<Step id=\"S_01\">\n  <Observation id=\"Obs_01\">Command output captured.</Observation>\n  <Task id=\"Task_01\" status=\"open\" action_ref=\"Obs_01\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_ref_target_kind",
+        "diagnostic_must_mention": [
+          "action_ref"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-kind-matching-and-text-derived",
+      "family": "local_ids",
+      "category": "positive",
+      "kinds": [
+        "Map",
+        "Event",
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Kind-matching prefixes with text-derived suffixes coexist with untouched legacy IDs.",
+      "payload": "<Step id=\"S_01\">\n  <Goal id=\"G_01\" scope=\"trace\">Ship the fixture change.</Goal>\n  <Map id=\"Map_run_inputs\" value_type=\"string\" entries=\"{}\">Inputs.</Map>\n  <Event id=\"Event_reviewed_17\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">The occurrence was recorded.</Event>\n  <Task id=\"Task_review_2\" status=\"open\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-ids-missing-new-kind-id",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "A new-kind atom without an id is rejected (base-optional id is overridden to required).",
+      "payload": "<Step id=\"S_01\">\n  <Map value_type=\"string\" entries=\"{}\">No id.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_shape",
+        "diagnostic_must_mention": [
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-wrong-prefix",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A Task with a Map_ prefix is a kind-mismatched ID.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Map_review\" status=\"open\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_shape",
+        "diagnostic_must_mention": [
+          "Map_review"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-illegal-characters",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Characters outside [A-Za-z0-9_] after the prefix are rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_bad-dash\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">The occurrence was recorded.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_shape",
+        "diagnostic_must_mention": [
+          "Event_bad-dash"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-duplicate-new-new",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Two new atoms sharing one ID collide.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_dup\" value_type=\"string\" entries=\"{}\">Inputs.</Map>\n  <Map id=\"Map_dup\" value_type=\"string\" entries=\"{&quot;k&quot;:&quot;v&quot;}\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_unique",
+        "diagnostic_must_mention": [
+          "Map_dup"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-duplicate-new-legacy",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A collision between a new atom and a legacy atom ID is an error anywhere in the trace.",
+      "payload": "<Step id=\"S_01\">\n  <Goal id=\"Task_shared\" scope=\"trace\">Legacy atom with a Task_-shaped id.</Goal>\n  <Task id=\"Task_shared\" status=\"open\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_unique",
+        "diagnostic_must_mention": [
+          "Task_shared"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-duplicate-new-step",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A collision between a new atom and a Step ID is an error.",
+      "payload": "<Step id=\"Task_shared\">\n  <Task id=\"Task_shared\" status=\"open\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_unique",
+        "diagnostic_must_mention": [
+          "Task_shared"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical-map-insertion-order-not-identity",
+      "family": "canonical_ids",
+      "category": "positive",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Two Maps whose entries differ only in insertion order share canonical identity (identical payloads may share canonical identity across distinct local references).",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_a\",\n          \"content\": \"Same mapping.\",\n          \"operators\": [],\n          \"value_type\": \"integer\",\n          \"entries\": {\n            \"x\": 1,\n            \"y\": 2\n          },\n          \"children\": []\n        },\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_b\",\n          \"content\": \"Same mapping.\",\n          \"operators\": [],\n          \"value_type\": \"integer\",\n          \"entries\": {\n            \"y\": 2,\n            \"x\": 1\n          },\n          \"children\": []\n        }\n      ]\n    }\n  ]\n}",
+      "identity": {
+        "relation": "equal",
+        "atoms": [
+          "Map_a",
+          "Map_b"
+        ]
+      },
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-canonical-map-value-change-changes-identity",
+      "family": "canonical_ids",
+      "category": "positive",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "A key/value change changes canonical identity.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_a\" value_type=\"integer\" entries=\"{&quot;x&quot;:1}\">Probe.</Map>\n  <Map id=\"Map_b\" value_type=\"integer\" entries=\"{&quot;x&quot;:2}\">Probe.</Map>\n</Step>",
+      "identity": {
+        "relation": "distinct",
+        "atoms": [
+          "Map_a",
+          "Map_b"
+        ]
+      },
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-canonical-event-timestamp-excluded",
+      "family": "canonical_ids",
+      "category": "positive",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Two traces differing only in an Event timestamp yield the same canonical ID for that Event: timestamp stays provenance, excluded from identity.",
+      "payload": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" timestamp=\"2026-09-05T08:30:00Z\">The occurrence was recorded.</Event>\n</Step>",
+      "payload_b": "<Step id=\"S_01\">\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" timestamp=\"2026-09-05T09:45:00Z\">The occurrence was recorded.</Event>\n</Step>",
+      "identity": {
+        "relation": "equal",
+        "cross_trace_atom": "Event_01"
+      },
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-canonical-claimed-mismatch",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "An explicitly claimed canonical_id that does not match the recomputed value is a validation failure, never silently repaired (the claimed 12-hex digest is deliberately wrong).",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_inputs\" value_type=\"string\" entries=\"{}\" canonical_id=\"sha256:000000000000\">Inputs.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical-malformed",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A malformed canonical_id (wrong shape, not sha256:<12 hex>) is rejected.",
+      "payload": "<Step id=\"S_01\">\n  <Task id=\"Task_01\" status=\"open\" canonical_id=\"sha256:xyz\">Review the fixture output.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "sha256:xyz"
+        ]
+      }
+    },
+    {
+      "id": "v07-serialization-roundtrip-all-new-kinds",
+      "family": "serialization",
+      "category": "positive",
+      "kinds": [
+        "Map",
+        "Event",
+        "Task"
+      ],
+      "format": "xml",
+      "description": "XML→JSON→YAML→XML round trips preserve semantic field values, operators, IDs, canonical IDs, and empty children; repeated canonical JSON is stable. Original whitespace/quoting/attribute order is not promised.",
+      "payload": "<Step id=\"S_01\">\n  <Goal id=\"G_01\" scope=\"trace\">Ship the fixture change.</Goal>\n  <Action id=\"A_01\">Edited the fixture.<Finding id=\"F_01\">The fixture compiles.</Finding></Action>\n  <Map id=\"Map_inputs\" value_type=\"atom_ref\" entries=\"{&quot;goal&quot;:&quot;G_01&quot;}\">Inputs.</Map>\n  <Task id=\"Task_01\" status=\"satisfied\" evidence_ref=\"F_01\" input_map=\"Map_inputs\">Review the fixture output.</Task>\n  <Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" for_task=\"Task_01\">The occurrence was recorded.</Event>\n  <Concluding id=\"C_01\" for_goal=\"G_01\" status=\"met\">REFER:F_01 closes the goal.</Concluding>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-serialization-children-on-new-kind",
+      "family": "serialization",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "New kinds accept no nested child atoms in this revision.",
+      "payload": "<Step id=\"S_01\">\n  <Map id=\"Map_01\" value_type=\"string\" entries=\"{}\">Body.<Finding id=\"F_01\">Nested.</Finding></Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_children_empty",
+        "diagnostic_must_mention": [
+          "children"
+        ]
+      }
+    },
+    {
+      "id": "v07-serialization-children-in-json",
+      "family": "serialization",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "json",
+      "description": "Nonempty children on a new kind are rejected in JSON input too.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Task\",\n          \"id\": \"Task_01\",\n          \"content\": \"Review.\",\n          \"operators\": [],\n          \"status\": \"open\",\n          \"children\": [\n            {\n              \"kind\": \"Finding\",\n              \"id\": \"F_01\",\n              \"content\": \"Nested.\",\n              \"operators\": [],\n              \"children\": []\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_children_empty",
+        "diagnostic_must_mention": [
+          "children"
+        ]
+      }
+    },
+    {
+      "id": "v07-serialization-operators-not-string-list",
+      "family": "serialization",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "json",
+      "description": "operators must be a list of strings on a new kind; arbitrary objects are never coerced.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Event\",\n          \"id\": \"Event_01\",\n          \"content\": \"Recorded.\",\n          \"operators\": [\n            {\n              \"op\": \"REFER\"\n            }\n          ],\n          \"source\": \"worker\",\n          \"occurrence_id\": \"occ-1\",\n          \"event_type\": \"unit.recorded\",\n          \"children\": []\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_operators_list",
+        "diagnostic_must_mention": [
+          "operators"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-field-map-json",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Map unknown-field control through json; retain the declared failure phase.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"value_type\": \"string\",\n          \"entries\": {},\n          \"unrecognized_field\": \"extra\"\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_unknown_field",
+        "diagnostic_must_mention": [
+          "unrecognized_field"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-field-map-yaml",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "Map unknown-field control through yaml; retain the declared failure phase.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Map\"\n        \"id\": \"Map_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": []\n        \"value_type\": \"string\"\n        \"entries\": {}\n        \"unrecognized_field\": \"extra\"\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_unknown_field",
+        "diagnostic_must_mention": [
+          "unrecognized_field"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-field-event-xml",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Event unknown-field control through xml; retain the declared failure phase.",
+      "payload": "<Step id=\"S_01\">\n<Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" unrecognized_field=\"extra\">Recorded fixture.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_unknown_field",
+        "diagnostic_must_mention": [
+          "unrecognized_field"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-field-event-json",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "json",
+      "description": "Event unknown-field control through json; retain the declared failure phase.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Event\",\n          \"id\": \"Event_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"source\": \"worker\",\n          \"occurrence_id\": \"occ-1\",\n          \"event_type\": \"unit.recorded\",\n          \"unrecognized_field\": \"extra\"\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_unknown_field",
+        "diagnostic_must_mention": [
+          "unrecognized_field"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-field-event-dict",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "dict",
+      "description": "Event unknown-field control through dict; retain the declared failure phase.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Event",
+                "id": "Event_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "source": "worker",
+                "occurrence_id": "occ-1",
+                "event_type": "unit.recorded",
+                "unrecognized_field": "extra"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_unknown_field",
+        "diagnostic_must_mention": [
+          "unrecognized_field"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-field-task-xml",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Task unknown-field control through xml; retain the declared failure phase.",
+      "payload": "<Step id=\"S_01\">\n<Task id=\"Task_01\" status=\"open\" unrecognized_field=\"extra\">Recorded fixture.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_unknown_field",
+        "diagnostic_must_mention": [
+          "unrecognized_field"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-field-task-yaml",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "yaml",
+      "description": "Task unknown-field control through yaml; retain the declared failure phase.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Task\"\n        \"id\": \"Task_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": []\n        \"status\": \"open\"\n        \"unrecognized_field\": \"extra\"\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_unknown_field",
+        "diagnostic_must_mention": [
+          "unrecognized_field"
+        ]
+      }
+    },
+    {
+      "id": "v07-catalog-unknown-field-task-dict",
+      "family": "catalog",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "dict",
+      "description": "Task unknown-field control through dict; retain the declared failure phase.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Task",
+                "id": "Task_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "status": "open",
+                "unrecognized_field": "extra"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_unknown_field",
+        "diagnostic_must_mention": [
+          "unrecognized_field"
+        ]
+      }
+    },
+    {
+      "id": "v07-serialization-children-map-json",
+      "family": "serialization",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Map children control through json; retain the declared failure phase.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [\n            {\n              \"kind\": \"Observation\",\n              \"id\": \"Obs_01\",\n              \"content\": \"Child fixture.\",\n              \"operators\": [],\n              \"children\": []\n            }\n          ],\n          \"value_type\": \"string\",\n          \"entries\": {}\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_children_empty",
+        "diagnostic_must_mention": [
+          "children"
+        ]
+      }
+    },
+    {
+      "id": "v07-serialization-children-map-yaml",
+      "family": "serialization",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "Map children control through yaml; retain the declared failure phase.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Map\"\n        \"id\": \"Map_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": \n          - \"kind\": \"Observation\"\n            \"id\": \"Obs_01\"\n            \"content\": \"Child fixture.\"\n            \"operators\": []\n            \"children\": []\n        \"value_type\": \"string\"\n        \"entries\": {}\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_children_empty",
+        "diagnostic_must_mention": [
+          "children"
+        ]
+      }
+    },
+    {
+      "id": "v07-serialization-children-map-dict",
+      "family": "serialization",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "dict",
+      "description": "Map children control through dict; retain the declared failure phase.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Map",
+                "id": "Map_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [
+                  {
+                    "kind": "Observation",
+                    "id": "Obs_01",
+                    "content": "Child fixture.",
+                    "operators": [],
+                    "children": []
+                  }
+                ],
+                "value_type": "string",
+                "entries": {}
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_children_empty",
+        "diagnostic_must_mention": [
+          "children"
+        ]
+      }
+    },
+    {
+      "id": "v07-serialization-children-event-xml",
+      "family": "serialization",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Event children control through xml; retain the declared failure phase.",
+      "payload": "<Step id=\"S_01\">\n<Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">Recorded fixture.<Observation id=\"Obs_01\">Child fixture.</Observation></Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_children_empty",
+        "diagnostic_must_mention": [
+          "children"
+        ]
+      }
+    },
+    {
+      "id": "v07-serialization-children-event-json",
+      "family": "serialization",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "json",
+      "description": "Event children control through json; retain the declared failure phase.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Event\",\n          \"id\": \"Event_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [\n            {\n              \"kind\": \"Observation\",\n              \"id\": \"Obs_01\",\n              \"content\": \"Child fixture.\",\n              \"operators\": [],\n              \"children\": []\n            }\n          ],\n          \"source\": \"worker\",\n          \"occurrence_id\": \"occ-1\",\n          \"event_type\": \"unit.recorded\"\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_children_empty",
+        "diagnostic_must_mention": [
+          "children"
+        ]
+      }
+    },
+    {
+      "id": "v07-serialization-children-event-yaml",
+      "family": "serialization",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "yaml",
+      "description": "Event children control through yaml; retain the declared failure phase.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Event\"\n        \"id\": \"Event_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": \n          - \"kind\": \"Observation\"\n            \"id\": \"Obs_01\"\n            \"content\": \"Child fixture.\"\n            \"operators\": []\n            \"children\": []\n        \"source\": \"worker\"\n        \"occurrence_id\": \"occ-1\"\n        \"event_type\": \"unit.recorded\"\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_children_empty",
+        "diagnostic_must_mention": [
+          "children"
+        ]
+      }
+    },
+    {
+      "id": "v07-serialization-children-event-dict",
+      "family": "serialization",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "dict",
+      "description": "Event children control through dict; retain the declared failure phase.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Event",
+                "id": "Event_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [
+                  {
+                    "kind": "Observation",
+                    "id": "Obs_01",
+                    "content": "Child fixture.",
+                    "operators": [],
+                    "children": []
+                  }
+                ],
+                "source": "worker",
+                "occurrence_id": "occ-1",
+                "event_type": "unit.recorded"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_children_empty",
+        "diagnostic_must_mention": [
+          "children"
+        ]
+      }
+    },
+    {
+      "id": "v07-serialization-children-task-xml",
+      "family": "serialization",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Task children control through xml; retain the declared failure phase.",
+      "payload": "<Step id=\"S_01\">\n<Task id=\"Task_01\" status=\"open\">Recorded fixture.<Observation id=\"Obs_01\">Child fixture.</Observation></Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_children_empty",
+        "diagnostic_must_mention": [
+          "children"
+        ]
+      }
+    },
+    {
+      "id": "v07-serialization-children-task-yaml",
+      "family": "serialization",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "yaml",
+      "description": "Task children control through yaml; retain the declared failure phase.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Task\"\n        \"id\": \"Task_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": \n          - \"kind\": \"Observation\"\n            \"id\": \"Obs_01\"\n            \"content\": \"Child fixture.\"\n            \"operators\": []\n            \"children\": []\n        \"status\": \"open\"\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_children_empty",
+        "diagnostic_must_mention": [
+          "children"
+        ]
+      }
+    },
+    {
+      "id": "v07-serialization-children-task-dict",
+      "family": "serialization",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "dict",
+      "description": "Task children control through dict; retain the declared failure phase.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Task",
+                "id": "Task_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [
+                  {
+                    "kind": "Observation",
+                    "id": "Obs_01",
+                    "content": "Child fixture.",
+                    "operators": [],
+                    "children": []
+                  }
+                ],
+                "status": "open"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "semantic_children_empty",
+        "diagnostic_must_mention": [
+          "children"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-claimed-mismatch-map-json",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Map claimed-mismatch control through json; retain the declared failure phase.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"value_type\": \"string\",\n          \"entries\": {},\n          \"canonical_id\": \"sha256:000000000000\"\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-claimed-mismatch-map-yaml",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "Map claimed-mismatch control through yaml; retain the declared failure phase.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Map\"\n        \"id\": \"Map_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": []\n        \"value_type\": \"string\"\n        \"entries\": {}\n        \"canonical_id\": \"sha256:000000000000\"\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-claimed-mismatch-map-dict",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "dict",
+      "description": "Map claimed-mismatch control through dict; retain the declared failure phase.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Map",
+                "id": "Map_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "value_type": "string",
+                "entries": {},
+                "canonical_id": "sha256:000000000000"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-claimed-mismatch-event-xml",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Event claimed-mismatch control through xml; retain the declared failure phase.",
+      "payload": "<Step id=\"S_01\">\n<Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" canonical_id=\"sha256:000000000000\">Recorded fixture.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-claimed-mismatch-event-json",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "json",
+      "description": "Event claimed-mismatch control through json; retain the declared failure phase.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Event\",\n          \"id\": \"Event_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"source\": \"worker\",\n          \"occurrence_id\": \"occ-1\",\n          \"event_type\": \"unit.recorded\",\n          \"canonical_id\": \"sha256:000000000000\"\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-claimed-mismatch-event-yaml",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "yaml",
+      "description": "Event claimed-mismatch control through yaml; retain the declared failure phase.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Event\"\n        \"id\": \"Event_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": []\n        \"source\": \"worker\"\n        \"occurrence_id\": \"occ-1\"\n        \"event_type\": \"unit.recorded\"\n        \"canonical_id\": \"sha256:000000000000\"\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-claimed-mismatch-event-dict",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "dict",
+      "description": "Event claimed-mismatch control through dict; retain the declared failure phase.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Event",
+                "id": "Event_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "source": "worker",
+                "occurrence_id": "occ-1",
+                "event_type": "unit.recorded",
+                "canonical_id": "sha256:000000000000"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-claimed-mismatch-task-xml",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Task claimed-mismatch control through xml; retain the declared failure phase.",
+      "payload": "<Step id=\"S_01\">\n<Task id=\"Task_01\" status=\"open\" canonical_id=\"sha256:000000000000\">Recorded fixture.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-claimed-mismatch-task-json",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "json",
+      "description": "Task claimed-mismatch control through json; retain the declared failure phase.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Task\",\n          \"id\": \"Task_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"status\": \"open\",\n          \"canonical_id\": \"sha256:000000000000\"\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-claimed-mismatch-task-yaml",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "yaml",
+      "description": "Task claimed-mismatch control through yaml; retain the declared failure phase.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Task\"\n        \"id\": \"Task_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": []\n        \"status\": \"open\"\n        \"canonical_id\": \"sha256:000000000000\"\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-claimed-mismatch-task-dict",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "dict",
+      "description": "Task claimed-mismatch control through dict; retain the declared failure phase.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Task",
+                "id": "Task_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "status": "open",
+                "canonical_id": "sha256:000000000000"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-malformed-claim-map-xml",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Map malformed-claim control through xml; retain the declared failure phase.",
+      "payload": "<Step id=\"S_01\">\n<Map id=\"Map_01\" value_type=\"string\" entries=\"{}\" canonical_id=\"sha256:xyz\">Recorded fixture.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-malformed-claim-map-json",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Map malformed-claim control through json; retain the declared failure phase.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"value_type\": \"string\",\n          \"entries\": {},\n          \"canonical_id\": \"sha256:xyz\"\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-malformed-claim-map-yaml",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "Map malformed-claim control through yaml; retain the declared failure phase.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Map\"\n        \"id\": \"Map_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": []\n        \"value_type\": \"string\"\n        \"entries\": {}\n        \"canonical_id\": \"sha256:xyz\"\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-malformed-claim-map-dict",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "dict",
+      "description": "Map malformed-claim control through dict; retain the declared failure phase.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Map",
+                "id": "Map_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "value_type": "string",
+                "entries": {},
+                "canonical_id": "sha256:xyz"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-malformed-claim-event-xml",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Event malformed-claim control through xml; retain the declared failure phase.",
+      "payload": "<Step id=\"S_01\">\n<Event id=\"Event_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\" canonical_id=\"sha256:xyz\">Recorded fixture.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-malformed-claim-event-json",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "json",
+      "description": "Event malformed-claim control through json; retain the declared failure phase.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Event\",\n          \"id\": \"Event_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"source\": \"worker\",\n          \"occurrence_id\": \"occ-1\",\n          \"event_type\": \"unit.recorded\",\n          \"canonical_id\": \"sha256:xyz\"\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-malformed-claim-event-yaml",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "yaml",
+      "description": "Event malformed-claim control through yaml; retain the declared failure phase.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Event\"\n        \"id\": \"Event_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": []\n        \"source\": \"worker\"\n        \"occurrence_id\": \"occ-1\"\n        \"event_type\": \"unit.recorded\"\n        \"canonical_id\": \"sha256:xyz\"\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-malformed-claim-event-dict",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "dict",
+      "description": "Event malformed-claim control through dict; retain the declared failure phase.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Event",
+                "id": "Event_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "source": "worker",
+                "occurrence_id": "occ-1",
+                "event_type": "unit.recorded",
+                "canonical_id": "sha256:xyz"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-malformed-claim-task-json",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "json",
+      "description": "Task malformed-claim control through json; retain the declared failure phase.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Task\",\n          \"id\": \"Task_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"status\": \"open\",\n          \"canonical_id\": \"sha256:xyz\"\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-malformed-claim-task-yaml",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "yaml",
+      "description": "Task malformed-claim control through yaml; retain the declared failure phase.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Task\"\n        \"id\": \"Task_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": []\n        \"status\": \"open\"\n        \"canonical_id\": \"sha256:xyz\"\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-canonical_ids-malformed-claim-task-dict",
+      "family": "canonical_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "dict",
+      "description": "Task malformed-claim control through dict; retain the declared failure phase.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Task",
+                "id": "Task_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "status": "open",
+                "canonical_id": "sha256:xyz"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "canonical_id_well_formed",
+        "diagnostic_must_mention": [
+          "canonical_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-wrong-prefix-map",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Map requires its own valid kind-prefixed local ID.",
+      "payload": "<Step id=\"S_01\">\n<Map id=\"Other_01\" value_type=\"string\" entries=\"{}\">Recorded fixture.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_shape",
+        "diagnostic_must_mention": [
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-illegal-characters-map",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Map requires its own valid kind-prefixed local ID.",
+      "payload": "<Step id=\"S_01\">\n<Map id=\"Map_bad-dash\" value_type=\"string\" entries=\"{}\">Recorded fixture.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_shape",
+        "diagnostic_must_mention": [
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-missing-id-event",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Event requires its own valid kind-prefixed local ID.",
+      "payload": "<Step id=\"S_01\">\n<Event source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">Recorded fixture.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_shape",
+        "diagnostic_must_mention": [
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-wrong-prefix-event",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "xml",
+      "description": "Event requires its own valid kind-prefixed local ID.",
+      "payload": "<Step id=\"S_01\">\n<Event id=\"Other_01\" source=\"worker\" occurrence_id=\"occ-1\" event_type=\"unit.recorded\">Recorded fixture.</Event>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_shape",
+        "diagnostic_must_mention": [
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-missing-id-task",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Task requires its own valid kind-prefixed local ID.",
+      "payload": "<Step id=\"S_01\">\n<Task status=\"open\">Recorded fixture.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_shape",
+        "diagnostic_must_mention": [
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-illegal-characters-task",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Task requires its own valid kind-prefixed local ID.",
+      "payload": "<Step id=\"S_01\">\n<Task id=\"Task_bad-dash\" status=\"open\">Recorded fixture.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_shape",
+        "diagnostic_must_mention": [
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-whitespace-map",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "dict",
+      "description": "Map whitespace-only ID is invalid.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Map",
+                "id": " ",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "value_type": "string",
+                "entries": {}
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_shape",
+        "diagnostic_must_mention": [
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-whitespace-event",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "dict",
+      "description": "Event whitespace-only ID is invalid.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Event",
+                "id": " ",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "source": "worker",
+                "occurrence_id": "occ-1",
+                "event_type": "unit.recorded"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_shape",
+        "diagnostic_must_mention": [
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "v07-ids-whitespace-task",
+      "family": "local_ids",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "dict",
+      "description": "Task whitespace-only ID is invalid.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Task",
+                "id": " ",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "status": "open"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "semantic_id_shape",
+        "diagnostic_must_mention": [
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-whitespace-value-type",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "dict",
+      "description": "Map.value_type cannot be whitespace-only.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Map",
+                "id": "Map_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "value_type": " \t ",
+                "entries": {}
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_value_type",
+        "diagnostic_must_mention": [
+          "value_type"
+        ]
+      }
+    },
+    {
+      "id": "v07-event-whitespace-source",
+      "family": "event_identity",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "dict",
+      "description": "Event.source cannot be whitespace-only.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Event",
+                "id": "Event_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "source": " \t ",
+                "occurrence_id": "occ-1",
+                "event_type": "unit.recorded"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "event_required_fields",
+        "diagnostic_must_mention": [
+          "source"
+        ]
+      }
+    },
+    {
+      "id": "v07-event-whitespace-occurrence-id",
+      "family": "event_identity",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "dict",
+      "description": "Event.occurrence_id cannot be whitespace-only.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Event",
+                "id": "Event_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "source": "worker",
+                "occurrence_id": " \t ",
+                "event_type": "unit.recorded"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "event_required_fields",
+        "diagnostic_must_mention": [
+          "occurrence_id"
+        ]
+      }
+    },
+    {
+      "id": "v07-event-whitespace-event-type",
+      "family": "event_identity",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "dict",
+      "description": "Event.event_type cannot be whitespace-only.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Event",
+                "id": "Event_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "source": "worker",
+                "occurrence_id": "occ-1",
+                "event_type": " \t "
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "event_required_fields",
+        "diagnostic_must_mention": [
+          "event_type"
+        ]
+      }
+    },
+    {
+      "id": "v07-event-whitespace-content",
+      "family": "event_identity",
+      "category": "negative",
+      "kinds": [
+        "Event"
+      ],
+      "format": "dict",
+      "description": "Event.content cannot be whitespace-only.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Event",
+                "id": "Event_01",
+                "content": " \t ",
+                "operators": [],
+                "children": [],
+                "source": "worker",
+                "occurrence_id": "occ-1",
+                "event_type": "unit.recorded"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "event_required_fields",
+        "diagnostic_must_mention": [
+          "content"
+        ]
+      }
+    },
+    {
+      "id": "v07-task-whitespace-status",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "dict",
+      "description": "Task.status cannot be whitespace-only.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Task",
+                "id": "Task_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "status": " \t "
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "task_status_enum",
+        "diagnostic_must_mention": [
+          "status"
+        ]
+      }
+    },
+    {
+      "id": "v07-task-whitespace-content",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "dict",
+      "description": "Task.content cannot be whitespace-only.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Task",
+                "id": "Task_01",
+                "content": " \t ",
+                "operators": [],
+                "children": [],
+                "status": "open"
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "task_required_fields",
+        "diagnostic_must_mention": [
+          "content"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-integer-bool-false-xml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Boolean false is not an integer in xml.",
+      "payload": "<Step id=\"S_01\">\n<Map id=\"Map_01\" value_type=\"integer\" entries=\"{&quot;n&quot;:false}\">Recorded fixture.</Map>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "integer"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-integer-bool-true-json",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Boolean true is not an integer in json.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"value_type\": \"integer\",\n          \"entries\": {\n            \"n\": true\n          }\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "integer"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-integer-bool-false-json",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Boolean false is not an integer in json.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"value_type\": \"integer\",\n          \"entries\": {\n            \"n\": false\n          }\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "integer"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-integer-bool-true-yaml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "Boolean true is not an integer in yaml.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Map\"\n        \"id\": \"Map_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": []\n        \"value_type\": \"integer\"\n        \"entries\": \n          \"n\": true\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "integer"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-integer-bool-false-yaml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "Boolean false is not an integer in yaml.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Map\"\n        \"id\": \"Map_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": []\n        \"value_type\": \"integer\"\n        \"entries\": \n          \"n\": false\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "integer"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-integer-bool-true-dict",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "dict",
+      "description": "Boolean true is not an integer in dict.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Map",
+                "id": "Map_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "value_type": "integer",
+                "entries": {
+                  "n": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "integer"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-integer-bool-false-dict",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "dict",
+      "description": "Boolean false is not an integer in dict.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Map",
+                "id": "Map_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "value_type": "integer",
+                "entries": {
+                  "n": false
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "integer"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-integer-negative-overflow",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "dict",
+      "description": "Integer map rejects negative-overflow.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Map",
+                "id": "Map_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "value_type": "integer",
+                "entries": {
+                  "n": -9007199254740992
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "integer"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-integer-numeric-string",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "dict",
+      "description": "Integer map rejects numeric-string.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Map",
+                "id": "Map_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "value_type": "integer",
+                "entries": {
+                  "n": "1"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "integer"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-integer-scientific-float",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Scientific numeric notation decodes to float even when its value is integral.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"value_type\": \"integer\",\n          \"entries\": {\n            \"n\": 1e0\n          }\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "integer"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-special-number-nan-xml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Non-JSON numeric token must be rejected by strict JSON decoding before an atom is constructed.",
+      "payload": "<Step id=\"S_01\"><Map id=\"Map_01\" value_type=\"integer\" entries=\"{&quot;n&quot;:NaN}\">Inputs.</Map></Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "entries"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-special-number-nan-json",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Non-JSON numeric token must be rejected by strict JSON decoding before an atom is constructed.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"value_type\": \"integer\",\n          \"entries\": {\n            \"n\": NaN\n          }\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "entries"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-special-number-infinity-xml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Non-JSON numeric token must be rejected by strict JSON decoding before an atom is constructed.",
+      "payload": "<Step id=\"S_01\"><Map id=\"Map_01\" value_type=\"integer\" entries=\"{&quot;n&quot;:Infinity}\">Inputs.</Map></Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "entries"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-special-number-infinity-json",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Non-JSON numeric token must be rejected by strict JSON decoding before an atom is constructed.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"value_type\": \"integer\",\n          \"entries\": {\n            \"n\": Infinity\n          }\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "entries"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-special-number-negative-infinity-xml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Non-JSON numeric token must be rejected by strict JSON decoding before an atom is constructed.",
+      "payload": "<Step id=\"S_01\"><Map id=\"Map_01\" value_type=\"integer\" entries=\"{&quot;n&quot;:-Infinity}\">Inputs.</Map></Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "entries"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-special-number-negative-infinity-json",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Non-JSON numeric token must be rejected by strict JSON decoding before an atom is constructed.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"value_type\": \"integer\",\n          \"entries\": {\n            \"n\": -Infinity\n          }\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "entries"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-special-number-nan-yaml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "YAML special float remains a typed-value validation failure, not integer coercion.",
+      "payload": "steps:\n- id: S_01\n  atoms:\n  - kind: Map\n    id: Map_01\n    content: Inputs.\n    value_type: integer\n    entries:\n      n: .nan\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "integer"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-special-number-infinity-yaml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "YAML special float remains a typed-value validation failure, not integer coercion.",
+      "payload": "steps:\n- id: S_01\n  atoms:\n  - kind: Map\n    id: Map_01\n    content: Inputs.\n    value_type: integer\n    entries:\n      n: .inf\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "integer"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-special-number-negative-infinity-yaml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "YAML special float remains a typed-value validation failure, not integer coercion.",
+      "payload": "steps:\n- id: S_01\n  atoms:\n  - kind: Map\n    id: Map_01\n    content: Inputs.\n    value_type: integer\n    entries:\n      n: -.inf\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "integer"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-entries-duplicate-keys-yaml-document",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "Raw duplicate YAML entries must be rejected before dictionary construction loses information.",
+      "payload": "steps:\n- id: S_01\n  atoms:\n  - kind: Map\n    id: Map_01\n    value_type: integer\n    entries:\n      n: 1\n      n: 2\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "n"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-duplicate-structure-kind-json",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Raw duplicate structural kind key is malformed input; never silently overwrite it.",
+      "payload": "{\"steps\":[{\"id\":\"S_01\",\"atoms\":[{\"kind\":\"Map\",\"id\":\"Map_01\",\"value_type\":\"integer\",\"entries\":{},\"kind\":\"Map\"}]}]}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "kind"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-duplicate-structure-kind-yaml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "Raw duplicate structural kind key is malformed input; never silently overwrite it.",
+      "payload": "steps:\n- id: S_01\n  atoms:\n  - kind: Map\n    id: Map_01\n    value_type: integer\n    entries: {}\n    kind: \"Map\"\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "kind"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-duplicate-structure-id-json",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Raw duplicate structural id key is malformed input; never silently overwrite it.",
+      "payload": "{\"steps\":[{\"id\":\"S_01\",\"atoms\":[{\"kind\":\"Map\",\"id\":\"Map_01\",\"value_type\":\"integer\",\"entries\":{},\"id\":\"Map_01\"}]}]}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-duplicate-structure-id-yaml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "Raw duplicate structural id key is malformed input; never silently overwrite it.",
+      "payload": "steps:\n- id: S_01\n  atoms:\n  - kind: Map\n    id: Map_01\n    value_type: integer\n    entries: {}\n    id: \"Map_01\"\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "id"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-duplicate-structure-entries-json",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Raw duplicate structural entries key is malformed input; never silently overwrite it.",
+      "payload": "{\"steps\":[{\"id\":\"S_01\",\"atoms\":[{\"kind\":\"Map\",\"id\":\"Map_01\",\"value_type\":\"integer\",\"entries\":{},\"entries\":{}}]}]}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "entries"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-duplicate-structure-entries-yaml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "Raw duplicate structural entries key is malformed input; never silently overwrite it.",
+      "payload": "steps:\n- id: S_01\n  atoms:\n  - kind: Map\n    id: Map_01\n    value_type: integer\n    entries: {}\n    entries: {}\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "parse",
+        "rule": "map_entries_shape",
+        "diagnostic_must_mention": [
+          "entries"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-nesting-null-json",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Nested null value is not a scalar string in json.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"value_type\": \"string\",\n          \"entries\": {\n            \"n\": null\n          }\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "string"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-nesting-null-yaml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "Nested null value is not a scalar string in yaml.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Map\"\n        \"id\": \"Map_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": []\n        \"value_type\": \"string\"\n        \"entries\": \n          \"n\": null\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "string"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-nesting-null-dict",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "dict",
+      "description": "Nested null value is not a scalar string in dict.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Map",
+                "id": "Map_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "value_type": "string",
+                "entries": {
+                  "n": null
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "string"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-nesting-list-json",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Nested list value is not a scalar string in json.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"value_type\": \"string\",\n          \"entries\": {\n            \"n\": []\n          }\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "string"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-nesting-list-yaml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "Nested list value is not a scalar string in yaml.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Map\"\n        \"id\": \"Map_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": []\n        \"value_type\": \"string\"\n        \"entries\": \n          \"n\": []\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "string"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-nesting-list-dict",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "dict",
+      "description": "Nested list value is not a scalar string in dict.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Map",
+                "id": "Map_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "value_type": "string",
+                "entries": {
+                  "n": []
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "string"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-nesting-object-json",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "json",
+      "description": "Nested object value is not a scalar string in json.",
+      "payload": "{\n  \"steps\": [\n    {\n      \"id\": \"S_01\",\n      \"atoms\": [\n        {\n          \"kind\": \"Map\",\n          \"id\": \"Map_01\",\n          \"content\": \"Recorded fixture.\",\n          \"operators\": [],\n          \"children\": [],\n          \"value_type\": \"string\",\n          \"entries\": {\n            \"n\": {}\n          }\n        }\n      ]\n    }\n  ]\n}",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "string"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-nesting-object-yaml",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "yaml",
+      "description": "Nested object value is not a scalar string in yaml.",
+      "payload": "\"steps\": \n  - \"id\": \"S_01\"\n    \"atoms\": \n      - \"kind\": \"Map\"\n        \"id\": \"Map_01\"\n        \"content\": \"Recorded fixture.\"\n        \"operators\": []\n        \"children\": []\n        \"value_type\": \"string\"\n        \"entries\": \n          \"n\": {}\n",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "string"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-nesting-object-dict",
+      "family": "map_types",
+      "category": "negative",
+      "kinds": [
+        "Map"
+      ],
+      "format": "dict",
+      "description": "Nested object value is not a scalar string in dict.",
+      "payload": {
+        "steps": [
+          {
+            "id": "S_01",
+            "atoms": [
+              {
+                "kind": "Map",
+                "id": "Map_01",
+                "content": "Recorded fixture.",
+                "operators": [],
+                "children": [],
+                "value_type": "string",
+                "entries": {
+                  "n": {}
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "map_entries_typed",
+        "diagnostic_must_mention": [
+          "string"
+        ]
+      }
+    },
+    {
+      "id": "v07-map-forward-atom-reference",
+      "family": "map_types",
+      "category": "positive",
+      "kinds": [
+        "Map"
+      ],
+      "format": "xml",
+      "description": "Map atom_ref resolves against the complete trace, including a later declared atom.",
+      "payload": "<Step id=\"S_01\">\n<Map id=\"Map_01\" value_type=\"atom_ref\" entries=\"{&quot;later&quot;:&quot;Obs_01&quot;}\">Recorded fixture.</Map>\n<Observation id=\"Obs_01\">Observed later.</Observation>\n</Step>",
+      "expects": {
+        "outcome": "pass",
+        "roundtrip": true,
+        "canonical_json_stable": true
+      }
+    },
+    {
+      "id": "v07-task-runtime-status-queued",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Runtime queued is not a semantic Task verdict.",
+      "payload": "<Step id=\"S_01\">\n<Task id=\"Task_01\" status=\"queued\">Recorded fixture.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "task_status_enum",
+        "diagnostic_must_mention": [
+          "queued"
+        ]
+      }
+    },
+    {
+      "id": "v07-task-runtime-status-input-required",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Runtime input_required is not a semantic Task verdict.",
+      "payload": "<Step id=\"S_01\">\n<Task id=\"Task_01\" status=\"input_required\">Recorded fixture.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "task_status_enum",
+        "diagnostic_must_mention": [
+          "input_required"
+        ]
+      }
+    },
+    {
+      "id": "v07-task-runtime-status-completed",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Runtime completed is not a semantic Task verdict.",
+      "payload": "<Step id=\"S_01\">\n<Task id=\"Task_01\" status=\"completed\">Recorded fixture.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "task_status_enum",
+        "diagnostic_must_mention": [
+          "completed"
+        ]
+      }
+    },
+    {
+      "id": "v07-task-runtime-status-cancelled",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "Runtime cancelled is not a semantic Task verdict.",
+      "payload": "<Step id=\"S_01\">\n<Task id=\"Task_01\" status=\"cancelled\">Recorded fixture.</Task>\n</Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "task_status_enum",
+        "diagnostic_must_mention": [
+          "cancelled"
+        ]
+      }
+    },
+    {
+      "id": "v07-task-satisfied-does-not-close-required-goal",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A satisfied Task is not an authorized Finding/Concluding closure of a required Goal.",
+      "payload": "<Step id=\"S_01\"><Goal id=\"G_01\" priority=\"required\" scope=\"trace\">Check the result.</Goal><Observation id=\"Obs_01\">Check recorded.</Observation><Task id=\"Task_01\" status=\"satisfied\" for_goal=\"G_01\" evidence_ref=\"Obs_01\">Obligation asserted met.</Task></Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "goal_declared",
+        "diagnostic_must_mention": [
+          "G_01"
+        ]
+      }
+    },
+    {
+      "id": "v07-task-satisfied-does-not-record-action-result",
+      "family": "task_declaration",
+      "category": "negative",
+      "kinds": [
+        "Task"
+      ],
+      "format": "xml",
+      "description": "A satisfied Task is not an explicit Finding or Concluding result for an Action.",
+      "payload": "<Step id=\"S_01\"><Action id=\"A_01\">Performed the change.</Action><Observation id=\"Obs_01\">Change observed.</Observation><Task id=\"Task_01\" status=\"satisfied\" action_ref=\"A_01\" evidence_ref=\"Obs_01\">Obligation asserted met.</Task></Step>",
+      "expects": {
+        "outcome": "fail",
+        "phase": "validate",
+        "rule": "action_recorded",
+        "diagnostic_must_mention": [
+          "A_01"
+        ]
+      }
+    }
+  ],
+  "positive_assertions": {
+    "required": [
+      "semantic_field_equality",
+      "operators_preserved",
+      "local_ids_preserved",
+      "canonical_ids_preserved",
+      "typed_entry_values_preserved",
+      "opaque_correlators_preserved",
+      "new_children_empty",
+      "repeated_canonical_json_stable"
+    ],
+    "execution_status": "pending_consumer_execution"
+  }
+}

@@ -21,7 +21,7 @@ from pathlib import Path
 PROTOCOL_VERSION = "2026-07-28"
 SUPPORTED_PROTOCOL_VERSIONS = ("2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26")
 SERVER_NAME = "scholialang"
-SERVER_VERSION = "0.7.2"
+SERVER_VERSION = "0.7.3"
 
 # MCP 2026-07-28 ``_meta`` keys (SEP-2575 / SEP-2322) and the error code for a
 # version the server does not support (-32022 per the 2026-07-28 error-code
@@ -36,7 +36,7 @@ UNSUPPORTED_PROTOCOL_VERSION = -32022
 # returns may be shared through a cross-client cache.
 CACHEABLE_TTL_MS = 300_000
 CACHE_SCOPE = "private"
-MIN_VALIDATOR_VERSION = (0, 7, 2)
+MIN_VALIDATOR_VERSION = (0, 7, 3)
 MAX_TEXT = 6000
 
 # A stdio MCP server can outlive, or be started independently of, a host's
@@ -62,9 +62,22 @@ def _has_goal_concluding(atoms_mod):
         "Goal" in kinds
         and "Concluding" in kinds
         and version is not None
-        and version[:2] == MIN_VALIDATOR_VERSION[:2]
-        and version >= MIN_VALIDATOR_VERSION
+        and version == MIN_VALIDATOR_VERSION
     )
+
+
+def _matches_accepted_source(atoms_mod):
+    """A same-version rebuild must not silently replace the accepted engine."""
+    try:
+        vendor = Path(__file__).resolve().parent / "_scholia_vendored"
+        upstream = json.loads((vendor / "UPSTREAM.json").read_text(encoding="utf-8"))
+        package = Path(atoms_mod.__file__).resolve().parent
+        return all(
+            hashlib.sha256((package / name).read_bytes()).hexdigest() == info["source_sha256"]
+            for name, info in upstream["files"].items()
+        )
+    except (OSError, ValueError, AttributeError, KeyError, TypeError):
+        return False
 
 
 def _load_scholia_engine():
@@ -75,7 +88,7 @@ def _load_scholia_engine():
         from scholialang import validator as _validator_mod  # type: ignore
         from scholialang import parser as _parser_mod  # type: ignore
         from scholialang import atoms as _atoms_mod  # type: ignore
-        if _has_goal_concluding(_atoms_mod):
+        if _has_goal_concluding(_atoms_mod) and _matches_accepted_source(_atoms_mod):
             return _validator_mod, _parser_mod, _atoms_mod, "scholialang-package"
     except ImportError:
         pass
@@ -1506,7 +1519,7 @@ def tool_catalog(_args):
         "lint_engine": LINT_ENGINE,
         "autoemit_default": True,
         "package_version": SERVER_VERSION,
-        "language_grammar_version": "0.6.2",
+        "language_grammar_version": SCHOLIA_ATOMS.SCHOLIA_GRAMMAR_VERSION,
     }
     return content_result(json.dumps(structured, indent=2, sort_keys=True), structured)
 
@@ -2736,7 +2749,7 @@ def list_tools():
         "scholia_trace_export": "Compatibility alias for scholia_dag_export.",
         "scholia_catalog": "List Scholialang atoms, operators, relations, and resources.",
         "scholia_lookup": "Lookup a Scholialang atom, operator, or relation.",
-        "scholia_lint_snippet": "Validate a Scholia snippet against the stable Scholia v0.6.2 language grammar using the 0.7.2 validator (closed-set atoms, canonical_id/fingerprint well-formedness, references, closure rules, and warnings). Pass mode='tag_balance' for the legacy tag-only check.",
+        "scholia_lint_snippet": "Validate a Scholia snippet against the Scholia v0.7.0 language grammar using the 0.7.3 validator (closed-set atoms, canonical_id/fingerprint well-formedness, references, closure rules, and warnings). Pass mode='tag_balance' for the legacy tag-only check.",
         "scholia_lint_trace": "Validate a Scholia trace and return per-rule structured errors plus counts. Use for CI gates and dashboard rendering.",
     }
     return [

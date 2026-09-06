@@ -25,7 +25,7 @@ This repo provides:
 - provider stubs for Claude, Codex, Ollama, and OpenAI host adapters
 - **three release-ready plugins** for the major coding harnesses, each
   with the same stdio MCP server, the same SQLite-backed local DAG,
-  the same validator for the stable Scholia v0.6.2 language grammar, and shared storage:
+  the same validator for the Scholia v0.7.0 language grammar, and shared storage:
   - `plugins/codex/scholialang/` — Codex plugin
   - `plugins/claude-code/scholialang/` — Claude Code plugin
   - `plugins/ollama/scholialang/` — Ollama / local-model recipes for
@@ -36,15 +36,19 @@ This repo provides:
 
 The repo is intentionally separate from `scholialang`, which contains the
 language model, parser, validator, and serializers. This package depends on
-`scholialang>=0.7.2,<0.8` and tracks the `scholialang-spec` additive
+`scholialang==0.7.3` and tracks the `scholialang-spec` additive
 `fingerprint=` contract (over the v0.6.2 shared conformance corpus).
 
-> **Two version axes:** `0.7.2` is the Python package/plugin release. `v0.6.2`
-> is the stable Scholia language grammar it implements. References to “v0.6”
+> **Two version axes:** `0.7.3` is the Python package/plugin release. `v0.7.0`
+> is the Scholia language grammar it implements. References to “v0.6”
 > in grammar documentation do not mean that an older `0.6.x` package is
 > installed. Public UI and bundle copy should always name both axes.
 
 ## Install
+
+For this unpublished candidate, the accepted core and its PyYAML dependency
+are retained in `vendor/core`. See the [input receipt](docs/receipts/core-0.7.3.md)
+for a hash-checked local installation and rollback instructions.
 
 For agent hosts, install the host plugin first. The plugins bundle the stdio MCP
 server and vendored validator snapshot, so normal Codex, Claude Code, and
@@ -159,7 +163,7 @@ PYTHONPATH=src python3 -m scholialang_mcp codex-trace-config --repo-root /path/t
 
 Three release-ready plugin trees ship with this repo, one per major
 coding harness. Each plugin bundles the same stdio MCP server, the same
-local SQLite DAG store, the validator for the stable Scholia v0.6.2 grammar, and the
+local SQLite DAG store, the validator for the Scholia v0.7.0 grammar, and the
 same Codex rollout importer. Traces written in one harness are visible
 from the other two (shared `~/.scholialang/scholialang.sqlite3`).
 
@@ -174,10 +178,10 @@ Each plugin's tool surface is identical:
 - `scholia_dag_*` — local SQLite DAG traces
 - `scholia_trace_*` — compatibility aliases
 - `scholia_catalog`, `scholia_lookup` — reference lookups across the
-  v0.6 closed-set vocabulary (32 atom kinds, 11 canonical
+  v0.7 closed-set vocabulary (35 atom kinds, 11 canonical
   operators, v0.6 structural primitive closed sets for `Edge`, `Effect`,
   `Ref`, and `Meta`, and the criticality ladder)
-- `scholia_lint_snippet` — stable Scholia v0.6.2 grammar validation (closed-set
+- `scholia_lint_snippet` — Scholia v0.7.0 grammar validation (closed-set
   atoms, reference completeness, decision closure, action recording,
   hypothesis evaluation, retract consistency, constraint respect, goal
   declaration, operator vocabulary, location/edge shape, Concluding

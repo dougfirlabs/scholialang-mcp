@@ -1,0 +1,30 @@
+{
+  "acceptance_receipt_sha256": "c663a2d0c1df74a6cbe227f377a6b3d3329be41ed25ade237ee7cbd1924ffd20",
+  "acceptance_scope": "j04 core semantic contract; consumer integration eligible, protected merges/releases held",
+  "artifacts": {
+    "pyyaml-6.0.3-py3-none-any.whl": "313f164096b8f47badd9de8fcec66acf1cb59145c191e71249f3dd60497d2297",
+    "pyyaml-6.0.3.tar.gz": "d76623373421df22fb4cf8817020cbb7ef15c725b9d5e45f17e189bfc384190f",
+    "scholialang-0.7.3-py3-none-any.whl": "76c9e9a15cb3039bcf59a63b4727271cc9933745eecd4280712c5df65616317a",
+    "scholialang-0.7.3.tar.gz": "45c710fe24f1713ae54a57740b991b506dbb124af36c8ca0698a70f54915e88d"
+  },
+  "commit": "9a86a4645c49074c4a415ade01093bff0e2ca70c",
+  "dependencies": [
+    "PyYAML>=6.0"
+  ],
+  "grammar_version": "0.7.0",
+  "license": "MIT OR Apache-2.0",
+  "rollback_commit": "dbe66e98168c03905176c695e4abde596e81af21",
+  "schema": 1,
+  "source": "https://github.com/dougfirlabs/scholialang",
+  "spec_commit": "4e19eae3e55566dac450c0dbf7bcba03d12afc50",
+  "validator_version": "0.7.3",
+  "yaml": {
+    "build": "PYYAML_FORCE_LIBYAML=0 python setup.py --without-libyaml bdist_wheel",
+    "build_setuptools": "84.0.0",
+    "build_wheel": "0.48.0",
+    "license": "MIT",
+    "runtime_dependencies": [],
+    "source": "https://pypi.org/project/PyYAML/6.0.3/",
+    "version": "6.0.3"
+  }
+}

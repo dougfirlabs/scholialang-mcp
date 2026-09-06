@@ -1,0 +1,790 @@
+{
+  "schema": "semantic-atoms.coverage.v1",
+  "original_case_ids": [
+    "v07-catalog-all-three-new-kinds-with-legacy",
+    "v07-catalog-map-atom-distinct-from-inline-map-primitive",
+    "v07-catalog-event-and-eventref-coexist",
+    "v07-catalog-unknown-kind",
+    "v07-catalog-unknown-field-xml",
+    "v07-catalog-unknown-field-json",
+    "v07-catalog-unknown-field-yaml",
+    "v07-catalog-unknown-field-dict",
+    "v07-catalog-new-kind-under-legacy-profile",
+    "v07-catalog-unknown-future-profile",
+    "v07-map-empty-string",
+    "v07-map-empty-integer",
+    "v07-map-empty-boolean",
+    "v07-map-empty-atom-ref",
+    "v07-map-populated-string",
+    "v07-map-populated-integer-bounds",
+    "v07-map-populated-boolean",
+    "v07-map-populated-atom-ref",
+    "v07-map-unicode-and-escaping",
+    "v07-map-missing-value-type",
+    "v07-map-missing-entries",
+    "v07-map-invalid-value-type-enum",
+    "v07-map-entries-not-json-object",
+    "v07-map-entries-duplicate-keys-embedded-json",
+    "v07-map-entries-duplicate-keys-json-document",
+    "v07-map-entries-encoded-string-in-json",
+    "v07-map-nonstring-key-yaml",
+    "v07-map-empty-key",
+    "v07-map-mixed-types",
+    "v07-map-bool-as-integer",
+    "v07-map-integer-out-of-range",
+    "v07-map-float-value",
+    "v07-map-null-value",
+    "v07-map-list-value",
+    "v07-map-object-value",
+    "v07-map-dangling-atom-ref",
+    "v07-map-self-ref",
+    "v07-map-atom-ref-to-step",
+    "v07-event-same-prose-different-occurrence-ids",
+    "v07-event-same-occurrence-id-different-source",
+    "v07-event-optional-links-absent",
+    "v07-event-optional-links-present",
+    "v07-event-timestamp-offset",
+    "v07-event-timestamp-zulu",
+    "v07-event-missing-source",
+    "v07-event-missing-occurrence-id",
+    "v07-event-missing-event-type",
+    "v07-event-empty-content",
+    "v07-event-invalid-type-token",
+    "v07-event-duplicate-occurrence-pair",
+    "v07-event-duplicate-pair-contradictory-content",
+    "v07-event-naive-timestamp",
+    "v07-event-impossible-timestamp",
+    "v07-task-open-minimal",
+    "v07-task-open-with-opaque-runtime-ref",
+    "v07-task-satisfied-with-evidence",
+    "v07-task-unsatisfied-with-evidence",
+    "v07-task-withdrawn",
+    "v07-task-all-optional-references",
+    "v07-task-missing-status",
+    "v07-task-empty-content",
+    "v07-task-runtime-status-substituted",
+    "v07-task-satisfied-without-evidence",
+    "v07-task-unsatisfied-without-evidence",
+    "v07-task-evidence-wrong-kind",
+    "v07-relations-forward-references",
+    "v07-relations-task-evidence-observation",
+    "v07-relations-task-evidence-evidence",
+    "v07-relations-task-evidence-finding",
+    "v07-relations-task-evidence-concluding",
+    "v07-relations-opaque-refs-stay-opaque",
+    "v07-relations-event-for-task-dangling",
+    "v07-relations-event-for-action-dangling",
+    "v07-relations-event-for-goal-dangling",
+    "v07-relations-event-effect-ref-dangling",
+    "v07-relations-event-map-ref-dangling",
+    "v07-relations-task-for-goal-dangling",
+    "v07-relations-task-input-map-dangling",
+    "v07-relations-task-output-map-dangling",
+    "v07-relations-task-action-ref-dangling",
+    "v07-relations-task-evidence-ref-dangling",
+    "v07-relations-event-for-task-wrong-kind",
+    "v07-relations-event-for-action-wrong-kind",
+    "v07-relations-event-for-goal-wrong-kind",
+    "v07-relations-event-effect-ref-wrong-kind",
+    "v07-relations-event-map-ref-wrong-kind",
+    "v07-relations-task-for-goal-wrong-kind",
+    "v07-relations-task-input-map-wrong-kind",
+    "v07-relations-task-output-map-wrong-kind",
+    "v07-relations-task-action-ref-wrong-kind",
+    "v07-ids-kind-matching-and-text-derived",
+    "v07-ids-missing-new-kind-id",
+    "v07-ids-wrong-prefix",
+    "v07-ids-illegal-characters",
+    "v07-ids-duplicate-new-new",
+    "v07-ids-duplicate-new-legacy",
+    "v07-ids-duplicate-new-step",
+    "v07-canonical-map-insertion-order-not-identity",
+    "v07-canonical-map-value-change-changes-identity",
+    "v07-canonical-event-timestamp-excluded",
+    "v07-canonical-claimed-mismatch",
+    "v07-canonical-malformed",
+    "v07-serialization-roundtrip-all-new-kinds",
+    "v07-serialization-children-on-new-kind",
+    "v07-serialization-children-in-json",
+    "v07-serialization-operators-not-string-list"
+  ],
+  "case_ids": [
+    "v07-catalog-all-three-new-kinds-with-legacy",
+    "v07-catalog-map-atom-distinct-from-inline-map-primitive",
+    "v07-catalog-event-and-eventref-coexist",
+    "v07-catalog-unknown-kind",
+    "v07-catalog-unknown-field-xml",
+    "v07-catalog-unknown-field-json",
+    "v07-catalog-unknown-field-yaml",
+    "v07-catalog-unknown-field-dict",
+    "v07-catalog-new-kind-under-legacy-profile",
+    "v07-catalog-unknown-future-profile",
+    "v07-map-empty-string",
+    "v07-map-empty-integer",
+    "v07-map-empty-boolean",
+    "v07-map-empty-atom-ref",
+    "v07-map-populated-string",
+    "v07-map-populated-integer-bounds",
+    "v07-map-populated-boolean",
+    "v07-map-populated-atom-ref",
+    "v07-map-unicode-and-escaping",
+    "v07-map-missing-value-type",
+    "v07-map-missing-entries",
+    "v07-map-invalid-value-type-enum",
+    "v07-map-entries-not-json-object",
+    "v07-map-entries-duplicate-keys-embedded-json",
+    "v07-map-entries-duplicate-keys-json-document",
+    "v07-map-entries-encoded-string-in-json",
+    "v07-map-nonstring-key-yaml",
+    "v07-map-empty-key",
+    "v07-map-mixed-types",
+    "v07-map-bool-as-integer",
+    "v07-map-integer-out-of-range",
+    "v07-map-float-value",
+    "v07-map-null-value",
+    "v07-map-list-value",
+    "v07-map-object-value",
+    "v07-map-dangling-atom-ref",
+    "v07-map-self-ref",
+    "v07-map-atom-ref-to-step",
+    "v07-event-same-prose-different-occurrence-ids",
+    "v07-event-same-occurrence-id-different-source",
+    "v07-event-optional-links-absent",
+    "v07-event-optional-links-present",
+    "v07-event-timestamp-offset",
+    "v07-event-timestamp-zulu",
+    "v07-event-missing-source",
+    "v07-event-missing-occurrence-id",
+    "v07-event-missing-event-type",
+    "v07-event-empty-content",
+    "v07-event-invalid-type-token",
+    "v07-event-duplicate-occurrence-pair",
+    "v07-event-duplicate-pair-contradictory-content",
+    "v07-event-naive-timestamp",
+    "v07-event-impossible-timestamp",
+    "v07-task-open-minimal",
+    "v07-task-open-with-opaque-runtime-ref",
+    "v07-task-satisfied-with-evidence",
+    "v07-task-unsatisfied-with-evidence",
+    "v07-task-withdrawn",
+    "v07-task-all-optional-references",
+    "v07-task-missing-status",
+    "v07-task-empty-content",
+    "v07-task-runtime-status-substituted",
+    "v07-task-satisfied-without-evidence",
+    "v07-task-unsatisfied-without-evidence",
+    "v07-task-evidence-wrong-kind",
+    "v07-relations-forward-references",
+    "v07-relations-task-evidence-observation",
+    "v07-relations-task-evidence-evidence",
+    "v07-relations-task-evidence-finding",
+    "v07-relations-task-evidence-concluding",
+    "v07-relations-opaque-refs-stay-opaque",
+    "v07-relations-event-for-task-dangling",
+    "v07-relations-event-for-action-dangling",
+    "v07-relations-event-for-goal-dangling",
+    "v07-relations-event-effect-ref-dangling",
+    "v07-relations-event-map-ref-dangling",
+    "v07-relations-task-for-goal-dangling",
+    "v07-relations-task-input-map-dangling",
+    "v07-relations-task-output-map-dangling",
+    "v07-relations-task-action-ref-dangling",
+    "v07-relations-task-evidence-ref-dangling",
+    "v07-relations-event-for-task-wrong-kind",
+    "v07-relations-event-for-action-wrong-kind",
+    "v07-relations-event-for-goal-wrong-kind",
+    "v07-relations-event-effect-ref-wrong-kind",
+    "v07-relations-event-map-ref-wrong-kind",
+    "v07-relations-task-for-goal-wrong-kind",
+    "v07-relations-task-input-map-wrong-kind",
+    "v07-relations-task-output-map-wrong-kind",
+    "v07-relations-task-action-ref-wrong-kind",
+    "v07-ids-kind-matching-and-text-derived",
+    "v07-ids-missing-new-kind-id",
+    "v07-ids-wrong-prefix",
+    "v07-ids-illegal-characters",
+    "v07-ids-duplicate-new-new",
+    "v07-ids-duplicate-new-legacy",
+    "v07-ids-duplicate-new-step",
+    "v07-canonical-map-insertion-order-not-identity",
+    "v07-canonical-map-value-change-changes-identity",
+    "v07-canonical-event-timestamp-excluded",
+    "v07-canonical-claimed-mismatch",
+    "v07-canonical-malformed",
+    "v07-serialization-roundtrip-all-new-kinds",
+    "v07-serialization-children-on-new-kind",
+    "v07-serialization-children-in-json",
+    "v07-serialization-operators-not-string-list",
+    "v07-catalog-unknown-field-map-json",
+    "v07-catalog-unknown-field-map-yaml",
+    "v07-catalog-unknown-field-event-xml",
+    "v07-catalog-unknown-field-event-json",
+    "v07-catalog-unknown-field-event-dict",
+    "v07-catalog-unknown-field-task-xml",
+    "v07-catalog-unknown-field-task-yaml",
+    "v07-catalog-unknown-field-task-dict",
+    "v07-serialization-children-map-json",
+    "v07-serialization-children-map-yaml",
+    "v07-serialization-children-map-dict",
+    "v07-serialization-children-event-xml",
+    "v07-serialization-children-event-json",
+    "v07-serialization-children-event-yaml",
+    "v07-serialization-children-event-dict",
+    "v07-serialization-children-task-xml",
+    "v07-serialization-children-task-yaml",
+    "v07-serialization-children-task-dict",
+    "v07-canonical_ids-claimed-mismatch-map-json",
+    "v07-canonical_ids-claimed-mismatch-map-yaml",
+    "v07-canonical_ids-claimed-mismatch-map-dict",
+    "v07-canonical_ids-claimed-mismatch-event-xml",
+    "v07-canonical_ids-claimed-mismatch-event-json",
+    "v07-canonical_ids-claimed-mismatch-event-yaml",
+    "v07-canonical_ids-claimed-mismatch-event-dict",
+    "v07-canonical_ids-claimed-mismatch-task-xml",
+    "v07-canonical_ids-claimed-mismatch-task-json",
+    "v07-canonical_ids-claimed-mismatch-task-yaml",
+    "v07-canonical_ids-claimed-mismatch-task-dict",
+    "v07-canonical_ids-malformed-claim-map-xml",
+    "v07-canonical_ids-malformed-claim-map-json",
+    "v07-canonical_ids-malformed-claim-map-yaml",
+    "v07-canonical_ids-malformed-claim-map-dict",
+    "v07-canonical_ids-malformed-claim-event-xml",
+    "v07-canonical_ids-malformed-claim-event-json",
+    "v07-canonical_ids-malformed-claim-event-yaml",
+    "v07-canonical_ids-malformed-claim-event-dict",
+    "v07-canonical_ids-malformed-claim-task-json",
+    "v07-canonical_ids-malformed-claim-task-yaml",
+    "v07-canonical_ids-malformed-claim-task-dict",
+    "v07-ids-wrong-prefix-map",
+    "v07-ids-illegal-characters-map",
+    "v07-ids-missing-id-event",
+    "v07-ids-wrong-prefix-event",
+    "v07-ids-missing-id-task",
+    "v07-ids-illegal-characters-task",
+    "v07-ids-whitespace-map",
+    "v07-ids-whitespace-event",
+    "v07-ids-whitespace-task",
+    "v07-map-whitespace-value-type",
+    "v07-event-whitespace-source",
+    "v07-event-whitespace-occurrence-id",
+    "v07-event-whitespace-event-type",
+    "v07-event-whitespace-content",
+    "v07-task-whitespace-status",
+    "v07-task-whitespace-content",
+    "v07-map-integer-bool-false-xml",
+    "v07-map-integer-bool-true-json",
+    "v07-map-integer-bool-false-json",
+    "v07-map-integer-bool-true-yaml",
+    "v07-map-integer-bool-false-yaml",
+    "v07-map-integer-bool-true-dict",
+    "v07-map-integer-bool-false-dict",
+    "v07-map-integer-negative-overflow",
+    "v07-map-integer-numeric-string",
+    "v07-map-integer-scientific-float",
+    "v07-map-special-number-nan-xml",
+    "v07-map-special-number-nan-json",
+    "v07-map-special-number-infinity-xml",
+    "v07-map-special-number-infinity-json",
+    "v07-map-special-number-negative-infinity-xml",
+    "v07-map-special-number-negative-infinity-json",
+    "v07-map-special-number-nan-yaml",
+    "v07-map-special-number-infinity-yaml",
+    "v07-map-special-number-negative-infinity-yaml",
+    "v07-map-entries-duplicate-keys-yaml-document",
+    "v07-map-duplicate-structure-kind-json",
+    "v07-map-duplicate-structure-kind-yaml",
+    "v07-map-duplicate-structure-id-json",
+    "v07-map-duplicate-structure-id-yaml",
+    "v07-map-duplicate-structure-entries-json",
+    "v07-map-duplicate-structure-entries-yaml",
+    "v07-map-nesting-null-json",
+    "v07-map-nesting-null-yaml",
+    "v07-map-nesting-null-dict",
+    "v07-map-nesting-list-json",
+    "v07-map-nesting-list-yaml",
+    "v07-map-nesting-list-dict",
+    "v07-map-nesting-object-json",
+    "v07-map-nesting-object-yaml",
+    "v07-map-nesting-object-dict",
+    "v07-map-forward-atom-reference",
+    "v07-task-runtime-status-queued",
+    "v07-task-runtime-status-input-required",
+    "v07-task-runtime-status-completed",
+    "v07-task-runtime-status-cancelled",
+    "v07-task-satisfied-does-not-close-required-goal",
+    "v07-task-satisfied-does-not-record-action-result"
+  ],
+  "counts": {
+    "total_cases": 204,
+    "positive": 36,
+    "negative": 168,
+    "families": {
+      "catalog": {
+        "positive": 3,
+        "negative": 15
+      },
+      "map_types": {
+        "positive": 10,
+        "negative": 55
+      },
+      "event_identity": {
+        "positive": 6,
+        "negative": 13
+      },
+      "task_declaration": {
+        "positive": 6,
+        "negative": 14
+      },
+      "relation_legality": {
+        "positive": 6,
+        "negative": 19
+      },
+      "local_ids": {
+        "positive": 1,
+        "negative": 15
+      },
+      "canonical_ids": {
+        "positive": 3,
+        "negative": 24
+      },
+      "serialization": {
+        "positive": 1,
+        "negative": 13
+      }
+    }
+  },
+  "formats": {
+    "xml": {
+      "positive": 35,
+      "negative": 87
+    },
+    "json": {
+      "positive": 1,
+      "negative": 27
+    },
+    "yaml": {
+      "positive": 0,
+      "negative": 25
+    },
+    "dict": {
+      "positive": 0,
+      "negative": 29
+    }
+  },
+  "runtime_obligation_ids": [
+    "v07-runtime-no-io",
+    "v07-runtime-roundtrip-no-caller-mutation",
+    "v07-runtime-forced-canonical-collision",
+    "v07-runtime-identical-payload-registry",
+    "v07-runtime-provenance-registry",
+    "v07-runtime-in-memory-map-key-and-object-shapes",
+    "v07-runtime-canonical-reference-resolution",
+    "v07-runtime-new-field-canonical-identity",
+    "v07-runtime-opaque-correlators",
+    "v07-runtime-legacy-artifact-probe",
+    "v07-runtime-packaging-parity"
+  ],
+  "runtime_obligation_case_counts": {
+    "v07-runtime-no-io": 15,
+    "v07-runtime-roundtrip-no-caller-mutation": 24,
+    "v07-runtime-forced-canonical-collision": 3,
+    "v07-runtime-identical-payload-registry": 3,
+    "v07-runtime-provenance-registry": 2,
+    "v07-runtime-in-memory-map-key-and-object-shapes": 16,
+    "v07-runtime-canonical-reference-resolution": 96,
+    "v07-runtime-new-field-canonical-identity": 22,
+    "v07-runtime-opaque-correlators": 5,
+    "v07-runtime-legacy-artifact-probe": 6,
+    "v07-runtime-packaging-parity": 3
+  },
+  "runtime_execution": "pending_consumer_execution",
+  "probe_families": [
+    {
+      "id": "map-int-bounds",
+      "case_ids": [
+        "v07-map-populated-integer-bounds"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "map-int-bool",
+      "case_ids": [
+        "v07-map-bool-as-integer",
+        "v07-map-integer-bool-false-xml",
+        "v07-map-integer-bool-true-json",
+        "v07-map-integer-bool-false-json",
+        "v07-map-integer-bool-true-yaml",
+        "v07-map-integer-bool-false-yaml",
+        "v07-map-integer-bool-true-dict",
+        "v07-map-integer-bool-false-dict"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "map-int-overflow",
+      "case_ids": [
+        "v07-map-integer-out-of-range",
+        "v07-map-integer-negative-overflow"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "map-int-float",
+      "case_ids": [
+        "v07-map-float-value",
+        "v07-map-integer-scientific-float"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "map-int-string",
+      "case_ids": [
+        "v07-map-integer-numeric-string"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "map-special-numbers",
+      "case_ids": [
+        "v07-map-special-number-nan-xml",
+        "v07-map-special-number-nan-json",
+        "v07-map-special-number-infinity-xml",
+        "v07-map-special-number-infinity-json",
+        "v07-map-special-number-negative-infinity-xml",
+        "v07-map-special-number-negative-infinity-json",
+        "v07-map-special-number-nan-yaml",
+        "v07-map-special-number-infinity-yaml",
+        "v07-map-special-number-negative-infinity-yaml"
+      ],
+      "runtime_obligation_ids": [
+        "v07-runtime-in-memory-map-key-and-object-shapes"
+      ]
+    },
+    {
+      "id": "map-duplicate-xml",
+      "case_ids": [
+        "v07-map-entries-duplicate-keys-embedded-json"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "map-duplicate-json",
+      "case_ids": [
+        "v07-map-entries-duplicate-keys-json-document"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "map-duplicate-yaml",
+      "case_ids": [
+        "v07-map-entries-duplicate-keys-yaml-document"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "map-duplicate-structure",
+      "case_ids": [
+        "v07-map-duplicate-structure-kind-json",
+        "v07-map-duplicate-structure-kind-yaml",
+        "v07-map-duplicate-structure-id-json",
+        "v07-map-duplicate-structure-id-yaml",
+        "v07-map-duplicate-structure-entries-json",
+        "v07-map-duplicate-structure-entries-yaml"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "map-nesting",
+      "case_ids": [
+        "v07-map-null-value",
+        "v07-map-list-value",
+        "v07-map-object-value",
+        "v07-map-nesting-null-json",
+        "v07-map-nesting-null-yaml",
+        "v07-map-nesting-null-dict",
+        "v07-map-nesting-list-json",
+        "v07-map-nesting-list-yaml",
+        "v07-map-nesting-list-dict",
+        "v07-map-nesting-object-json",
+        "v07-map-nesting-object-yaml",
+        "v07-map-nesting-object-dict"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "map-key-shapes",
+      "case_ids": [
+        "v07-map-nonstring-key-yaml",
+        "v07-map-empty-key"
+      ],
+      "runtime_obligation_ids": [
+        "v07-runtime-in-memory-map-key-and-object-shapes"
+      ]
+    },
+    {
+      "id": "map-order-identity",
+      "case_ids": [
+        "v07-canonical-map-insertion-order-not-identity"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "map-value-identity",
+      "case_ids": [
+        "v07-canonical-map-value-change-changes-identity"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "map-empty-types",
+      "case_ids": [
+        "v07-map-empty-string",
+        "v07-map-empty-integer",
+        "v07-map-empty-boolean",
+        "v07-map-empty-atom-ref"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "map-reference",
+      "case_ids": [
+        "v07-map-populated-atom-ref",
+        "v07-map-dangling-atom-ref",
+        "v07-map-self-ref",
+        "v07-map-atom-ref-to-step",
+        "v07-map-forward-atom-reference"
+      ],
+      "runtime_obligation_ids": [
+        "v07-runtime-canonical-reference-resolution"
+      ]
+    },
+    {
+      "id": "event-occurrence-distinct",
+      "case_ids": [
+        "v07-event-same-prose-different-occurrence-ids"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "event-source-distinct",
+      "case_ids": [
+        "v07-event-same-occurrence-id-different-source"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "event-duplicate-identical",
+      "case_ids": [
+        "v07-event-duplicate-occurrence-pair"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "event-duplicate-conflict",
+      "case_ids": [
+        "v07-event-duplicate-pair-contradictory-content"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "event-time-provenance",
+      "case_ids": [
+        "v07-canonical-event-timestamp-excluded"
+      ],
+      "runtime_obligation_ids": [
+        "v07-runtime-provenance-registry"
+      ]
+    },
+    {
+      "id": "event-invalid-time",
+      "case_ids": [
+        "v07-event-naive-timestamp",
+        "v07-event-impossible-timestamp"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "task-goal-not-closed",
+      "case_ids": [
+        "v07-task-satisfied-does-not-close-required-goal"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "task-action-not-recorded",
+      "case_ids": [
+        "v07-task-satisfied-does-not-record-action-result"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "task-runtime-enum",
+      "case_ids": [
+        "v07-task-runtime-status-substituted",
+        "v07-task-runtime-status-queued",
+        "v07-task-runtime-status-input-required",
+        "v07-task-runtime-status-completed",
+        "v07-task-runtime-status-cancelled"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "task-verdict-evidence",
+      "case_ids": [
+        "v07-task-satisfied-without-evidence",
+        "v07-task-unsatisfied-without-evidence",
+        "v07-task-evidence-wrong-kind",
+        "v07-relations-task-evidence-observation",
+        "v07-relations-task-evidence-evidence",
+        "v07-relations-task-evidence-finding",
+        "v07-relations-task-evidence-concluding"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "task-opaque-handle",
+      "case_ids": [
+        "v07-task-open-with-opaque-runtime-ref",
+        "v07-relations-opaque-refs-stay-opaque"
+      ],
+      "runtime_obligation_ids": [
+        "v07-runtime-opaque-correlators"
+      ]
+    },
+    {
+      "id": "typed-forward-refs",
+      "case_ids": [
+        "v07-relations-forward-references"
+      ],
+      "runtime_obligation_ids": [
+        "v07-runtime-canonical-reference-resolution"
+      ]
+    },
+    {
+      "id": "typed-wrong-kind",
+      "case_ids": [
+        "v07-task-evidence-wrong-kind",
+        "v07-relations-event-for-task-wrong-kind",
+        "v07-relations-event-for-action-wrong-kind",
+        "v07-relations-event-for-goal-wrong-kind",
+        "v07-relations-event-effect-ref-wrong-kind",
+        "v07-relations-event-map-ref-wrong-kind",
+        "v07-relations-task-for-goal-wrong-kind",
+        "v07-relations-task-input-map-wrong-kind",
+        "v07-relations-task-output-map-wrong-kind",
+        "v07-relations-task-action-ref-wrong-kind"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "strict-unknown-fields",
+      "case_ids": [
+        "v07-catalog-unknown-field-xml",
+        "v07-catalog-unknown-field-json",
+        "v07-catalog-unknown-field-yaml",
+        "v07-catalog-unknown-field-dict",
+        "v07-catalog-unknown-field-map-json",
+        "v07-catalog-unknown-field-map-yaml",
+        "v07-catalog-unknown-field-event-xml",
+        "v07-catalog-unknown-field-event-json",
+        "v07-catalog-unknown-field-event-dict",
+        "v07-catalog-unknown-field-task-xml",
+        "v07-catalog-unknown-field-task-yaml",
+        "v07-catalog-unknown-field-task-dict"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "strict-children",
+      "case_ids": [
+        "v07-serialization-children-on-new-kind",
+        "v07-serialization-children-in-json",
+        "v07-serialization-children-map-json",
+        "v07-serialization-children-map-yaml",
+        "v07-serialization-children-map-dict",
+        "v07-serialization-children-event-xml",
+        "v07-serialization-children-event-json",
+        "v07-serialization-children-event-yaml",
+        "v07-serialization-children-event-dict",
+        "v07-serialization-children-task-xml",
+        "v07-serialization-children-task-yaml",
+        "v07-serialization-children-task-dict"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "claimed-id-tamper",
+      "case_ids": [
+        "v07-canonical-claimed-mismatch",
+        "v07-canonical-malformed",
+        "v07-canonical_ids-claimed-mismatch-map-json",
+        "v07-canonical_ids-claimed-mismatch-map-yaml",
+        "v07-canonical_ids-claimed-mismatch-map-dict",
+        "v07-canonical_ids-claimed-mismatch-event-xml",
+        "v07-canonical_ids-claimed-mismatch-event-json",
+        "v07-canonical_ids-claimed-mismatch-event-yaml",
+        "v07-canonical_ids-claimed-mismatch-event-dict",
+        "v07-canonical_ids-claimed-mismatch-task-xml",
+        "v07-canonical_ids-claimed-mismatch-task-json",
+        "v07-canonical_ids-claimed-mismatch-task-yaml",
+        "v07-canonical_ids-claimed-mismatch-task-dict",
+        "v07-canonical_ids-malformed-claim-map-xml",
+        "v07-canonical_ids-malformed-claim-map-json",
+        "v07-canonical_ids-malformed-claim-map-yaml",
+        "v07-canonical_ids-malformed-claim-map-dict",
+        "v07-canonical_ids-malformed-claim-event-xml",
+        "v07-canonical_ids-malformed-claim-event-json",
+        "v07-canonical_ids-malformed-claim-event-yaml",
+        "v07-canonical_ids-malformed-claim-event-dict",
+        "v07-canonical_ids-malformed-claim-task-json",
+        "v07-canonical_ids-malformed-claim-task-yaml",
+        "v07-canonical_ids-malformed-claim-task-dict"
+      ],
+      "runtime_obligation_ids": []
+    },
+    {
+      "id": "roundtrip-identity",
+      "case_ids": [
+        "v07-serialization-roundtrip-all-new-kinds"
+      ],
+      "runtime_obligation_ids": [
+        "v07-runtime-new-field-canonical-identity"
+      ]
+    },
+    {
+      "id": "roundtrip-no-mutation",
+      "case_ids": [],
+      "runtime_obligation_ids": [
+        "v07-runtime-roundtrip-no-caller-mutation"
+      ]
+    },
+    {
+      "id": "forced-canonical-collision",
+      "case_ids": [],
+      "runtime_obligation_ids": [
+        "v07-runtime-forced-canonical-collision"
+      ]
+    },
+    {
+      "id": "identical-payload-registry",
+      "case_ids": [],
+      "runtime_obligation_ids": [
+        "v07-runtime-identical-payload-registry"
+      ]
+    },
+    {
+      "id": "provenance-registry",
+      "case_ids": [],
+      "runtime_obligation_ids": [
+        "v07-runtime-provenance-registry"
+      ]
+    },
+    {
+      "id": "no-io",
+      "case_ids": [],
+      "runtime_obligation_ids": [
+        "v07-runtime-no-io"
+      ]
+    }
+  ]
+}

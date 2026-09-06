@@ -42,11 +42,11 @@ import sys
 import tomllib
 from pathlib import Path
 
-VERIFY_VERSION = "0.7.2"
+VERIFY_VERSION = "0.7.3"
 SCHEMA_VERSION = 1
-# The stable Scholia language grammar. Release 0.7.2 implements grammar
-# v0.6.2 — distinct axes, expected alignment, never a downgrade.
-STABLE_GRAMMAR_VERSION = "0.6.2"
+# The stable Scholia language grammar. Release 0.7.3 implements grammar
+# v0.7.0 — distinct axes, expected alignment, never a downgrade.
+STABLE_GRAMMAR_VERSION = "0.7.0"
 SKILL_NAME = "scholialang-verify"
 
 MCP_PACKAGE_DIST = "scholialang-mcp"
@@ -77,7 +77,8 @@ DEFAULT_ARMS = ("canonical-plugin", "vendored-codex", INSTALLED_ARM)
 
 PLUGIN_PROTOCOL_VERSION = "2025-11-25"
 WHEEL_PROTOCOL_VERSION = "2025-06-18"
-SPEC_FIXTURE_SUBDIR = Path("tests/fixtures/scholialang-spec") / f"v{STABLE_GRAMMAR_VERSION}"
+COMPATIBILITY_CORPUS_VERSION = "0.6.2"
+SPEC_FIXTURE_SUBDIR = Path("tests/fixtures/scholialang-spec") / f"v{COMPATIBILITY_CORPUS_VERSION}"
 SPEC_FIXTURE_FILE = "action_recorded.json"
 
 EXCHANGE_CHAR_BUDGET = 4000
@@ -849,7 +850,7 @@ def scenario_shared_spec_fixtures(ctx, recorder):
     if not corpus.is_file():
         return ("not_run", f"shared scholialang-spec corpus unavailable at {corpus}")
     suite = json.loads(corpus.read_text(encoding="utf-8"))
-    recorder.check("corpus_targets_stable_grammar", suite.get("spec_version") == STABLE_GRAMMAR_VERSION, str(suite.get("spec_version")))
+    recorder.check("corpus_targets_stable_grammar", suite.get("spec_version") == COMPATIBILITY_CORPUS_VERSION, str(suite.get("spec_version")))
     driven = 0
     adapted_out = 0
     for case in suite["cases"]:

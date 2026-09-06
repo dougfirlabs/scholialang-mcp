@@ -535,8 +535,8 @@ class PublicDagContractRegressionTests(unittest.TestCase):
 
     def test_catalog_distinguishes_package_release_from_language_grammar(self):
         catalog = server.tool_catalog({})["structuredContent"]
-        self.assertEqual(catalog["package_version"], "0.7.2")
-        self.assertEqual(catalog["language_grammar_version"], "0.6.2")
+        self.assertEqual(catalog["package_version"], "0.7.3")
+        self.assertEqual(catalog["language_grammar_version"], "0.7.0")
 
     def test_add_atom_schema_is_closed_and_preserves_atom_attributes(self):
         schema = server.tool_schema("scholia_dag_add_atom")
@@ -1080,11 +1080,15 @@ class ScholialangValidatorTests(unittest.TestCase):
     def test_catalog_exposes_v05_closed_sets(self):
         result = json.loads(server.tool_catalog({})["content"][0]["text"])
         self.assertIn("scholia_atom_kinds_v05", result)
-        self.assertEqual(len(result["scholia_atom_kinds_v05"]), 32)
+        # 35 = the 32 stable v0.6.2 kinds plus the v0.7-proposed Map/Event/
+        # Task semantic kinds shipped by the accepted scholialang 0.7.3 engine.
+        self.assertEqual(len(result["scholia_atom_kinds_v05"]), 35)
         self.assertIn("Concluding", result["scholia_atom_kinds_v05"])
+        for proposed in ("Map", "Event", "Task"):
+            self.assertIn(proposed, result["scholia_atom_kinds_v05"])
         self.assertIn("scholia_canonical_operators_v05", result)
         self.assertIn("scholia_criticality_rank", result)
-        self.assertEqual(result["scholia_validator_version"], "0.7.2")
+        self.assertEqual(result["scholia_validator_version"], "0.7.3")
         # Back-compat aliases remain available for older clients.
         self.assertIn("scholia_atom_kinds_v04", result)
         self.assertIn("scholia_canonical_operators_v04", result)
@@ -1193,15 +1197,33 @@ class ScholialangPluginManifestTests(unittest.TestCase):
     def test_installed_validator_must_meet_release_floor(self):
         class Atoms:
             ATOM_KINDS = ("Goal", "Concluding")
-            SCHOLIA_VALIDATOR_VERSION = "0.7.2"
+            SCHOLIA_VALIDATOR_VERSION = "0.7.3"
 
         self.assertTrue(server._has_goal_concluding(Atoms))
+        Atoms.SCHOLIA_VALIDATOR_VERSION = "0.7.4"
+        self.assertFalse(server._has_goal_concluding(Atoms))
+        Atoms.SCHOLIA_VALIDATOR_VERSION = "0.7.2"
+        self.assertFalse(server._has_goal_concluding(Atoms))
         Atoms.SCHOLIA_VALIDATOR_VERSION = "0.7.0"
         self.assertFalse(server._has_goal_concluding(Atoms))
         Atoms.SCHOLIA_VALIDATOR_VERSION = "0.6.2"
         self.assertFalse(server._has_goal_concluding(Atoms))
         Atoms.SCHOLIA_VALIDATOR_VERSION = "1.0.0"
         self.assertFalse(server._has_goal_concluding(Atoms))
+
+    def test_same_version_modified_engine_cannot_outrank_vendor(self):
+        import types
+        import zipfile
+
+        root = SERVER_PATH.parents[4]
+        with tempfile.TemporaryDirectory() as tmp:
+            with zipfile.ZipFile(root / "vendor/core/scholialang-0.7.3-py3-none-any.whl") as wheel:
+                wheel.extractall(tmp)
+            atoms = types.SimpleNamespace(__file__=str(Path(tmp) / "scholialang/atoms.py"))
+            self.assertTrue(server._matches_accepted_source(atoms))
+            serializer = Path(tmp) / "scholialang/serializer.py"
+            serializer.write_bytes(serializer.read_bytes() + b"\n# changed\n")
+            self.assertFalse(server._matches_accepted_source(atoms))
 
 
 class FramingTests(unittest.TestCase):

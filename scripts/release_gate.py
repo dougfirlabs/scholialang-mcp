@@ -38,9 +38,9 @@ import tempfile
 import tomllib
 from pathlib import Path
 
-GATE_VERSION = "0.7.2"
+GATE_VERSION = "0.7.3"
 SCHEMA_VERSION = 1
-STABLE_GRAMMAR_VERSION = "0.6.2"
+STABLE_GRAMMAR_VERSION = "0.7.0"
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ("scholialang-doctor", "scholialang-verify")

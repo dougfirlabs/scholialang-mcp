@@ -1,3 +1,7 @@
 # Plugin/Scholia Live release contracts run from the repository but remain
 # outside the PyPI source and wheel distributions.
 exclude tests/test_v062_vendor_contract.py
+# Preserve the accepted local dependency input in the source distribution.
+recursive-include vendor/core *
+include scripts/verify_core_input.py
+include docs/receipts/core-0.7.3.md

@@ -34,7 +34,7 @@ import hashlib
 import json
 import warnings
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, replace
 from enum import Enum
 from typing import Any, ClassVar, Optional, Union
 
@@ -485,6 +485,88 @@ class EventRef(Atom):
     kind: ClassVar[str] = "EventRef"
 
 
+# ── v0.7.3-candidate — proposed semantic kinds (grammar 0.7.0) ───────
+#
+# Map / Event / Task are the three PROPOSED additive kinds from
+# SCHOLIA_v0.7_SPEC.md (scholialang-spec, grammar 0.7.0 / package
+# 0.7.3). They are declarative semantics only: constructing, parsing,
+# validating, hashing, or serializing one NEVER executes work,
+# dereferences an opaque correlator, or grants authority. They carry
+# no nested child atoms in this revision, and each REQUIRES a
+# kind-prefixed trace-local id (``Map_…`` / ``Event_…`` / ``Task_…``).
+
+
+@dataclass
+class Map(Atom):
+    """v0.7-proposed — a named, homogeneous, finite typed mapping value.
+
+    Distinct from the inline ``MAP`` primitive (a type alias above), from
+    a topology, and from an arbitrary object bag. ``value_type`` declares
+    the single type every entry value must match (``string`` / ``integer``
+    / ``boolean`` / ``atom_ref``); ``entries`` is a possibly-empty mapping
+    with unique nonempty string keys. The optional body is a human
+    explanation, not a second data payload. On the XML wire ``entries``
+    is a canonical-JSON object attribute; JSON/YAML carry a real mapping.
+    """
+
+    value_type: Optional[str] = None
+    entries: Optional[dict[str, Any]] = None
+    kind: ClassVar[str] = "Map"
+
+
+@dataclass
+class Event(Atom):
+    """v0.7-proposed — a recorded occurrence, not a delivered notification.
+
+    ``(source, occurrence_id)`` identifies the occurrence; two Events with
+    the same pair in one trace are rejected even with matching bodies —
+    transport deduplication belongs upstream of semantic insertion.
+    ``timestamp`` is RFC3339-with-timezone and, like all provenance, is
+    excluded from canonical identity. Distinct from the existing
+    ``EventRef`` (which stays the external event-stream reference kind).
+    ``external_ref`` is an opaque correlator: never interpreted as a local
+    id, dereferenced, or treated as proof of identity/authority.
+    """
+
+    source: Optional[str] = None
+    occurrence_id: Optional[str] = None
+    event_type: Optional[str] = None
+    timestamp: Optional[str] = None
+    for_task: Optional[str] = None
+    for_action: Optional[str] = None
+    for_goal: Optional[str] = None
+    effect_ref: Optional[str] = None
+    map_ref: Optional[str] = None
+    external_ref: Optional[str] = None
+    kind: ClassVar[str] = "Event"
+
+
+@dataclass
+class Task(Atom):
+    """v0.7-proposed — declarative work semantics, not a runtime task handle.
+
+    ``status`` is the author's descriptive claim (``open`` / ``satisfied``
+    / ``unsatisfied`` / ``withdrawn``) — never enforcement, authorization,
+    or a runtime execution state; runtime lifecycle states (queued,
+    working, cancelled, …) are never legal here. A satisfied Task does
+    NOT close a required Goal, substitute for a Finding/Concluding, or
+    excuse an Action without a recorded result — existing closure rules
+    remain authoritative. ``satisfied``/``unsatisfied`` REQUIRE
+    ``evidence_ref``. ``runtime_ref`` is an opaque correlator for a
+    separately authorized runtime task; recording it never creates or
+    controls one.
+    """
+
+    status: Optional[str] = None
+    for_goal: Optional[str] = None
+    input_map: Optional[str] = None
+    output_map: Optional[str] = None
+    action_ref: Optional[str] = None
+    evidence_ref: Optional[str] = None
+    runtime_ref: Optional[str] = None
+    kind: ClassVar[str] = "Task"
+
+
 @dataclass
 class Budget(Atom):
     """§3f — declared resource cap for a Goal, Step, or atom."""
@@ -642,10 +724,61 @@ _ATOM_CLASSES: dict[str, type[Atom]] = {
     "Effect": Effect,
     "Ref": Ref,
     "Meta": Meta,
+    # v0.7.3-candidate — proposed additive semantic kinds (grammar 0.7.0).
+    "Map": Map,
+    "Event": Event,
+    "Task": Task,
 }
 
 ATOM_KINDS: tuple[str, ...] = tuple(_ATOM_CLASSES.keys())
 PSEUDO_ATOM_KINDS: tuple[str, ...] = ("Meta:research-mode",)
+
+# ── v0.7 — current vs legacy catalog projections ─────────────────────
+#
+# The CURRENT catalog is the 35-kind set above. The LEGACY projection is
+# the immutable 32-kind v0.6.2 catalog — the closed set every already-
+# released 0.6.x/0.7.0-0.7.2 consumer understands. It is spelled out as
+# an explicit literal (not derived) so the historical contract cannot
+# drift when the current catalog grows.
+LEGACY_ATOM_KINDS: tuple[str, ...] = (
+    "Thinking",
+    "Observation",
+    "Action",
+    "Hypothesis",
+    "Evidence",
+    "Finding",
+    "Contradiction",
+    "Uncertainty",
+    "Retract",
+    "Concluding",
+    "Deciding",
+    "Alternative",
+    "Branch",
+    "Loop",
+    "Parallel",
+    "Storing",
+    "Print",
+    "Reference",
+    "Implication",
+    "Handoff",
+    "Question",
+    "Review",
+    "Constraint",
+    "Goal",
+    "Confidence",
+    "EventRef",
+    "Budget",
+    "Cost",
+    "Edge",
+    "Effect",
+    "Ref",
+    "Meta",
+)
+LEGACY_KNOWN_KINDS: frozenset[str] = frozenset(LEGACY_ATOM_KINDS)
+
+# The three proposed additive kinds — CURRENT catalog minus LEGACY.
+SEMANTIC_ATOM_KINDS: tuple[str, ...] = ("Map", "Event", "Task")
+SEMANTIC_KINDS: frozenset[str] = frozenset(SEMANTIC_ATOM_KINDS)
 
 
 # ── Closed-set canonical helpers (grammar-emergence detector) ────────
@@ -779,23 +912,25 @@ def _hash_value(value: Any) -> Any:
     return value
 
 
-def compute_canonical_id(atom: "Atom") -> str:
-    """Compute the content-addressable canonical_id for ``atom``.
+# Number of lowercase hex digits kept from the SHA-256 digest in a
+# canonical_id. 12 is the cross-implementation contract value — do NOT
+# change it in production. It is a module-level named constant (rather
+# than an inline literal) as a deliberate TEST SEAM: a collision test
+# monkeypatches it down so two genuinely different, unpatched structural
+# payloads can share a truncated digest, proving collision handling on
+# the real hash path instead of pretending the 48-bit prefix makes
+# collisions impossible.
+CANONICAL_ID_HEX_LENGTH: int = 12
 
-    Hash input is the canonical-JSON serialization of
-    ``{"kind", "content", "attrs"}`` where:
 
-    - ``content`` is the body text with leading/trailing whitespace
-      stripped.
-    - ``attrs`` is a sorted dict of the atom's kind-specific fields,
-      excluding provenance (``timestamp``, ``run_id``, ``wall_clock``,
-      ``sequence``, ``instance``) and the base bookkeeping fields
-      (``id``, ``canonical_id``, ``children``, ``operators``).
-    - Empty / ``None`` attrs are dropped so absence and explicit-None
-      hash identically.
+def canonical_payload(atom: "Atom") -> dict[str, Any]:
+    """Return the exact structural-identity payload the hasher consumes.
 
-    Output: ``"sha256:" + first 12 hex chars`` of the SHA-256 digest
-    of the canonical JSON. Multihash-compatible prefix.
+    ``{"kind", "content", "attrs"}`` with provenance / bookkeeping /
+    external-code fields excluded and empty values dropped — see
+    :func:`compute_canonical_id`. Exposed so collision handling (the
+    registry) can compare *full structural payloads*, not just the
+    truncated digests, when two atoms claim the same canonical_id.
     """
     attrs: dict[str, Any] = {}
     for f in fields(atom):
@@ -812,14 +947,38 @@ def compute_canonical_id(atom: "Atom") -> str:
             continue
         attrs[f.name] = _hash_value(value)
 
-    payload = {
+    return {
         "kind": atom.kind,
         "content": (atom.content or "").strip(),
         "attrs": attrs,
     }
+
+
+def compute_canonical_id(atom: "Atom") -> str:
+    """Compute the content-addressable canonical_id for ``atom``.
+
+    Hash input is the canonical-JSON serialization of
+    ``{"kind", "content", "attrs"}`` where:
+
+    - ``content`` is the body text with leading/trailing whitespace
+      stripped.
+    - ``attrs`` is a sorted dict of the atom's kind-specific fields,
+      excluding provenance (``timestamp``, ``run_id``, ``wall_clock``,
+      ``sequence``, ``instance``) and the base bookkeeping fields
+      (``id``, ``canonical_id``, ``children``, ``operators``).
+    - Empty / ``None`` attrs are dropped so absence and explicit-None
+      hash identically.
+
+    Output: ``"sha256:" + first 12 hex chars`` of the SHA-256 digest
+    of the canonical JSON. Multihash-compatible prefix. (v0.7 Map
+    ``entries`` participate as a nested mapping; ``sort_keys`` makes
+    entry insertion order identity-neutral while key/value changes
+    change the id.)
+    """
+    payload = canonical_payload(atom)
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
-    return f"sha256:{digest[:12]}"
+    return f"sha256:{digest[:CANONICAL_ID_HEX_LENGTH]}"
 
 
 # Regex matching ``UPPERCASE_TOKEN:atom_id`` operator-target pairs in
@@ -920,6 +1079,29 @@ KIND_SPECIFIC_FIELDS: dict[str, tuple[str, ...]] = {
     "Effect": ("effect_kind",),
     "Ref": ("ref_type", "target"),
     "Meta": ("criticality",),
+    # v0.7.3-candidate — proposed semantic kinds.
+    "Map": ("value_type", "entries"),
+    "Event": (
+        "source",
+        "occurrence_id",
+        "event_type",
+        "timestamp",
+        "for_task",
+        "for_action",
+        "for_goal",
+        "effect_ref",
+        "map_ref",
+        "external_ref",
+    ),
+    "Task": (
+        "status",
+        "for_goal",
+        "input_map",
+        "output_map",
+        "action_ref",
+        "evidence_ref",
+        "runtime_ref",
+    ),
 }
 
 
@@ -995,7 +1177,102 @@ def wire_name_for(kind: str, py_field: str) -> str:
 # constants are imported by parser/validator/tests so the canonical
 # set lives in one place. Bumping a set requires a spec doc update.
 
-SCHOLIA_VALIDATOR_VERSION: str = "0.7.2"
+SCHOLIA_VALIDATOR_VERSION: str = "0.7.3"
+
+# ── v0.7 — grammar profiles (package and grammar are separate axes) ──
+#
+# The GRAMMAR revision is 0.7.0 — the closed atom catalog grows from 32
+# to 35, so claiming the unchanged 0.6.2 grammar would be misleading.
+# The PACKAGE version is 0.7.3 (SCHOLIA_VALIDATOR_VERSION above); the
+# two move on separate axes on purpose. A consumer crossing a negotiated
+# boundary selects a profile explicitly; the validator rejects new kinds
+# under the legacy 0.6.2 profile and rejects unknown profiles with a
+# structured unsupported-version diagnostic (see
+# ``check_grammar_profile`` in :mod:`scholialang.validator`).
+SCHOLIA_GRAMMAR_VERSION: str = "0.7.0"
+LEGACY_GRAMMAR_VERSION: str = "0.6.2"
+GRAMMAR_PROFILES: dict[str, frozenset[str]] = {
+    LEGACY_GRAMMAR_VERSION: LEGACY_KNOWN_KINDS,
+    SCHOLIA_GRAMMAR_VERSION: KNOWN_KINDS,
+}
+
+# ── v0.7 — semantic-kind closed sets and shape contracts ─────────────
+
+# Map.value_type closed set — deliberately small; no heterogeneous or
+# recursively typed syntax in this revision.
+MAP_VALUE_TYPES: frozenset[str] = frozenset({
+    "string",
+    "integer",
+    "boolean",
+    "atom_ref",
+})
+
+# Task.status closed set — descriptive claims only. Runtime lifecycle
+# states (queued / working / input_required / cancelled / expired /
+# paused) stay in transport contracts and are NEVER legal here.
+TASK_STATUSES: frozenset[str] = frozenset({
+    "open",
+    "satisfied",
+    "unsatisfied",
+    "withdrawn",
+})
+
+# Task.evidence_ref permitted target kinds.
+TASK_EVIDENCE_KINDS: tuple[str, ...] = (
+    "Observation",
+    "Evidence",
+    "Finding",
+    "Concluding",
+)
+
+# Typed local-reference fields per semantic kind → permitted target
+# kinds. Resolution is against the complete trace (forward references
+# allowed) by local id or canonical id; targets are atoms, never Steps.
+SEMANTIC_REF_FIELDS: dict[str, dict[str, tuple[str, ...]]] = {
+    "Event": {
+        "for_task": ("Task",),
+        "for_action": ("Action",),
+        "for_goal": ("Goal",),
+        "effect_ref": ("Effect",),
+        "map_ref": ("Map",),
+    },
+    "Task": {
+        "for_goal": ("Goal",),
+        "input_map": ("Map",),
+        "output_map": ("Map",),
+        "action_ref": ("Action",),
+        "evidence_ref": TASK_EVIDENCE_KINDS,
+    },
+}
+
+# Opaque correlator fields per semantic kind — nonempty strings that are
+# never interpreted as local ids, dereferenced, executed, or treated as
+# proof of identity/authority.
+SEMANTIC_OPAQUE_FIELDS: dict[str, tuple[str, ...]] = {
+    "Event": ("external_ref",),
+    "Task": ("runtime_ref",),
+}
+
+# Whether the free-text body is required (nonempty) for each kind.
+SEMANTIC_BODY_REQUIRED: dict[str, bool] = {
+    "Map": False,
+    "Event": True,
+    "Task": True,
+}
+
+# Required trace-local id shape: the exact kind, an underscore, then one
+# or more ASCII letters, digits, or underscores.
+SEMANTIC_ID_PATTERNS: dict[str, "_re.Pattern[str]"] = {
+    kind: _re.compile(rf"^{kind}_[A-Za-z0-9_]+$") for kind in SEMANTIC_ATOM_KINDS
+}
+
+# Event.event_type token shape — producer-defined vocabulary, not a new
+# atom kind.
+EVENT_TYPE_RE: "_re.Pattern[str]" = _re.compile(r"^[A-Za-z][A-Za-z0-9_.-]*$")
+
+# Interoperable JSON exact-integer bounds for Map integer entries.
+JSON_SAFE_INT_MAX: int = 2**53 - 1
+JSON_SAFE_INT_MIN: int = -(2**53 - 1)
 
 V031_EDGE_TYPES: frozenset[str] = frozenset({
     "depends_on",
@@ -1068,6 +1345,128 @@ def is_valid_fingerprint(value: str | None) -> bool:
     return bool(FINGERPRINT_RE.match(value))
 
 
+# ── v0.7 — semantic-kind structural helpers ──────────────────────────
+#
+# Pure, no-I/O structural checks shared by the parser (XML path), the
+# serializer (JSON/YAML/dict paths), and the validator (Python-
+# constructed atoms). They enforce the DECODE-parity contract for the
+# proposed kinds: ``operators`` is a list of strings, ``children`` is
+# empty, and ``Map.entries`` is a real mapping with string keys. Field
+# *semantics* (required fields, enums, typed entries, references) stay
+# in the validator.
+
+
+class SemanticShapeError(ValueError):
+    """A semantic-kind payload failed a structural decode-parity check.
+
+    ``rule`` carries the conformance rule code (e.g.
+    ``semantic_children_empty``); ``kind`` the offending atom kind when
+    known. Raised at the parse phase — the input never becomes an atom.
+    """
+
+    def __init__(self, message: str, *, rule: str, kind: Optional[str] = None):
+        super().__init__(message)
+        self.rule = rule
+        self.kind = kind
+
+
+def semantic_structural_violations(atom: "Atom") -> list[tuple[str, str]]:
+    """Return ``(rule, message)`` structural violations for a semantic atom.
+
+    Mirrors the parse-phase strictness for atoms constructed directly in
+    Python: the same shapes a decoder rejects must also fail
+    ``validate()``. Returns an empty list for non-semantic kinds.
+    """
+    if atom.kind not in SEMANTIC_KINDS:
+        return []
+    violations: list[tuple[str, str]] = []
+    operators = atom.operators
+    if not isinstance(operators, list) or not all(
+        isinstance(op, str) for op in operators
+    ):
+        violations.append(
+            (
+                "semantic_operators_list",
+                f"<{atom.kind}> operators must be a list of strings; "
+                f"got {operators!r} (no coercion from arbitrary objects).",
+            )
+        )
+    if atom.children:
+        violations.append(
+            (
+                "semantic_children_empty",
+                f"<{atom.kind}> children must be empty — new kinds carry "
+                "no nested child atoms in this revision.",
+            )
+        )
+    if atom.kind == "Map":
+        entries = getattr(atom, "entries", None)
+        if entries is not None:
+            if not isinstance(entries, dict):
+                violations.append(
+                    (
+                        "map_entries_shape",
+                        f"<Map> entries must be a real mapping, never "
+                        f"{type(entries).__name__!r} — a JSON-encoded "
+                        "string or other non-mapping value is rejected.",
+                    )
+                )
+            else:
+                for key in entries:
+                    if not isinstance(key, str):
+                        violations.append(
+                            (
+                                "map_entries_shape",
+                                f"<Map> entries keys must be strings; got "
+                                f"{key!r} ({type(key).__name__}).",
+                            )
+                        )
+    return violations
+
+
+def normalize_semantic_atom(atom: "Atom") -> "Atom":
+    """Return a validated copy of a semantic atom, canonical_id computed.
+
+    The single pure normalization seam the serializers and decoders
+    share: structural violations raise :class:`SemanticShapeError`;
+    otherwise a COPY is returned (serialization never mutates the
+    caller's object) with a missing ``canonical_id`` computed after all
+    fields are populated. An explicitly claimed ``canonical_id`` —
+    matching or not — is preserved verbatim so the validator's
+    ``canonical_id_well_formed`` rule can report a mismatch; a tampered
+    claim is never silently repaired.
+    """
+    if atom.kind not in SEMANTIC_KINDS:
+        return atom
+    violations = semantic_structural_violations(atom)
+    if violations:
+        rule, message = violations[0]
+        raise SemanticShapeError(message, rule=rule, kind=atom.kind)
+    kwargs: dict[str, Any] = {
+        "children": list(atom.children),
+        "operators": list(atom.operators),
+    }
+    entries = getattr(atom, "entries", None)
+    if isinstance(entries, dict):
+        kwargs["entries"] = dict(entries)
+    normalized = replace(atom, **kwargs)
+    if normalized.canonical_id is None:
+        normalized.canonical_id = compute_canonical_id(normalized)
+    return normalized
+
+
+def canonical_entries_json(entries: dict[str, Any]) -> str:
+    """Encode ``Map.entries`` as canonical JSON for the XML attribute.
+
+    Sorted string keys, compact separators, Unicode preserved (the XML
+    layer escapes afterwards). This is the single wire encoding for the
+    ``entries`` attribute — Python ``repr`` output is never valid.
+    """
+    return json.dumps(
+        entries, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    )
+
+
 # ── v0.6 — minimal single-atom XML serialization ─────────────────────
 #
 # The full trace serializers (JSON/YAML) live in :mod:`scholialang.serializer`
@@ -1079,6 +1478,10 @@ def is_valid_fingerprint(value: str | None) -> bool:
 
 
 def _atom_to_element(atom: "Atom") -> "ET.Element":
+    if atom.kind in SEMANTIC_KINDS:
+        # v0.7 — encode the validated normalized copy (missing
+        # canonical_id computed, caller's object never mutated).
+        atom = normalize_semantic_atom(atom)
     elem = ET.Element(atom.kind)
     if atom.id is not None:
         elem.set("id", atom.id)
@@ -1088,7 +1491,10 @@ def _atom_to_element(atom: "Atom") -> "ET.Element":
         value = getattr(atom, fname, None)
         if value is None:
             continue
-        if isinstance(value, list):
+        if atom.kind == "Map" and fname == "entries":
+            # Canonical JSON on the XML wire — never Python repr.
+            elem.set("entries", canonical_entries_json(value))
+        elif isinstance(value, list):
             if not value:
                 continue
             elem.set(wire_name_for(atom.kind, fname), ",".join(str(v) for v in value))

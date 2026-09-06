@@ -497,11 +497,15 @@ class ScholialangValidatorTests(unittest.TestCase):
     def test_catalog_exposes_v05_closed_sets(self):
         result = json.loads(server.tool_catalog({})["content"][0]["text"])
         self.assertIn("scholia_atom_kinds_v05", result)
-        self.assertEqual(len(result["scholia_atom_kinds_v05"]), 32)
+        # 35 = the 32 stable v0.6.2 kinds plus the v0.7-proposed Map/Event/
+        # Task semantic kinds shipped by the accepted scholialang 0.7.3 engine.
+        self.assertEqual(len(result["scholia_atom_kinds_v05"]), 35)
         self.assertIn("Concluding", result["scholia_atom_kinds_v05"])
+        for proposed in ("Map", "Event", "Task"):
+            self.assertIn(proposed, result["scholia_atom_kinds_v05"])
         self.assertIn("scholia_canonical_operators_v05", result)
         self.assertIn("scholia_criticality_rank", result)
-        self.assertEqual(result["scholia_validator_version"], "0.7.2")
+        self.assertEqual(result["scholia_validator_version"], "0.7.3")
         # Back-compat aliases remain available for older clients.
         self.assertIn("scholia_atom_kinds_v04", result)
         self.assertIn("scholia_canonical_operators_v04", result)

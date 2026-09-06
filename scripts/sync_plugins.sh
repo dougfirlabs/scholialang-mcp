@@ -16,6 +16,7 @@ targets=(
 for dst in "${targets[@]}"; do
   cp "$canonical/scholialang_mcp_server.py" "$dst/scholialang_mcp_server.py"
   cp "$canonical/_scholia_vendored/"*.py "$dst/_scholia_vendored/"
+  cp "$canonical/_scholia_vendored/"LICENSE-* "$dst/_scholia_vendored/"
   if [[ -f "$canonical/_scholia_vendored/UPSTREAM.json" ]]; then
     cp "$canonical/_scholia_vendored/UPSTREAM.json" "$dst/_scholia_vendored/UPSTREAM.json"
   else
