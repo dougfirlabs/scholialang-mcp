@@ -1,0 +1,19 @@
+{
+  "kind":"prd","schema_version":1,"id":"sch073-manual-acceptance-smoke-codex-20260906","title":"ScholiaLang MCP 0.7.3 manual acceptance smoke (codex)","status":"approved","group_id":"sch073-manual-acceptance-smoke-codex-20260906","run_policy":"gated_stack","skip_commit_gate":true,
+  "approval":{"approved":true,"execution_authorized":true,"merge_authorized":false,"release_authorized":false},
+  "authority":"Report-only execution. No source edits, merge, deploy, PyPI publication, or Cloud propagation.",
+  "problem":"Exercise the integrated 0.7.3 grammar/spec and MCP Events, Tasks, and Heartbeat features in one reproducible no-op run.",
+  "outcome":"Durable receipt with exact SHA, grammar/spec checks, real stdio wire captures, and no tracked product changes.",
+  "repositories":["scholialang-mcp"],"target_repo":"scholialang-mcp","target_root":"/tmp/sch073-mcp-stage-base-20260906","allowed_drivers":["codex"],
+  "hard_constraints":["Use integration/sch073-mcp-stage-base-20260906 only.","Do not modify tracked source or merge.","Use real subprocess stdio evidence.","No PyPI, production, or Cloud claim.","Sequential execution and report-only caveats."],
+  "stories":[
+    {"id":"SMOKE-CODEX-S1","title":"Grammar/spec verification","priority":1,"passes":false,"description":"Run the existing 0.7.3 artifact, grammar, and spec-fingerprint checks from the pinned integration tip; capture commands and results.","acceptance_criteria":["Grammar/spec checks pass","Exact SHA recorded","No tracked files change"]},
+    {"id":"SMOKE-CODEX-S2","title":"Real MCP stdio features","priority":1,"passes":false,"description":"Run tests/integration/test_real_adapters.py and targeted protocol regressions to exercise authorized Events, Tasks, Heartbeat, default-off, malformed routing, revocation, and reconnect behavior over subprocess stdio; preserve wire captures.","acceptance_criteria":["Real stdio tests pass","Events/Tasks/Heartbeat evidence present","Boundaries explicit"]},
+    {"id":"SMOKE-CODEX-S3","title":"Acceptance receipt","priority":2,"passes":false,"description":"Write a report-only receipt with exact tip, commands, exit codes, captures, changed-file check, caveats, and verdict.","acceptance_criteria":["Receipt durable","No product source mutation","Verdict explicit"]}
+  ],
+  "verification":"Run `python -m pytest tests/test_core073_artifact_contract.py tests/test_spec_fingerprint_fixtures.py -q`, `python -m pytest tests/integration/test_real_adapters.py -q`, and the repository's targeted MCP protocol regressions; inspect captures and git diff.",
+  "success_metrics":["`python -m pytest tests/test_core073_artifact_contract.py tests/test_spec_fingerprint_fixtures.py -q` passes","`python -m pytest tests/integration/test_real_adapters.py -q` passes","No tracked product changes","Durable acceptance receipt","Independent adjudication pass or pass_with_caveats"],
+  "out_of_scope":["implementation","stage/main merge","PyPI","production","Cloud","credentials","GUI/tmux restart"],"rollback":"Discard only report artifacts; preserve integration branch and backups.",
+  "coordination_metadata":{"job_id":"sch073-j-smoke-codex-20260906","launch_ready":true,"gui_port":7706,"source_branch":"integration/sch073-mcp-stage-base-20260906","source_tip":"db8f700","launch_model":"codex","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only"},
+  "launch_contract":{"project":"scholialang-mcp-stage-base-20260906","port":7706,"source_branch":"integration/sch073-mcp-stage-base-20260906","execution_mode":"skolem_worktree","driver":"codex","model":"codex","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only","protected_merge_authorized":false}
+}
