@@ -1,0 +1,8 @@
+........sssss                                                            [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_spec_fingerprint_fixtures.py:129: scholialang-spec fingerprint fixtures not found; set SCHOLIALANG_SPEC_DIR or place a scholialang-spec checkout beside this repo (shared corpus, no in-repo fork).
+SKIPPED [1] tests/test_spec_fingerprint_fixtures.py:142: scholialang-spec fingerprint fixtures not found; set SCHOLIALANG_SPEC_DIR or place a scholialang-spec checkout beside this repo (shared corpus, no in-repo fork).
+SKIPPED [1] tests/test_spec_fingerprint_fixtures.py:168: scholialang-spec fingerprint fixtures not found; set SCHOLIALANG_SPEC_DIR or place a scholialang-spec checkout beside this repo (shared corpus, no in-repo fork).
+SKIPPED [1] tests/test_spec_fingerprint_fixtures.py:186: scholialang-spec fingerprint fixtures not found; set SCHOLIALANG_SPEC_DIR or place a scholialang-spec checkout beside this repo (shared corpus, no in-repo fork).
+SKIPPED [1] tests/test_spec_fingerprint_fixtures.py:221: scholialang-spec fingerprint fixtures not found; set SCHOLIALANG_SPEC_DIR or place a scholialang-spec checkout beside this repo (shared corpus, no in-repo fork).
+exit=0

@@ -1,0 +1,8 @@
+== S2 real MCP stdio features + targeted protocol regressions ==
+date: 2026-09-06T13:36:53Z
+tip: 75319cc8ac9b12dbfb76458c5c882fd6577f1a11
+cmd: python -m pytest tests/integration/test_real_adapters.py tests/integration/test_mcp_protocol.py tests/integration/test_mcp_2026_conformance.py tests/integration/test_durable_store.py -q --basetemp=<evidence>/pytest-basetemp
+........................................................................ [ 36%]
+........................................................................ [ 73%]
+...................................................                      [100%]
+exit=0
