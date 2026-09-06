@@ -145,6 +145,33 @@ def test_schema_and_vendor_bytes_are_pinned():
         assert hashlib.sha256((SCHEMAS.parent / path).read_bytes()).hexdigest() == digest
 
 
+@pytest.mark.parametrize('policy', ['off', 'enforce'])
+@pytest.mark.parametrize('field,value,code', [
+    ('method', [], -32600), ('method', {}, -32600),
+    ('name', [], -32602), ('name', {}, -32602),
+    ('id', [], -32600), ('id', {}, -32600), ('id', True, -32600),
+])
+def test_malformed_routing_keys_do_not_kill_stdio(peers, policy, field, value, code):
+    p = peers({'policy': dict.fromkeys(('events', 'tasks', 'heartbeat'), policy),
+               'synthetic_certified': True})
+    request = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
+               'params': {'name': 'fixture_job'}}
+    if field == 'name':
+        request['params']['name'] = value
+    else:
+        request[field] = value
+    p.raw(request)
+    response = p.recv()
+    if field == 'id':
+        assert 'id' not in response
+    else:
+        assert response['id'] == 1
+    assert response['error']['code'] == code
+    validate('core', 'JSONRPCErrorResponse', response)
+    assert 'result' in p.rpc('server/discover')
+    assert p.proc.poll() is None
+
+
 @pytest.mark.parametrize('enabled', list(itertools.product((False, True), repeat=3)))
 def test_eight_independent_capability_combinations(peers, enabled):
     policy = {facet: 'enforce' if on else 'off' for facet, on in zip(('events', 'tasks', 'heartbeat'), enabled)}

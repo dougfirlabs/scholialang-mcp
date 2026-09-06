@@ -118,10 +118,19 @@ class WireAdapters:
             return []
         if request_id is None:
             return []
+        # Check routing keys before set/dict membership can hash wire values.
+        if type(request_id) not in (str, int):
+            response = _err(None, -32600, "invalid_request_id")
+            del response["id"]  # Modern errors omit an unresolvable request ID.
+            return [response]
+        if not isinstance(method, str):
+            return [_err(request_id, -32600, "invalid_method")]
         params = payload.get("params", {})
         relevant = method in {"subscriptions/listen", "tasks/get", "tasks/update", "tasks/cancel",
                               "resources/read", "resources/list", "tools/list", "server/discover"}
         if method == "tools/call" and isinstance(params, dict):
+            if not isinstance(params.get("name"), str):
+                return [_err(request_id, -32602, "invalid_tool_name")]
             relevant = params.get("name") in self.tasks.tools
         if not relevant:
             return None
