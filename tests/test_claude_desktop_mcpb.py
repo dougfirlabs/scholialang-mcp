@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import tempfile
+import tomllib
 from pathlib import Path
 
 
@@ -33,6 +34,12 @@ def test_desktop_manifest_and_staged_server_are_release_aligned():
         "claude-desktop"
     )
     assert template_manifest["tools_generated"] is True
+    desktop_project = tomllib.loads(
+        (ROOT / "plugins/claude-desktop/scholialang/pyproject.toml").read_text()
+    )["project"]
+    assert desktop_project["requires-python"] == ">=3.11,<4.0"
+    assert template_manifest["compatibility"]["runtimes"]["python"] == desktop_project["requires-python"]
+    assert desktop_project["dependencies"] == ["PyYAML>=6.0"]
 
     with tempfile.TemporaryDirectory() as tmp:
         staged = Path(tmp) / "scholialang"

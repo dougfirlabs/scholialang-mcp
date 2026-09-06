@@ -2,7 +2,7 @@
 name = "scholialang-claude-desktop"
 version = "0.7.3"
 description = "Bundled local Scholialang MCP server for Claude Desktop"
-requires-python = ">=3.10,<4.0"
+requires-python = ">=3.11,<4.0"
 dependencies = ["PyYAML>=6.0"]
 
 [tool.uv]
