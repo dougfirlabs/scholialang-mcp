@@ -1,0 +1,163 @@
+{
+  "accepted_core_receipt": {
+    "atom_kinds": 35,
+    "grammar_version": "0.7.0",
+    "sdist_sha256": "457fe675175adf2c3166eeb55ffe86f8e9e0fb72b5acea54615ac3401c2557b2",
+    "source_sha": "9a86a4645c49074c4a415ade01093bff0e2ca70c",
+    "status": "receipt_pinned_not_yet_vendored",
+    "version": "0.7.3",
+    "wheel_sha256": "bbe08813bb0431824fa82db6b086ff2aafca5f6024e0b377dcfa7d37c25c1831"
+  },
+  "contract": "scholialang.mcp-capabilities.v1",
+  "declaration": {
+    "contract": "scholialang.mcp-capabilities.v1",
+    "core_dependency": {
+      "accepted_candidate": {
+        "sdist_sha256": "457fe675175adf2c3166eeb55ffe86f8e9e0fb72b5acea54615ac3401c2557b2",
+        "source_sha": "9a86a4645c49074c4a415ade01093bff0e2ca70c",
+        "status": "receipt_pinned_not_yet_vendored",
+        "version": "0.7.3",
+        "wheel_sha256": "bbe08813bb0431824fa82db6b086ff2aafca5f6024e0b377dcfa7d37c25c1831"
+      },
+      "declared_floor": "scholialang>=0.7.2,<0.8"
+    },
+    "engine_validator_version": "0.7.2",
+    "facets": {
+      "events": {
+        "advertisement": "capabilities.subscriptions",
+        "conformance_certified": false,
+        "implemented": false,
+        "negotiation": "independent",
+        "pin": "modelcontextprotocol/modelcontextprotocol@e76e9c572c6f2bfcb730357101acc90f2f802e02",
+        "wire_methods": [
+          "subscriptions/listen"
+        ]
+      },
+      "heartbeat": {
+        "advertisement": "capabilities.extensions['com.dougfirlabs/heartbeat']",
+        "conformance_certified": false,
+        "implemented": false,
+        "negotiation": "independent",
+        "pin": "com.dougfirlabs/mcp-heartbeat@cb87379bbe4e26a8e59bab9cc18dc51ef4079bff:packages/mcp-heartbeat",
+        "wire_methods": [
+          "com.dougfirlabs/heartbeat.lease"
+        ]
+      },
+      "tasks": {
+        "advertisement": "capabilities.extensions['io.modelcontextprotocol/tasks']",
+        "conformance_certified": false,
+        "implemented": false,
+        "negotiation": "independent",
+        "pin": "modelcontextprotocol/experimental-ext-tasks@9263312d11a682ac83f83fe84794d4627efd22f5",
+        "wire_methods": [
+          "tasks/get",
+          "tasks/update",
+          "tasks/cancel"
+        ]
+      }
+    },
+    "grammar_version": "0.6.2",
+    "identity": {
+      "caller_supplied_identity": "never_authoritative",
+      "id_axes": "MCP task ids, OT run ids, A2A ids, approval ids and DAG/atom ids stay distinct",
+      "principal_source": "trusted_configuration_only",
+      "unbound_context": "fail_closed"
+    },
+    "package_version": "0.7.2",
+    "policy": {
+      "default": "off",
+      "enforce_semantics": "activates only an implemented, independently conformance-certified adapter",
+      "environment": {
+        "events": "SCHOLIALANG_MCP_EXT_EVENTS_POLICY",
+        "heartbeat": "SCHOLIALANG_MCP_EXT_HEARTBEAT_POLICY",
+        "tasks": "SCHOLIALANG_MCP_EXT_TASKS_POLICY"
+      },
+      "invalid_value_behavior": "fail_closed_to_off",
+      "observe_semantics": "records negotiation attempts; never executes, advertises, or approves",
+      "values": [
+        "off",
+        "observe",
+        "enforce"
+      ]
+    },
+    "protocol": {
+      "preferred": "2026-07-28"
+    }
+  },
+  "feature_gaps": [
+    {
+      "blocking": true,
+      "id": "gap-core-073-vendoring",
+      "summary": "vendored plugin engine remains accepted 0.7.2 (grammar 0.6.2, 32 kinds); migration to the receipt-pinned core 0.7.3 wheel (grammar 0.7.0, 35 kinds, serializer + PyYAML dependency closure, license provenance) is a deliberate follow-up that must rebind fingerprint/vendor-contract baselines explicitly"
+    },
+    {
+      "blocking": true,
+      "id": "gap-durable-store",
+      "summary": "authoritative durable store, transaction fault-injection evidence, reconnect/refetch and retention windows are specified as interfaces only; the synthetic in-memory store proves scoping and notifications-after-commit ordering, not durability"
+    },
+    {
+      "blocking": true,
+      "id": "gap-real-adapters",
+      "summary": "Events/Tasks/Heartbeat transport adapters are unimplemented; the eight-combination matrix is proven with synthetic adapters marked synthetic on the wire"
+    }
+  ],
+  "per_surface": {
+    "plugins": {
+      "hosts": [
+        "claude-code",
+        "codex",
+        "ollama"
+      ],
+      "note": "intentional matrix: plugins exclude 2024-11-05; do not silently widen",
+      "server": "scholialang",
+      "supported_protocol_versions": [
+        "2026-07-28",
+        "2025-11-25",
+        "2025-06-18",
+        "2025-03-26"
+      ]
+    },
+    "wheel": {
+      "server": "mcp__scholialang__atlas",
+      "supported_protocol_versions": [
+        "2026-07-28",
+        "2025-11-25",
+        "2025-06-18",
+        "2025-03-26",
+        "2024-11-05"
+      ]
+    }
+  },
+  "prd": "sch073-04-capability-contract-scholialang-mcp",
+  "protocol_pins": {
+    "audit_sha256": "f2e491a016a9d6c46a5bbff0d34c939de81f6121214a436df09298a4dea972b0",
+    "core": "modelcontextprotocol/modelcontextprotocol@e76e9c572c6f2bfcb730357101acc90f2f802e02",
+    "core_schema_sha256": "ef70b61f99b6d2e5e3b46863822eab08dff6a45bedc7a08914e0e5b133f40203",
+    "heartbeat_source": "com.dougfirlabs/mcp-heartbeat@cb87379bbe4e26a8e59bab9cc18dc51ef4079bff:packages/mcp-heartbeat",
+    "sdk": "modelcontextprotocol/python-sdk@0921d94a74db900dccd2d534842aa7b6160542d2",
+    "tasks": "modelcontextprotocol/experimental-ext-tasks@9263312d11a682ac83f83fe84794d4627efd22f5",
+    "tasks_schema_sha256": "bf30afb7ac251e3e22c037b7a685f60ef6603031b5484c0d08b1fa0bbe86d460"
+  },
+  "reuse_audit": {
+    "accepted": [
+      "host mcp-heartbeat portable core + current/legacy adapters (vendor contract com.dougfirlabs/heartbeat 0.1)",
+      "GOAT bounded project-scoped event projections, cursor expiry and subscription limits as design patterns",
+      "GOAT FileWorkStore fsync/atomic-replace/flock persistence technique",
+      "tasks prototype ideas: journal rehydration without fabricated completion, expiring hashed approval tokens, distinct task/run identity, cooperative cancellation"
+    ],
+    "rejected": [
+      "tasks/MRTR prototype wire implementation (feat/mcp-2026-07-28-prd-03-tasks-mrtr@f14501ba): legacy method names tasks/provide_input+tasks/result, nested resultType task shape, _meta-read augmentation, protocolVersions discovery, no durable transaction",
+      "GoatTaskService/GoatEventLog as MCP wire services: in-memory event log, non-atomic store+notify, GOAT-specific schemas",
+      "SDK v2.1.1 modern Tasks runtime (explicitly deferred upstream); legacy mcp_types task shapes"
+    ],
+    "source": ".ralph/contracts/protocol-contract-pins.md"
+  },
+  "schema_version": 1,
+  "unsupported_combinations": [
+    "modern 2026-07-28 requests cannot inherit facet support negotiated by an earlier request or implied by package name/version",
+    "legacy (pre-2026) consumers negotiate no extension facet: Events/Tasks/Heartbeat are modern-only until a legacy adapter is independently conformance-tested",
+    "protocol 2024-11-05 on plugin servers is rejected (-32022); HTTP transports are unsupported on every surface (stdio only)",
+    "observe policy with an implemented adapter still advertises and executes nothing",
+    "enforce policy without an implemented, conformance-certified adapter advertises nothing and refuses with explicit fallback"
+  ]
+}

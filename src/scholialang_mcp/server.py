@@ -12,10 +12,12 @@ import argparse
 import json
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote
+
+from . import capabilities
 
 ENV_MODE = "SCHOLIALANG_MCP_SERVER_MODE"
 MODE_OFF = "off"
@@ -63,10 +65,21 @@ PROJECT_NOT_SWEPT_STATUS = "atlas_not_yet_swept"
 
 @dataclass
 class ScholiaServerConfig:
-    """Per-server configuration."""
+    """Per-server configuration.
+
+    Extension facets (sch073-04): per-facet policies, the adapter
+    registry (empty on the shipped server — nothing advertised), and
+    the principal/project context all come from trusted launcher
+    configuration at construction; nothing on the wire can change them.
+    """
 
     repo_root: Path
     allow_regenerate: bool = False
+    policies: dict[str, str] = field(default_factory=capabilities.resolve_policies)
+    registry: capabilities.ExtensionRegistry = field(default_factory=capabilities.build_registry)
+    principal: Optional[capabilities.PrincipalContext] = field(
+        default_factory=capabilities.resolve_principal
+    )
 
 
 def resolve_mode() -> str:
@@ -430,17 +443,77 @@ def _unsupported_version(
     )
 
 
-def _discover_result() -> dict[str, Any]:
-    """Final-stable ``server/discover`` payload."""
+def _discover_result(server: ScholiaMCPServer) -> dict[str, Any]:
+    """Final-stable ``server/discover`` payload.
+
+    ``capabilities`` advertises exactly the active facets from the
+    registry — on the shipped server that registry is empty, so no
+    Events/Tasks/Heartbeat facet is ever advertised regardless of
+    policy. The declared capability contract rides in ``_meta`` under a
+    vendor key so it stays safely ignorable.
+    """
+    config = server.config
+    contract_meta: dict[str, Any] = {"declaration": capabilities.declaration()}
+    synthetic = config.registry.synthetic_facets(config.policies)
+    if synthetic:
+        contract_meta["synthetic_facets"] = synthetic
     return {
         "supportedVersions": list(SUPPORTED_MCP_PROTOCOL_VERSIONS),
-        "capabilities": {"tools": {"listChanged": False}},
+        "capabilities": config.registry.capabilities_payload(config.policies),
         "instructions": (
             "Use the Scholia atlas tools to inspect host-generated project summaries."
         ),
         "ttlMs": TOOLS_LIST_TTL_MS,
         "cacheScope": CACHE_SCOPE,
+        "_meta": {capabilities.META_CAPABILITY_CONTRACT: contract_meta},
     }
+
+
+def _handle_extension_method(
+    server: ScholiaMCPServer, request_id: Any, method: str, params: dict[str, Any]
+) -> dict[str, Any]:
+    """Route a facet wire method; refuse explicitly when inactive.
+
+    Inactive facets answer ``-32601`` with structured fallback data —
+    never a fake success — so old or optimistic consumers see an honest
+    method-not-found. Active facets require a bound principal (fail
+    closed) and dispatch into the adapter with the configured context;
+    caller-supplied identity in ``params`` is never consulted.
+    """
+    config = server.config
+    facet = capabilities.EXTENSION_METHOD_FACETS[method]
+    policy = config.policies.get(facet, capabilities.POLICY_OFF)
+    # Facet support is negotiated per request era: a legacy (pre-2026)
+    # request never inherits an active facet, even in enforce mode.
+    if _modern_protocol_version(params) != MCP_PROTOCOL_VERSION:
+        return _err(
+            request_id,
+            -32601,
+            f"Method not found: {method}",
+            capabilities.refusal_data(
+                facet, policy, config.registry, reason="modern_protocol_required"
+            ),
+        )
+    if not config.registry.active(facet, config.policies):
+        return _err(
+            request_id,
+            -32601,
+            f"Method not found: {method}",
+            capabilities.refusal_data(facet, policy, config.registry),
+        )
+    if config.principal is None:
+        return _err(
+            request_id,
+            capabilities.PRINCIPAL_UNBOUND,
+            "principal context unbound; failing closed",
+            {"facet": facet},
+        )
+    adapter = config.registry.adapters[facet]
+    try:
+        result = adapter.handler(method, params, config.principal)
+    except capabilities.ExtensionMethodError as exc:
+        return _err(request_id, exc.code, exc.message, exc.data)
+    return _ok(request_id, result)
 
 
 def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Optional[dict[str, Any]]:
@@ -461,8 +534,8 @@ def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Option
     if modern_version is not None:
         if modern_version != MCP_PROTOCOL_VERSION:
             return _unsupported_version(request_id, modern_version)
-        capabilities = (meta or {}).get(META_CLIENT_CAPABILITIES)
-        if not isinstance(capabilities, dict):
+        client_capabilities = (meta or {}).get(META_CLIENT_CAPABILITIES)
+        if not isinstance(client_capabilities, dict):
             return _err(
                 request_id,
                 -32602,
@@ -497,7 +570,7 @@ def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Option
                 -32602,
                 "server/discover requires 2026-07-28 per-request _meta",
             )
-        return _ok(request_id, _discover_result())
+        return _ok(request_id, _discover_result(server))
     # Legacy handshake — retained for pre-2026 hosts (dual-version). New hosts
     # never send it; they call server/discover and carry version in _meta.
     if method == "initialize":
@@ -554,6 +627,9 @@ def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Option
             },
         )
 
+    if method in capabilities.EXTENSION_METHOD_FACETS:
+        return _handle_extension_method(server, request_id, method, params)
+
     # Unknown JSON-RPC methods fail with -32601. 0.6.2 additionally dispatched
     # unknown methods as direct tool invocations (audit p7); that undocumented
     # surface is removed — tools are reachable only through ``tools/call``.
@@ -606,12 +682,20 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 1
 
     if args.subcommand == "check":
+        config = ScholiaServerConfig(repo)
         print(
             json.dumps(
                 {
                     "mode": resolve_mode(),
                     "repo_root": str(repo),
-                    "project_swept": ScholiaMCPServer(ScholiaServerConfig(repo))._project_swept(),
+                    "project_swept": ScholiaMCPServer(config)._project_swept(),
+                    "extension_policies": config.policies,
+                    "advertised_capabilities": config.registry.capabilities_payload(
+                        config.policies
+                    ),
+                    "synthetic_facets": config.registry.synthetic_facets(config.policies),
+                    "principal_bound": config.principal is not None,
+                    "capability_contract": capabilities.CAPABILITY_CONTRACT_NAME,
                 },
                 indent=2,
             )

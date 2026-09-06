@@ -39,6 +39,115 @@ CACHE_SCOPE = "private"
 MIN_VALIDATOR_VERSION = (0, 7, 2)
 MAX_TEXT = 6000
 
+# ── Frozen capability contract (sch073-04) ─────────────────────────────────
+# Declared on server/discover under a namespaced, safely-ignorable _meta key.
+# This block MUST stay in lockstep with src/scholialang_mcp/capabilities.py
+# and contracts/mcp-capability-contract.v1.json — enforced by
+# tests/integration/test_capability_contract.py. The plugin server implements
+# NO extension facet: nothing here is ever advertised as a capability, and
+# facet wire methods are refused with explicit structured fallback.
+META_CAPABILITY_CONTRACT = "com.dougfirlabs/scholialang.mcp-capabilities.v1"
+EXTENSION_POLICY_VALUES = ("off", "observe", "enforce")
+EXTENSION_POLICY_ENV = {
+    "events": "SCHOLIALANG_MCP_EXT_EVENTS_POLICY",
+    "tasks": "SCHOLIALANG_MCP_EXT_TASKS_POLICY",
+    "heartbeat": "SCHOLIALANG_MCP_EXT_HEARTBEAT_POLICY",
+}
+EXTENSION_METHOD_FACETS = {
+    "subscriptions/listen": "events",
+    "tasks/get": "tasks",
+    "tasks/update": "tasks",
+    "tasks/cancel": "tasks",
+    "com.dougfirlabs/heartbeat.lease": "heartbeat",
+}
+CAPABILITY_DECLARATION = {
+    "contract": "scholialang.mcp-capabilities.v1",
+    "package_version": "0.7.2",
+    "grammar_version": "0.6.2",
+    "engine_validator_version": "0.7.2",
+    "core_dependency": {
+        "declared_floor": "scholialang>=0.7.2,<0.8",
+        "accepted_candidate": {
+            "version": "0.7.3",
+            "source_sha": "9a86a4645c49074c4a415ade01093bff0e2ca70c",
+            "wheel_sha256": "bbe08813bb0431824fa82db6b086ff2aafca5f6024e0b377dcfa7d37c25c1831",
+            "sdist_sha256": "457fe675175adf2c3166eeb55ffe86f8e9e0fb72b5acea54615ac3401c2557b2",
+            "status": "receipt_pinned_not_yet_vendored",
+        },
+    },
+    "protocol": {"preferred": "2026-07-28"},
+    "policy": {
+        "values": list(EXTENSION_POLICY_VALUES),
+        "default": "off",
+        "environment": dict(EXTENSION_POLICY_ENV),
+        "invalid_value_behavior": "fail_closed_to_off",
+        "observe_semantics": "records negotiation attempts; never executes, advertises, or approves",
+        "enforce_semantics": "activates only an implemented, independently conformance-certified adapter",
+    },
+    "facets": {
+        "events": {
+            "wire_methods": ["subscriptions/listen"],
+            "advertisement": "capabilities.subscriptions",
+            "pin": "modelcontextprotocol/modelcontextprotocol@e76e9c572c6f2bfcb730357101acc90f2f802e02",
+            "implemented": False,
+            "conformance_certified": False,
+            "negotiation": "independent",
+        },
+        "tasks": {
+            "wire_methods": ["tasks/get", "tasks/update", "tasks/cancel"],
+            "advertisement": "capabilities.extensions['io.modelcontextprotocol/tasks']",
+            "pin": "modelcontextprotocol/experimental-ext-tasks@9263312d11a682ac83f83fe84794d4627efd22f5",
+            "implemented": False,
+            "conformance_certified": False,
+            "negotiation": "independent",
+        },
+        "heartbeat": {
+            "wire_methods": ["com.dougfirlabs/heartbeat.lease"],
+            "advertisement": "capabilities.extensions['com.dougfirlabs/heartbeat']",
+            "pin": "com.dougfirlabs/mcp-heartbeat@cb87379bbe4e26a8e59bab9cc18dc51ef4079bff:packages/mcp-heartbeat",
+            "implemented": False,
+            "conformance_certified": False,
+            "negotiation": "independent",
+        },
+    },
+    "identity": {
+        "principal_source": "trusted_configuration_only",
+        "caller_supplied_identity": "never_authoritative",
+        "unbound_context": "fail_closed",
+        "id_axes": "MCP task ids, OT run ids, A2A ids, approval ids and DAG/atom ids stay distinct",
+    },
+}
+
+
+def resolve_extension_policies(env=None):
+    """Per-facet policy from trusted environment configuration; unset or
+    unrecognized values fail closed to ``off``."""
+    source = os.environ if env is None else env
+    policies = {}
+    for facet, var in EXTENSION_POLICY_ENV.items():
+        raw = (source.get(var) or "").strip().lower()
+        policies[facet] = raw if raw in EXTENSION_POLICY_VALUES else "off"
+    return policies
+
+
+class ExtensionNotActive(Exception):
+    """A facet wire method arrived but the facet is not active here.
+
+    The plugin server implements no facet, so this is unconditional: the
+    caller gets -32601 with structured, honest fallback data instead of a
+    fake success or a silent capability claim."""
+
+    def __init__(self, method, facet, policy):
+        super().__init__(method)
+        self.method = method
+        self.data = {
+            "facet": facet,
+            "policy": policy,
+            "implemented": False,
+            "observed": policy == "observe",
+            "reason": "facet_not_active",
+        }
+
 # A stdio MCP server can outlive, or be started independently of, a host's
 # conversation lifecycle.  When the host does not expose a conversation ID,
 # keep implicit calls isolated to this server process instead of collapsing
@@ -2775,12 +2884,16 @@ def dispatch(method, params):
     # 2026-07-28 MUST: advertise supported versions, capabilities, identity.
     # Also serves as the STDIO backward-compatibility probe for new hosts.
     if method == "server/discover":
+        # No extension facet is implemented here, so ``capabilities``
+        # never advertises Events/Tasks/Heartbeat regardless of policy;
+        # the declared contract rides in ignorable vendor _meta.
         return {
             "supportedVersions": list(SUPPORTED_PROTOCOL_VERSIONS),
             "capabilities": {"tools": {}, "resources": {}},
             "instructions": "Use Scholialang DAG tools for explicit local SQLite work traces. Prefer summaries, frontier, search, and neighborhoods for token efficiency.",
             "ttlMs": CACHEABLE_TTL_MS,
             "cacheScope": CACHE_SCOPE,
+            "_meta": {META_CAPABILITY_CONTRACT: {"declaration": CAPABILITY_DECLARATION}},
         }
     # Legacy handshake — retained for pre-2026 hosts (dual-version). New hosts
     # never send it; they call server/discover and carry version in _meta.
@@ -2825,6 +2938,9 @@ def dispatch(method, params):
     if method in {"resources/templates/list", "prompts/list"}:
         key = "resourceTemplates" if method.startswith("resources") else "prompts"
         return {key: [], "ttlMs": CACHEABLE_TTL_MS, "cacheScope": CACHE_SCOPE}
+    if method in EXTENSION_METHOD_FACETS:
+        facet = EXTENSION_METHOD_FACETS[method]
+        raise ExtensionNotActive(method, facet, resolve_extension_policies()[facet])
     raise NotImplementedError(method)
 
 
@@ -2900,6 +3016,8 @@ def handle_message(message):
             )
     try:
         return rpc_result(message_id, dispatch(method, params))
+    except ExtensionNotActive as exc:
+        return rpc_error(message_id, -32601, f"Method not found: {exc.method}", exc.data)
     except NotImplementedError:
         return rpc_error(message_id, -32601, f"Method not found: {method}")
     except ValueError as exc:

@@ -1,0 +1,445 @@
+{
+  "contract": "scholialang.mcp-capabilities.v1",
+  "identity_scenarios": [
+    {
+      "expect_error_code": -32001,
+      "id": "identity/foreign-project-get",
+      "note": "foreign-scope read is byte-identical to missing record"
+    },
+    {
+      "expect_error_code": -32001,
+      "id": "identity/forged-owner-params",
+      "note": "caller-supplied owner/project fields are never authoritative"
+    },
+    {
+      "expect_error_code": -32000,
+      "id": "identity/unbound-principal",
+      "note": "unbound context fails closed before any adapter runs"
+    }
+  ],
+  "incompatible_protocol": {
+    "expect_error_code": -32022,
+    "note": "version rejection precedes facet routing; no facet data leaks",
+    "requested": "1999-01-01"
+  },
+  "mode_matrix": [
+    {
+      "expect_active": [],
+      "id": "mode/events-off/tasks-off/heartbeat-off",
+      "policies": {
+        "events": "off",
+        "heartbeat": "off",
+        "tasks": "off"
+      }
+    },
+    {
+      "expect_active": [],
+      "id": "mode/events-off/tasks-off/heartbeat-observe",
+      "policies": {
+        "events": "off",
+        "heartbeat": "observe",
+        "tasks": "off"
+      }
+    },
+    {
+      "expect_active": [
+        "heartbeat"
+      ],
+      "id": "mode/events-off/tasks-off/heartbeat-enforce",
+      "policies": {
+        "events": "off",
+        "heartbeat": "enforce",
+        "tasks": "off"
+      }
+    },
+    {
+      "expect_active": [],
+      "id": "mode/events-off/tasks-observe/heartbeat-off",
+      "policies": {
+        "events": "off",
+        "heartbeat": "off",
+        "tasks": "observe"
+      }
+    },
+    {
+      "expect_active": [],
+      "id": "mode/events-off/tasks-observe/heartbeat-observe",
+      "policies": {
+        "events": "off",
+        "heartbeat": "observe",
+        "tasks": "observe"
+      }
+    },
+    {
+      "expect_active": [
+        "heartbeat"
+      ],
+      "id": "mode/events-off/tasks-observe/heartbeat-enforce",
+      "policies": {
+        "events": "off",
+        "heartbeat": "enforce",
+        "tasks": "observe"
+      }
+    },
+    {
+      "expect_active": [
+        "tasks"
+      ],
+      "id": "mode/events-off/tasks-enforce/heartbeat-off",
+      "policies": {
+        "events": "off",
+        "heartbeat": "off",
+        "tasks": "enforce"
+      }
+    },
+    {
+      "expect_active": [
+        "tasks"
+      ],
+      "id": "mode/events-off/tasks-enforce/heartbeat-observe",
+      "policies": {
+        "events": "off",
+        "heartbeat": "observe",
+        "tasks": "enforce"
+      }
+    },
+    {
+      "expect_active": [
+        "tasks",
+        "heartbeat"
+      ],
+      "id": "mode/events-off/tasks-enforce/heartbeat-enforce",
+      "policies": {
+        "events": "off",
+        "heartbeat": "enforce",
+        "tasks": "enforce"
+      }
+    },
+    {
+      "expect_active": [],
+      "id": "mode/events-observe/tasks-off/heartbeat-off",
+      "policies": {
+        "events": "observe",
+        "heartbeat": "off",
+        "tasks": "off"
+      }
+    },
+    {
+      "expect_active": [],
+      "id": "mode/events-observe/tasks-off/heartbeat-observe",
+      "policies": {
+        "events": "observe",
+        "heartbeat": "observe",
+        "tasks": "off"
+      }
+    },
+    {
+      "expect_active": [
+        "heartbeat"
+      ],
+      "id": "mode/events-observe/tasks-off/heartbeat-enforce",
+      "policies": {
+        "events": "observe",
+        "heartbeat": "enforce",
+        "tasks": "off"
+      }
+    },
+    {
+      "expect_active": [],
+      "id": "mode/events-observe/tasks-observe/heartbeat-off",
+      "policies": {
+        "events": "observe",
+        "heartbeat": "off",
+        "tasks": "observe"
+      }
+    },
+    {
+      "expect_active": [],
+      "id": "mode/events-observe/tasks-observe/heartbeat-observe",
+      "policies": {
+        "events": "observe",
+        "heartbeat": "observe",
+        "tasks": "observe"
+      }
+    },
+    {
+      "expect_active": [
+        "heartbeat"
+      ],
+      "id": "mode/events-observe/tasks-observe/heartbeat-enforce",
+      "policies": {
+        "events": "observe",
+        "heartbeat": "enforce",
+        "tasks": "observe"
+      }
+    },
+    {
+      "expect_active": [
+        "tasks"
+      ],
+      "id": "mode/events-observe/tasks-enforce/heartbeat-off",
+      "policies": {
+        "events": "observe",
+        "heartbeat": "off",
+        "tasks": "enforce"
+      }
+    },
+    {
+      "expect_active": [
+        "tasks"
+      ],
+      "id": "mode/events-observe/tasks-enforce/heartbeat-observe",
+      "policies": {
+        "events": "observe",
+        "heartbeat": "observe",
+        "tasks": "enforce"
+      }
+    },
+    {
+      "expect_active": [
+        "tasks",
+        "heartbeat"
+      ],
+      "id": "mode/events-observe/tasks-enforce/heartbeat-enforce",
+      "policies": {
+        "events": "observe",
+        "heartbeat": "enforce",
+        "tasks": "enforce"
+      }
+    },
+    {
+      "expect_active": [
+        "events"
+      ],
+      "id": "mode/events-enforce/tasks-off/heartbeat-off",
+      "policies": {
+        "events": "enforce",
+        "heartbeat": "off",
+        "tasks": "off"
+      }
+    },
+    {
+      "expect_active": [
+        "events"
+      ],
+      "id": "mode/events-enforce/tasks-off/heartbeat-observe",
+      "policies": {
+        "events": "enforce",
+        "heartbeat": "observe",
+        "tasks": "off"
+      }
+    },
+    {
+      "expect_active": [
+        "events",
+        "heartbeat"
+      ],
+      "id": "mode/events-enforce/tasks-off/heartbeat-enforce",
+      "policies": {
+        "events": "enforce",
+        "heartbeat": "enforce",
+        "tasks": "off"
+      }
+    },
+    {
+      "expect_active": [
+        "events"
+      ],
+      "id": "mode/events-enforce/tasks-observe/heartbeat-off",
+      "policies": {
+        "events": "enforce",
+        "heartbeat": "off",
+        "tasks": "observe"
+      }
+    },
+    {
+      "expect_active": [
+        "events"
+      ],
+      "id": "mode/events-enforce/tasks-observe/heartbeat-observe",
+      "policies": {
+        "events": "enforce",
+        "heartbeat": "observe",
+        "tasks": "observe"
+      }
+    },
+    {
+      "expect_active": [
+        "events",
+        "heartbeat"
+      ],
+      "id": "mode/events-enforce/tasks-observe/heartbeat-enforce",
+      "policies": {
+        "events": "enforce",
+        "heartbeat": "enforce",
+        "tasks": "observe"
+      }
+    },
+    {
+      "expect_active": [
+        "events",
+        "tasks"
+      ],
+      "id": "mode/events-enforce/tasks-enforce/heartbeat-off",
+      "policies": {
+        "events": "enforce",
+        "heartbeat": "off",
+        "tasks": "enforce"
+      }
+    },
+    {
+      "expect_active": [
+        "events",
+        "tasks"
+      ],
+      "id": "mode/events-enforce/tasks-enforce/heartbeat-observe",
+      "policies": {
+        "events": "enforce",
+        "heartbeat": "observe",
+        "tasks": "enforce"
+      }
+    },
+    {
+      "expect_active": [
+        "events",
+        "tasks",
+        "heartbeat"
+      ],
+      "id": "mode/events-enforce/tasks-enforce/heartbeat-enforce",
+      "policies": {
+        "events": "enforce",
+        "heartbeat": "enforce",
+        "tasks": "enforce"
+      }
+    }
+  ],
+  "refusal_shape": {
+    "data_keys": [
+      "facet",
+      "policy",
+      "implemented",
+      "observed",
+      "reason"
+    ],
+    "error_code": -32601,
+    "reason": "facet_not_active"
+  },
+  "scope": "portable consumer contract fixtures for sch073-04; synthetic-adapter arms prove negotiation, not shipped transport support",
+  "support_matrix": [
+    {
+      "events": false,
+      "expect_advertised": {
+        "capabilities.extensions['com.dougfirlabs/heartbeat']": false,
+        "capabilities.extensions['io.modelcontextprotocol/tasks']": false,
+        "capabilities.subscriptions": false
+      },
+      "expect_refused_facets": [
+        "events",
+        "tasks",
+        "heartbeat"
+      ],
+      "heartbeat": false,
+      "id": "support/events-0/tasks-0/heartbeat-0",
+      "tasks": false
+    },
+    {
+      "events": false,
+      "expect_advertised": {
+        "capabilities.extensions['com.dougfirlabs/heartbeat']": true,
+        "capabilities.extensions['io.modelcontextprotocol/tasks']": false,
+        "capabilities.subscriptions": false
+      },
+      "expect_refused_facets": [
+        "events",
+        "tasks"
+      ],
+      "heartbeat": true,
+      "id": "support/events-0/tasks-0/heartbeat-1",
+      "tasks": false
+    },
+    {
+      "events": false,
+      "expect_advertised": {
+        "capabilities.extensions['com.dougfirlabs/heartbeat']": false,
+        "capabilities.extensions['io.modelcontextprotocol/tasks']": true,
+        "capabilities.subscriptions": false
+      },
+      "expect_refused_facets": [
+        "events",
+        "heartbeat"
+      ],
+      "heartbeat": false,
+      "id": "support/events-0/tasks-1/heartbeat-0",
+      "tasks": true
+    },
+    {
+      "events": false,
+      "expect_advertised": {
+        "capabilities.extensions['com.dougfirlabs/heartbeat']": true,
+        "capabilities.extensions['io.modelcontextprotocol/tasks']": true,
+        "capabilities.subscriptions": false
+      },
+      "expect_refused_facets": [
+        "events"
+      ],
+      "heartbeat": true,
+      "id": "support/events-0/tasks-1/heartbeat-1",
+      "tasks": true
+    },
+    {
+      "events": true,
+      "expect_advertised": {
+        "capabilities.extensions['com.dougfirlabs/heartbeat']": false,
+        "capabilities.extensions['io.modelcontextprotocol/tasks']": false,
+        "capabilities.subscriptions": true
+      },
+      "expect_refused_facets": [
+        "tasks",
+        "heartbeat"
+      ],
+      "heartbeat": false,
+      "id": "support/events-1/tasks-0/heartbeat-0",
+      "tasks": false
+    },
+    {
+      "events": true,
+      "expect_advertised": {
+        "capabilities.extensions['com.dougfirlabs/heartbeat']": true,
+        "capabilities.extensions['io.modelcontextprotocol/tasks']": false,
+        "capabilities.subscriptions": true
+      },
+      "expect_refused_facets": [
+        "tasks"
+      ],
+      "heartbeat": true,
+      "id": "support/events-1/tasks-0/heartbeat-1",
+      "tasks": false
+    },
+    {
+      "events": true,
+      "expect_advertised": {
+        "capabilities.extensions['com.dougfirlabs/heartbeat']": false,
+        "capabilities.extensions['io.modelcontextprotocol/tasks']": true,
+        "capabilities.subscriptions": true
+      },
+      "expect_refused_facets": [
+        "heartbeat"
+      ],
+      "heartbeat": false,
+      "id": "support/events-1/tasks-1/heartbeat-0",
+      "tasks": true
+    },
+    {
+      "events": true,
+      "expect_advertised": {
+        "capabilities.extensions['com.dougfirlabs/heartbeat']": true,
+        "capabilities.extensions['io.modelcontextprotocol/tasks']": true,
+        "capabilities.subscriptions": true
+      },
+      "expect_refused_facets": [],
+      "heartbeat": true,
+      "id": "support/events-1/tasks-1/heartbeat-1",
+      "tasks": true
+    }
+  ]
+}
