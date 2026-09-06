@@ -41,6 +41,23 @@ def _stop_exhaust(home, session_id):
         pass
 
 
+def _stamp_model(server, dag_id, project_path, transcript_path):
+    """Best-effort model provenance from the finished transcript."""
+    if not dag_id or not transcript_path:
+        return
+    try:
+        import cc_exhaust as cc
+
+        lines = Path(transcript_path).read_text(errors="replace").splitlines()
+        model = cc.model_from_lines(lines)
+        if model:
+            server.tool_dag_set_model(
+                {"dag_id": dag_id, "project_path": project_path, "model": model}
+            )
+    except Exception:
+        pass
+
+
 def main():
     try:
         raw = sys.stdin.read()
@@ -64,14 +81,21 @@ def main():
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     import scholialang_mcp_server as server  # noqa: E402
 
-    server.tool_dag_finish_session(
+    finished = server.tool_dag_finish_session(
         {
             "project_path": cwd,
             "session_id": session_id,
             "host": HOST,
+            "kind": "Observation",
             "summary": f"Claude Code session ended ({reason}).",
         }
-    )
+    ).get("structuredContent", {})
+
+    # The exhaust tailer normally backfills provenance, but it only runs when
+    # exhaust capture is enabled. Session end is the other point where the whole
+    # transcript is on disk, so stamp from here too — set_dag_model is
+    # first-writer-wins, so this is a no-op when the tailer already recorded it.
+    _stamp_model(server, finished.get("dag_id"), cwd, payload.get("transcript_path"))
 
 
 if __name__ == "__main__":

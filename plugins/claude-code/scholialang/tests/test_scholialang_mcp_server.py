@@ -4,9 +4,11 @@ import json
 import os
 import sqlite3
 import tempfile
+import threading
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from unittest import mock
 
 
 SERVER_PATH = Path(__file__).resolve().parents[1] / "scripts" / "scholialang_mcp_server.py"
@@ -122,6 +124,56 @@ class ScholialangDagTests(unittest.TestCase):
                     "relation": "derived_from",
                 }
             )
+
+    def test_concurrent_opposite_links_cannot_persist_a_cycle(self):
+        dag_id = self.start_dag()
+        first = self.add_atom(dag_id, "Observation", "A")
+        second = self.add_atom(dag_id, "Observation", "B")
+        barrier = threading.Barrier(2)
+        original_add_edge = server.add_edge
+
+        def synchronized_add_edge(*args, **kwargs):
+            try:
+                barrier.wait(timeout=0.25)
+            except threading.BrokenBarrierError:
+                pass
+            return original_add_edge(*args, **kwargs)
+
+        errors = []
+
+        def link(from_id, to_id):
+            try:
+                server.tool_dag_link(
+                    {
+                        "dag_id": dag_id,
+                        "project_path": self.project_path,
+                        "from": from_id,
+                        "to": to_id,
+                    }
+                )
+            except Exception as exc:  # noqa: BLE001 - asserted below
+                errors.append(exc)
+
+        with mock.patch.object(server, "add_edge", side_effect=synchronized_add_edge):
+            threads = [
+                threading.Thread(target=link, args=(first, second)),
+                threading.Thread(target=link, args=(second, first)),
+            ]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(timeout=5)
+
+        self.assertTrue(all(not thread.is_alive() for thread in threads))
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("cycle", str(errors[0]))
+        dag = server.load_dag(dag_id, self.project_path)
+        opposing = [
+            edge
+            for edge in dag["edges"]
+            if {edge["from"], edge["to"]} == {first, second}
+        ]
+        self.assertEqual(len(opposing), 1, dag["edges"])
 
     def test_trace_aliases_use_dag_store(self):
         started = server.TOOLS["scholia.trace_start"]({"project_path": self.project_path, "title": "Alias"})
@@ -506,7 +558,7 @@ class PublicDagContractRegressionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unknown.*atom kind"):
             self.add(dag_id, "Trace", "This wrapper is not a canonical atom.")
 
-    def test_finish_session_defaults_to_canonical_goal_closing_concluding(self):
+    def test_finish_session_closes_goal_only_with_explicit_outcome(self):
         created = server.tool_dag_ensure_session(
             {
                 "project_path": self.project_path,
@@ -515,16 +567,24 @@ class PublicDagContractRegressionTests(unittest.TestCase):
                 "objective": "Close this session canonically.",
             }
         )["structuredContent"]
+        premise = self.add(
+            created["dag_id"], "Observation", "Synthetic review completed successfully."
+        )
         finished = server.tool_dag_finish_session(
             {
                 "project_path": self.project_path,
                 "session_id": "contract-session",
                 "host": "test",
                 "summary": "Session complete.",
+                "outcome": "met",
             }
         )["structuredContent"]
         self.assertEqual(finished["atom"]["kind"], "Concluding")
         self.assertEqual(finished["atom"]["attributes"]["for_goal"], created["goal_atom"]["id"])
+        self.assertEqual(finished["atom"]["attributes"]["status"], "met")
+        dag = server.load_dag(created["dag_id"], self.project_path)
+        self.assertTrue(any(edge["from"] == finished["atom"]["id"] and
+                            edge["to"] == premise["id"] for edge in dag["edges"]))
 
     def test_xml_export_is_grammar_valid_and_preserves_goal_closure(self):
         started = self.start()
@@ -646,6 +706,19 @@ class PublicDagContractRegressionTests(unittest.TestCase):
         )["structuredContent"]
         self.assertIn("Satellite evidence is present", compact["summary"])
 
+    def test_dag_list_uses_bounded_metadata_query_without_hydrating_graphs(self):
+        for index in range(3):
+            dag_id = self.start()["dag_id"]
+            self.add(dag_id, "Observation", f"Observation {index}")
+
+        with mock.patch.object(server, "row_to_dag", side_effect=AssertionError("full graph loaded")):
+            listing = server.tool_dag_list(
+                {"project_path": self.project_path, "limit": 1}
+            )["structuredContent"]
+
+        self.assertEqual(len(listing["dags"]), 1)
+        self.assertEqual(listing["dags"][0]["node_count"], 2)
+
 
 class AutoEmitSessionTests(unittest.TestCase):
     """Default per-project auto-emit: idempotent session DAGs, host tagging,
@@ -706,6 +779,17 @@ class AutoEmitSessionTests(unittest.TestCase):
         self.assertFalse(second["created"])
         self.assertEqual(first["dag_id"], second["dag_id"])
 
+    def test_resumed_session_backfills_missing_provenance_first_writer_wins(self):
+        first = self.ensure()
+        resumed = self.ensure(model="test-model", orchestrator="outer-runner")
+        preserved = self.ensure(model="another-model", orchestrator="another-orchestrator")
+
+        self.assertEqual(resumed["dag_id"], first["dag_id"])
+        self.assertEqual(resumed["model"], "test-model")
+        self.assertEqual(resumed["orchestrator"], "outer-runner")
+        self.assertEqual(preserved["model"], "test-model")
+        self.assertEqual(preserved["orchestrator"], "outer-runner")
+
     def test_implicit_identity_is_runtime_scoped_and_never_unknown_default(self):
         first = server.tool_dag_ensure_session(
             {"project_path": self.project_path}
@@ -756,7 +840,8 @@ class AutoEmitSessionTests(unittest.TestCase):
         )["structuredContent"]
         self.assertTrue(finished["found"])
         self.assertEqual(finished["dag_id"], created["dag_id"])
-        self.assertEqual(finished["atom"]["kind"], "Concluding")
+        self.assertEqual(finished["atom"]["kind"], "Observation")
+        self.assertIsNone(finished["outcome"])
 
     def test_two_hosts_same_session_get_distinct_dags(self):
         cc = self.ensure(host="claude-code")
@@ -785,7 +870,7 @@ class AutoEmitSessionTests(unittest.TestCase):
         res = self.ensure(auto=False)
         self.assertTrue(res["created"])
 
-    def test_finish_session_appends_concluding(self):
+    def test_finish_session_without_outcome_records_lifecycle_observation(self):
         created = self.ensure()
         fin = server.tool_dag_finish_session(
             {
@@ -797,7 +882,44 @@ class AutoEmitSessionTests(unittest.TestCase):
         )["structuredContent"]
         self.assertTrue(fin["found"])
         self.assertEqual(fin["dag_id"], created["dag_id"])
+        self.assertEqual(fin["atom"]["kind"], "Observation")
+        self.assertEqual(fin["atom"]["attributes"], {})
+
+    def test_finish_session_records_non_success_outcome_without_claiming_met(self):
+        created = self.ensure(session_id="cancelled")
+        premise = server.tool_dag_add_atom({
+            "dag_id": created["dag_id"], "project_path": self.project_path,
+            "kind": "Observation", "summary": "Synthetic work was cancelled before execution.",
+        })["structuredContent"]["atom"]
+        fin = server.tool_dag_finish_session(
+            {
+                "project_path": self.project_path,
+                "session_id": "cancelled",
+                "host": "claude-code",
+                "summary": "Cancelled before work began.",
+                "outcome": "unmet",
+            }
+        )["structuredContent"]
         self.assertEqual(fin["atom"]["kind"], "Concluding")
+        self.assertEqual(
+            fin["atom"]["attributes"],
+            {"for_goal": created["goal_atom"]["id"], "status": "unmet"},
+        )
+        dag = server.load_dag(created["dag_id"], self.project_path)
+        self.assertTrue(any(edge["from"] == fin["atom"]["id"] and
+                            edge["to"] == premise["id"] for edge in dag["edges"]))
+
+    def test_finish_session_rejects_concluding_without_outcome(self):
+        self.ensure(session_id="ambiguous")
+        with self.assertRaisesRegex(ValueError, "outcome is required"):
+            server.tool_dag_finish_session(
+                {
+                    "project_path": self.project_path,
+                    "session_id": "ambiguous",
+                    "host": "claude-code",
+                    "kind": "Concluding",
+                }
+            )
 
     def test_finish_session_missing_is_safe(self):
         fin = server.tool_dag_finish_session(
@@ -846,6 +968,11 @@ class AutoEmitSessionTests(unittest.TestCase):
         self.assertIn("session_id", sch["properties"])
         self.assertIn("host", sch["properties"])
         self.assertIn("auto", sch["properties"])
+        finish = server.tool_schema("scholia_dag_finish_session")
+        self.assertEqual(
+            finish["properties"]["outcome"]["enum"],
+            ["met", "unmet", "partially_met"],
+        )
 
 
 class ScholialangValidatorTests(unittest.TestCase):
@@ -911,6 +1038,16 @@ class ScholialangValidatorTests(unittest.TestCase):
         result = json.loads(server.tool_lint_snippet({"snippet": snippet})["content"][0]["text"])
         self.assertFalse(result["ok"])
         self.assertEqual(result["errors"][0]["rule"], "well_formed")
+
+    def test_lint_rejects_plain_or_truncated_model_output_with_no_atoms(self):
+        snippet = (
+            'Observation(id="obs_mcp_structure", description="The inspected '
+            'directory contains only README.md and'
+        )
+        result = server.tool_lint_snippet({"snippet": snippet})["structuredContent"]
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["errors"][0]["rule"], "well_formed")
+        self.assertIn("at least one recognized atom", result["errors"][0]["message"])
 
     def test_lint_trace_returns_per_rule_breakdown(self):
         snippet = '<Step id="S1"><Hypothesis id="H1">y</Hypothesis></Step>'

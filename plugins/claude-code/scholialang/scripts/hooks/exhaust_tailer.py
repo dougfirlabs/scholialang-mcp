@@ -55,8 +55,36 @@ def save_state(path, state):
         pass
 
 
+def stamp_model(*dag_ids, project_path, model, log=None):
+    """Record the model on each paired DAG. Best-effort: provenance is a nice
+    label, not worth failing a capture pass over."""
+    ok = False
+    for dag_id in dag_ids:
+        if not dag_id:
+            continue
+        try:
+            server.tool_dag_set_model({"dag_id": dag_id, "project_path": project_path, "model": model})
+            ok = True
+        except Exception as exc:  # noqa: BLE001 - see docstring
+            if callable(log):
+                log(f"model stamp failed for {dag_id}: {exc}")
+    return ok
+
+
 def sync_state(state, *, transcript_path, project_path, max_events, log=None):
     """Run one capture pass and fold the result into ``state`` (mutated + returned)."""
+    reason = server.autoemit_disabled_reason(project_path)
+    if reason is not None:
+        if callable(log):
+            log(f"exhaust opted out for {project_path} ({reason}); capture paused")
+        last_line = int(state.get("last_line", 0))
+        return state, cc.CaptureResult(
+            0,
+            last_line,
+            False,
+            state.get("last_atom_id"),
+            last_line,
+        )
     start_line = int(state.get("last_line", 0)) + 1
     result = cc.capture_once(
         server,
@@ -73,6 +101,16 @@ def sync_state(state, *, transcript_path, project_path, max_events, log=None):
         state["last_atom_id"] = result.last_atom_id
     state["appended_total"] = int(state.get("appended_total", 0)) + result.appended
     state["truncated"] = result.truncated
+    if result.model and not state.get("model"):
+        stamped = stamp_model(
+            state["dag_id"],
+            state.get("checkpoint_dag_id"),
+            project_path=project_path,
+            model=result.model,
+            log=log,
+        )
+        if stamped:
+            state["model"] = result.model
     return state, result
 
 
@@ -88,6 +126,7 @@ def run(*, transcript_path, project_path, session_id, max_events, poll=POLL_SECO
         log("exhaust capture opted out; nothing to tail")
         return 0
     state["dag_id"] = info["dag_id"]
+    state["checkpoint_dag_id"] = info.get("checkpoint_dag_id")
     state["pid"] = os.getpid()
     state["transcript"] = str(transcript_path)
     save_state(path, state)

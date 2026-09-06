@@ -71,6 +71,41 @@ class TailerSyncTests(unittest.TestCase):
         )
         self.assertEqual(r.appended, 0)
 
+    def test_sync_state_pauses_on_live_optout_and_keeps_cursor_for_resume(self):
+        transcript = Path(self.tempdir.name) / "live-optout.jsonl"
+        transcript.write_text(FIXTURE.read_text(encoding="utf-8").splitlines()[0] + "\n", encoding="utf-8")
+        state = self._state()
+        state, first = tailer.sync_state(
+            state,
+            transcript_path=str(transcript),
+            project_path=self.project,
+            max_events=2000,
+        )
+        self.assertEqual(first.appended, 1)
+        self.assertEqual(state["last_line"], 1)
+
+        (Path(self.project) / ".scholia-off").write_text("", encoding="utf-8")
+        with transcript.open("a", encoding="utf-8") as stream:
+            stream.write(FIXTURE.read_text(encoding="utf-8").splitlines()[1] + "\n")
+        state, paused = tailer.sync_state(
+            state,
+            transcript_path=str(transcript),
+            project_path=self.project,
+            max_events=2000,
+        )
+        self.assertEqual(paused.appended, 0)
+        self.assertEqual(state["last_line"], 1)
+
+        (Path(self.project) / ".scholia-off").unlink()
+        state, resumed = tailer.sync_state(
+            state,
+            transcript_path=str(transcript),
+            project_path=self.project,
+            max_events=2000,
+        )
+        self.assertEqual(resumed.appended, 1)
+        self.assertEqual(state["last_line"], 2)
+
     def test_run_captures_then_exits_on_cap(self):
         # max_events < transcript length -> run() captures the capped set and
         # exits via the truncated break (no infinite loop, no sleep reached).
@@ -219,21 +254,13 @@ class SessionHookLifecycleTests(unittest.TestCase):
         closed = server.load_dag(announced_dag_id, self.project)
         kinds = [closed["nodes"][node_id]["kind"] for node_id in closed["order"]]
         self.assertNotIn("Summary", kinds)
-        self.assertEqual(kinds[-1], "Concluding")
-        concluding = closed["nodes"][closed["order"][-1]]
-        goal_id = next(
-            node_id
-            for node_id in closed["order"]
-            if closed["nodes"][node_id]["kind"] == "Goal"
+        self.assertEqual(kinds[-1], "Observation")
+        lifecycle = closed["nodes"][closed["order"][-1]]
+        self.assertIn("session ended", lifecycle["summary"].lower())
+        self.assertEqual(lifecycle["attributes"], {})
+        self.assertFalse(
+            any(node["kind"] == "Concluding" for node in closed["nodes"].values())
         )
-        self.assertEqual(concluding["attributes"]["for_goal"], goal_id)
-        targets = {
-            edge["to"]
-            for edge in closed["edges"]
-            if edge["from"] == concluding["id"]
-        }
-        self.assertIn(goal_id, targets)
-        self.assertIn(observation["id"], targets)
 
         after_close = server.tool_dag_ensure_session(
             {"project_path": self.project}

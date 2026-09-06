@@ -284,7 +284,11 @@ MANIFEST = [
         scenario_class="composition",
         boundary="mcp:scholia_dag_ensure_session,scholia_dag_finish_session,scholia_dag_export,scholia_lint_trace",
         arms=PLUGIN_ARMS,
-        expected="finish appends a status-bearing goal-closing Concluding; the finished trace lints clean",
+        expected=(
+            "premise-free explicit closure is rejected without mutation; a no-outcome "
+            "finish records a lifecycle Observation; with a genuine premise, finish "
+            "appends a status-bearing goal-closing Concluding and the trace lints clean"
+        ),
     ),
     _scenario(
         "search_neighbors_compaction",
@@ -767,10 +771,31 @@ def scenario_session_finish_roundtrip(ctx, recorder):
     project = str(ctx["sandbox"] / "project")
     ensured = client.call("scholia_dag_ensure_session", {"project_path": project, "auto": False})["structured"]
     recorder.check("session_created", ensured.get("created") is True, json.dumps({k: ensured.get(k) for k in ("created", "enabled")}))
+    dag_id = ensured.get("dag_id")
     again = client.call("scholia_dag_ensure_session", {"project_path": project, "auto": False})["structured"]
-    recorder.check("ensure_is_idempotent", again.get("created") is False and again.get("dag_id") == ensured.get("dag_id"), "")
-    finished = client.call("scholia_dag_finish_session", {"project_path": project, "summary": "Verification session ended."})["structured"]
-    recorder.check("finish_found_session", finished.get("found") is True, "")
+    recorder.check("ensure_is_idempotent", again.get("created") is False and again.get("dag_id") == dag_id, "")
+
+    # Explicit closure without any in-trace premise is fail-closed: rejected
+    # before any atom/edge/counter/session-binding mutation.
+    rejected = client.call("scholia_dag_finish_session", {"project_path": project, "outcome": "met", "summary": "Premature closure."})
+    recorder.check("premise_free_closure_rejected", "rpc_error" in rejected, json.dumps(rejected.get("rpc_error", rejected)))
+    after_reject = client.call("scholia_dag_read", {"dag_id": dag_id, "project_path": project, "include_nodes": True})["structured"]
+    reject_kinds = sorted(node.get("kind") for node in after_reject.get("nodes", []))
+    recorder.check("rejection_left_graph_unmutated", reject_kinds == ["Goal"], json.dumps(reject_kinds))
+
+    # A finish with no outcome stays a plain lifecycle Observation.
+    lifecycle = client.call("scholia_dag_finish_session", {"project_path": project, "summary": "Verification session ended."})["structured"]
+    recorder.check("finish_found_session", lifecycle.get("found") is True, "")
+    recorder.check("lifecycle_finish_is_observation", lifecycle.get("atom", {}).get("kind") == "Observation", str(lifecycle.get("atom", {}).get("kind")))
+
+    resumed = client.call("scholia_dag_ensure_session", {"project_path": project, "auto": False})["structured"]
+    recorder.check("session_resumes_after_lifecycle_finish", resumed.get("created") is False and resumed.get("dag_id") == dag_id, "")
+    premise = client.call(
+        "scholia_dag_add_atom",
+        {"dag_id": dag_id, "project_path": project, "kind": "Finding",
+         "summary": "Verification battery observed the session goal satisfied."},
+    )["structured"]["atom"]
+    finished = client.call("scholia_dag_finish_session", {"project_path": project, "outcome": "met", "summary": "Verification session ended."})["structured"]
     atom = finished.get("atom", {})
     recorder.check("finish_appends_concluding", atom.get("kind") == "Concluding", str(atom.get("kind")))
     attributes = atom.get("attributes", {})
@@ -778,6 +803,12 @@ def scenario_session_finish_roundtrip(ctx, recorder):
         "concluding_closes_goal_with_status",
         bool(attributes.get("for_goal")) and attributes.get("status") in {"met", "unmet", "partially_met"},
         json.dumps(attributes),
+    )
+    closed = client.call("scholia_dag_read", {"dag_id": dag_id, "project_path": project, "include_edges": True})["structured"]
+    recorder.check(
+        "concluding_cites_real_premise",
+        any(edge.get("from") == atom.get("id") and edge.get("to") == premise["id"] for edge in closed.get("edges", [])),
+        json.dumps(closed.get("edges", [])),
     )
     exported = client.call("scholia_dag_export", {"dag_id": finished["dag_id"], "format": "xml", "project_path": project})
     linted = _lint(client, exported["text"])

@@ -188,6 +188,24 @@ Each plugin's tool surface is identical:
 - `scholia_codex_import_thread` — import Codex rollout JSONL as an
   event-sourced exhaust DAG
 
+`scholia_dag_finish_session` distinguishes lifecycle completion from goal
+attainment. With no `outcome`, it records an `Observation` that the session
+ended. Supply `outcome=met`, `unmet`, or `partially_met` only when the caller
+can truthfully close the session Goal; that creates the corresponding
+`Concluding` atom.
+
+Explicit closure is fail-closed. A goal-closing `Concluding` must cite a
+genuine in-trace premise — at least one `Finding`, `Observation`, or
+`Evidence` atom recorded before the finish call (`refer_at_least_one`). If
+the trace holds none, the finish call is rejected before any atom, edge,
+counter, or session-binding mutation; the session stays bound. To remediate,
+record the supporting atom via `scholia_dag_add_atom` and finish again, or
+finish without an `outcome` to record the lifecycle `Observation`. The server
+never fabricates a premise or rewrites a declared outcome. This replaces the
+old behavior that fabricated a supporting Observation and repairs the #46
+hardening candidate's regression, which removed that fabrication but could
+still persist a premise-free `Concluding` that failed the bundled validator.
+
 The validator prefers the installed `scholialang` Python package and
 falls back to the vendored snapshot at
 `<plugin>/scripts/_scholia_vendored/`. Check the `lint_engine` field
@@ -252,6 +270,9 @@ MVP v0.6 LSP scope:
 - Definition resolution order: workspace-relative file path,
   `path.py::symbol` path prefix, then Scholia atom id in the current document
   when that atom has a `location` attribute.
+- Full-document `didChange` synchronization with monotonically increasing
+  document versions; `didClose` drops the in-memory buffer so later reads use
+  the file on disk.
 - Version alignment with the v0.6 language/runtime stack; full v0.6 grammar
   validation is exposed through the MCP lint tools rather than the LSP MVP.
 

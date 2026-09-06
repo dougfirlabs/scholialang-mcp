@@ -1,0 +1,21 @@
+{
+  "kind": "prd", "schema_version": 1, "status": "approved",
+  "group_id": "sch073-mcp-next-steps-20260906", "run_policy": "gated_stack",
+  "approval": {"approved": true, "execution_authorized": true, "merge_authorized": true, "release_authorized": false},
+  "authority": "Darren approved execution and cumulative integration of the four next-step PRDs. PyPI publication, production activation, and Scholialang-cloud propagation remain prohibited.",
+  "evidence_contract": "Bind evidence to the exact candidate SHA, accepted core artifact hashes, clean isolated environment, import origin, dependency/license closure, parity tests, independent review, and rollback ref. Preserve all historical records.",
+  "id": "sch073-05-core073-vendoring", "title": "Rebind MCP to accepted Scholialang 0.7.3", "sequence": 5,
+  "depends_on_prds": [], "repositories": ["scholialang-mcp"],
+  "problem": "MCP still reports and packages the 0.7.2 engine while the accepted Scholialang core receipt is 0.7.3.",
+  "outcome": "MCP consumes the exact accepted 0.7.3 artifact reproducibly without requiring PyPI.",
+  "key_files": ["pyproject and package metadata", "vendored artifact/input receipt", "fingerprint and parity fixtures", "license/provenance record"],
+  "hard_constraints": ["Use the exact accepted wheel or source by hash.", "Do not publish to PyPI.", "Do not modify Scholialang core semantics.", "Do not mutate shared stage during execution.", "Do not install into a host or shared runner environment.", "Verify actual import origin/version, serializer and PyYAML closure, and source/wheel/sdist parity."],
+  "stories": [{"id":"SCH073-05-S1","title":"Materialize exact core artifact","description":"Install or vendor the accepted 0.7.3 wheel/source and record hashes and provenance.","priority":1,"passes":0},{"id":"SCH073-05-S2","title":"Rebind MCP metadata and fingerprints","description":"Update declared package/grammar/engine identity and regenerate parity baselines.","priority":2,"passes":0},{"id":"SCH073-05-S3","title":"Prove clean artifact parity","description":"Run canonical, compatibility, fingerprint, import-origin, and adversarial tests from clean environments.","priority":3,"passes":0}],
+  "acceptance": ["No shipped MCP surface reports the old 0.7.2 engine after installation.", "Exact 0.7.3 hashes and dependency/license provenance are recorded.", "Source, wheel, and sdist parity suites pass with no required skips.", "No PyPI publication or protected-branch merge occurs during the run."],
+  "verification": "Run the MCP suite plus exact core semantic corpus and installed-artifact import-origin checks; independently adjudicate the pushed candidate.",
+  "out_of_scope": ["PyPI publication", "new grammar semantics", "production activation", "Scholialang-cloud propagation"],
+  "rollback": "Revert the candidate and restore the prior 0.7.2 receipt; preserve both artifacts and hashes.", "success_metrics": ["0.7.3 receipt verified", "old 0.7.2 identity absent from active MCP artifact", "clean parity green"],
+  "target_repo": "scholialang-mcp", "target_root": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control", "allowed_drivers": ["claude"],
+  "coordination_metadata": {"job_id":"sch073-j05-vendoring","launch_ready":true,"gui_port":7709,"source_branch":"feat/sch073-mcp-control-20260905","source_tip":"ba31107d8205b02744e9647f9a251cadbe6a50ca","launch_model":"claude-fable-5","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only"},
+  "launch_contract": {"project":"scholialang-mcp-sch073","port":7709,"source_branch":"feat/sch073-mcp-control-20260905","execution_mode":"skolem_worktree","driver":"claude","model":"claude-fable-5","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only","protected_merge_authorized":true}
+}
