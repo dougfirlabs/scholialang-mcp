@@ -1,0 +1,9 @@
+== S1 grammar/spec verification ==
+date: 2026-09-06T13:35:49Z
+branch: integration/sch073-mcp-stage-base-20260906
+tip: 75319cc8ac9b12dbfb76458c5c882fd6577f1a11
+status-pre:
+ M .gitignore
+cmd: python -m pytest tests/test_core073_artifact_contract.py tests/test_spec_fingerprint_fixtures.py -q
+........sssss                                                            [100%]
+exit=0

@@ -1,0 +1,9 @@
+== S1 rerun with pinned spec corpus ==
+date: 2026-09-06T13:36:32Z
+tip: 75319cc8ac9b12dbfb76458c5c882fd6577f1a11
+SCHOLIALANG_SPEC_DIR=/tmp/sch073-spec-pin-20260906 (clone of ~/projects/scholialang-spec at pinned 4e19eae3e55566dac450c0dbf7bcba03d12afc50)
+cmd: python -m pytest tests/test_core073_artifact_contract.py tests/test_spec_fingerprint_fixtures.py -q -rs
+........s....                                                            [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_spec_fingerprint_fixtures.py:132: MCP_REQUIRE_FINGERPRINT_FIXTURES not set (offline checkout)
+exit=0

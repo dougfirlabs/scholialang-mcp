@@ -1,0 +1,198 @@
+[
+  {
+    "direction": "client",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": 101,
+      "method": "tools/call",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {},
+              "com.dougfirlabs/heartbeat": {
+                "extension_version": "0.1"
+              }
+            },
+            "elicitation": {
+              "form": {}
+            }
+          },
+          "org.scholialang/idempotencyKey": "creation"
+        },
+        "name": "fixture_job",
+        "arguments": {
+          "behavior": "wait"
+        }
+      }
+    }
+  },
+  {
+    "direction": "server",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": 101,
+      "result": {
+        "taskId": "mcp-task-7eb0bf7462016d594c792034eb9b902b430d414f429b86c545983c701d5e511f",
+        "status": "working",
+        "createdAt": "2026-09-06T13:37:00.063Z",
+        "lastUpdatedAt": "2026-09-06T13:37:00.063Z",
+        "ttlMs": 86400000,
+        "pollIntervalMs": 100,
+        "resultType": "task",
+        "_meta": {
+          "io.modelcontextprotocol/serverInfo": {
+            "name": "mcp__scholialang__atlas",
+            "version": "0.7.3"
+          }
+        }
+      }
+    }
+  },
+  {
+    "direction": "client",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": "revoked",
+      "method": "subscriptions/listen",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {},
+              "com.dougfirlabs/heartbeat": {
+                "extension_version": "0.1"
+              }
+            }
+          }
+        },
+        "notifications": {
+          "taskIds": [
+            "mcp-task-7eb0bf7462016d594c792034eb9b902b430d414f429b86c545983c701d5e511f"
+          ]
+        }
+      }
+    }
+  },
+  {
+    "direction": "server",
+    "message": {
+      "jsonrpc": "2.0",
+      "method": "notifications/subscriptions/acknowledged",
+      "params": {
+        "notifications": {
+          "taskIds": [
+            "mcp-task-7eb0bf7462016d594c792034eb9b902b430d414f429b86c545983c701d5e511f"
+          ]
+        },
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "revoked"
+        }
+      }
+    }
+  },
+  {
+    "direction": "server",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": "revoked",
+      "result": {
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "revoked",
+          "io.modelcontextprotocol/serverInfo": {
+            "name": "mcp__scholialang__atlas",
+            "version": "0.7.3"
+          }
+        },
+        "resultType": "complete"
+      }
+    }
+  },
+  {
+    "direction": "client",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": 102,
+      "method": "tasks/get",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {},
+              "com.dougfirlabs/heartbeat": {
+                "extension_version": "0.1"
+              }
+            }
+          }
+        },
+        "taskId": "mcp-task-7eb0bf7462016d594c792034eb9b902b430d414f429b86c545983c701d5e511f"
+      }
+    }
+  },
+  {
+    "direction": "server",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": 102,
+      "error": {
+        "code": -32601,
+        "message": "adapter_unavailable"
+      }
+    }
+  },
+  {
+    "direction": "client",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": 103,
+      "method": "server/discover",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {},
+              "com.dougfirlabs/heartbeat": {
+                "extension_version": "0.1"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "direction": "server",
+    "message": {
+      "jsonrpc": "2.0",
+      "id": 103,
+      "result": {
+        "supportedVersions": [
+          "2026-07-28",
+          "2025-11-25",
+          "2025-06-18",
+          "2025-03-26",
+          "2024-11-05"
+        ],
+        "capabilities": {
+          "tools": {
+            "listChanged": false
+          }
+        },
+        "instructions": "Use the Scholia atlas tools to inspect host-generated project summaries.",
+        "ttlMs": 0,
+        "cacheScope": "private",
+        "resultType": "complete",
+        "_meta": {
+          "io.modelcontextprotocol/serverInfo": {
+            "name": "mcp__scholialang__atlas",
+            "version": "0.7.3"
+          }
+        }
+      }
+    }
+  }
+]

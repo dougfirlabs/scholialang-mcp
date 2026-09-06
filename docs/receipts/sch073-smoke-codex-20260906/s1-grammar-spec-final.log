@@ -1,0 +1,7 @@
+== S1 final: pinned corpus + fail-closed gate ==
+date: 2026-09-06T13:36:43Z
+tip: 75319cc8ac9b12dbfb76458c5c882fd6577f1a11
+env: SCHOLIALANG_SPEC_DIR=/tmp/sch073-spec-pin-20260906 MCP_REQUIRE_FINGERPRINT_FIXTURES=1
+cmd: python -m pytest tests/test_core073_artifact_contract.py tests/test_spec_fingerprint_fixtures.py -q
+.............                                                            [100%]
+exit=0
