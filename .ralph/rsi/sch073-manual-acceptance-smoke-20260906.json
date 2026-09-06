@@ -58,7 +58,7 @@
   "verification": "Run targeted grammar/spec tests plus tests/integration/test_real_adapters.py and related protocol regression tests from the pinned integration tip; inspect wire captures and git diff; independently adjudicate the run.",
   "out_of_scope": ["source implementation", "stage/main merge", "PyPI publication", "production activation", "Scholialang-cloud propagation", "credential changes", "GUI or tmux restart"],
   "rollback": "No product rollback is required. If run artifacts are malformed, discard only the report-only run record; preserve the integration branch and its existing backup refs.",
-  "success_metrics": ["grammar/spec checks pass", "real stdio Events/Tasks/Heartbeat checks pass", "no tracked product changes", "durable acceptance receipt", "independent adjudication pass or pass_with_caveats"],
+  "success_metrics": ["`python -m pytest tests/test_core073_artifact_contract.py tests/test_spec_fingerprint_fixtures.py -q` passes", "`python -m pytest tests/integration/test_real_adapters.py -q` passes", "`python -m pytest tests/test_mcp_protocol.py tests/test_mcp_events.py tests/test_mcp_tasks.py tests/test_mcp_heartbeat.py -q` passes when present, otherwise record the repository's exact targeted protocol command", "no tracked product changes", "durable acceptance receipt", "independent adjudication pass or pass_with_caveats"],
   "coordination_metadata": {
     "job_id": "sch073-j-smoke-20260906",
     "launch_ready": true,
