@@ -65,7 +65,7 @@
     "gui_port": 7706,
     "source_branch": "integration/sch073-mcp-stage-base-20260906",
     "source_tip": "51dac1f73ee522d322e0676d754d7cbb1950cbd0",
-    "launch_model": "gpt-6-astra",
+    "launch_model": "codex",
     "validation_enforcement": "report_only",
     "scholia_feedback_mode": "midstream_report_only"
   },
@@ -75,7 +75,7 @@
     "source_branch": "integration/sch073-mcp-stage-base-20260906",
     "execution_mode": "sequential",
     "driver": "codex",
-    "model": "gpt-6-astra",
+    "model": "codex",
     "validation_enforcement": "report_only",
     "scholia_feedback_mode": "midstream_report_only",
     "protected_merge_authorized": false
