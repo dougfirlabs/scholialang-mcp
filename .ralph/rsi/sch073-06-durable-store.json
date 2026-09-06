@@ -1,19 +1,223 @@
 {
-  "kind": "prd", "schema_version": 1, "status": "approved",
-  "group_id": "sch073-mcp-next-steps-astra-recovery-20260906", "run_policy": "gated_stack",
-  "approval": {"approved": true, "execution_authorized": true, "merge_authorized": true, "release_authorized": false},
+  "kind": "prd",
+  "schema_version": 1,
+  "status": "completed",
+  "group_id": "sch073-mcp-next-steps-astra-recovery-20260906",
+  "run_policy": "gated_stack",
+  "approval": {
+    "approved": true,
+    "execution_authorized": true,
+    "merge_authorized": true,
+    "release_authorized": false
+  },
   "authority": "Darren approved execution and cumulative integration. Production deployment, new credentials, PyPI publication, and Cloud propagation remain prohibited.",
   "evidence_contract": "Bind to the exact cumulative base and candidate SHA; preserve fault-injection logs, restart/reconnect evidence, transaction ordering, retention measurements, independent tests, and rollback ref.",
-  "id": "sch073-06-durable-store", "title": "Implement authoritative durable capability state", "sequence": 6,
-  "depends_on_prds": [], "repositories": ["scholialang-mcp"],
-  "problem": "The current capability contract proves ordering only with a synthetic in-memory store.", "outcome": "The authoritative path provides durable, atomic, recoverable capability state.",
-  "key_files": ["durable store", "transaction boundary", "reconnect/refetch", "retention", "fault-injection and restart tests"],
-  "hard_constraints": ["Notifications occur only after commit.", "Forced failures must not expose uncommitted state.", "Reconnect/refetch returns committed state only.", "Retention is bounded and documented.", "Use disposable test state; no operator databases or credentials.", "Preserve default-off policy."],
-  "stories": [{"id":"SCH073-06-S1","title":"Implement persistent store","description":"Replace the authoritative in-memory path with a persistent implementation and atomic transaction boundary.","priority":1,"passes":0},{"id":"SCH073-06-S2","title":"Implement recovery semantics","description":"Add reconnect/refetch, crash recovery, and bounded retention behavior.","priority":2,"passes":0},{"id":"SCH073-06-S3","title":"Prove failure ordering","description":"Run deterministic fault injection and independent restart tests.","priority":3,"passes":0}],
-  "acceptance": ["Atomic commit and notification ordering are proven under injected failure.", "Recovery reconstructs committed state only.", "Retention windows and expiry are tested.", "Synthetic fixtures are not counted as real durability evidence."],
-  "verification": "Run persistent-backend tests, crash/reconnect/fault matrix, and independent clean-export adjudication.", "out_of_scope": ["production deployment", "new credentials", "PyPI publication", "Cloud propagation"],
-  "rollback": "Disable the durable path behind the existing default-off boundary and restore the prior receipt; preserve failure evidence.", "success_metrics": ["durable backend active in acceptance path", "fault matrix green", "reconnect and retention evidence complete"],
-  "target_repo": "scholialang-mcp", "target_root": "/tmp/sch073-mcp-stage-base-20260906", "allowed_drivers": ["codex"],
-  "coordination_metadata": {"job_id":"sch073-j06-durable-store","launch_ready":true,"gui_port":7706,"source_branch":"integration/sch073-mcp-stage-base-20260906","source_tip":"b7b44b6","launch_model":"gpt-6-astra","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only"},
-  "launch_contract": {"project":"scholialang-mcp-stage-base-20260906","port":7706,"source_branch":"integration/sch073-mcp-stage-base-20260906","execution_mode":"sequential","driver":"codex","model":"gpt-6-astra","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only","protected_merge_authorized":true}
+  "id": "sch073-06-durable-store",
+  "title": "Implement authoritative durable capability state",
+  "sequence": 6,
+  "depends_on_prds": [],
+  "repositories": [
+    "scholialang-mcp"
+  ],
+  "problem": "The current capability contract proves ordering only with a synthetic in-memory store.",
+  "outcome": "The authoritative path provides durable, atomic, recoverable capability state.",
+  "key_files": [
+    "durable store",
+    "transaction boundary",
+    "reconnect/refetch",
+    "retention",
+    "fault-injection and restart tests"
+  ],
+  "hard_constraints": [
+    "Notifications occur only after commit.",
+    "Forced failures must not expose uncommitted state.",
+    "Reconnect/refetch returns committed state only.",
+    "Retention is bounded and documented.",
+    "Use disposable test state; no operator databases or credentials.",
+    "Preserve default-off policy."
+  ],
+  "stories": [
+    {
+      "id": "SCH073-06-S1",
+      "title": "Implement persistent store",
+      "description": "Replace the authoritative in-memory path with a persistent implementation and atomic transaction boundary.",
+      "priority": 1,
+      "passes": 0
+    },
+    {
+      "id": "SCH073-06-S2",
+      "title": "Implement recovery semantics",
+      "description": "Add reconnect/refetch, crash recovery, and bounded retention behavior.",
+      "priority": 2,
+      "passes": 0
+    },
+    {
+      "id": "SCH073-06-S3",
+      "title": "Prove failure ordering",
+      "description": "Run deterministic fault injection and independent restart tests.",
+      "priority": 3,
+      "passes": 0
+    }
+  ],
+  "acceptance": [
+    "Atomic commit and notification ordering are proven under injected failure.",
+    "Recovery reconstructs committed state only.",
+    "Retention windows and expiry are tested.",
+    "Synthetic fixtures are not counted as real durability evidence."
+  ],
+  "verification": "Run persistent-backend tests, crash/reconnect/fault matrix, and independent clean-export adjudication.",
+  "out_of_scope": [
+    "production deployment",
+    "new credentials",
+    "PyPI publication",
+    "Cloud propagation"
+  ],
+  "rollback": "Disable the durable path behind the existing default-off boundary and restore the prior receipt; preserve failure evidence.",
+  "success_metrics": [
+    "durable backend active in acceptance path",
+    "fault matrix green",
+    "reconnect and retention evidence complete"
+  ],
+  "target_repo": "scholialang-mcp",
+  "target_root": "/tmp/sch073-mcp-stage-base-20260906",
+  "allowed_drivers": [
+    "codex"
+  ],
+  "coordination_metadata": {
+    "job_id": "sch073-j06-durable-store",
+    "launch_ready": true,
+    "gui_port": 7706,
+    "source_branch": "integration/sch073-mcp-stage-base-20260906",
+    "source_tip": "b7b44b6",
+    "launch_model": "gpt-6-astra",
+    "validation_enforcement": "report_only",
+    "scholia_feedback_mode": "midstream_report_only"
+  },
+  "launch_contract": {
+    "project": "scholialang-mcp-stage-base-20260906",
+    "port": 7706,
+    "source_branch": "integration/sch073-mcp-stage-base-20260906",
+    "execution_mode": "sequential",
+    "driver": "codex",
+    "model": "gpt-6-astra",
+    "validation_enforcement": "report_only",
+    "scholia_feedback_mode": "midstream_report_only",
+    "protected_merge_authorized": true
+  },
+  "lifecycle": {
+    "run_status": "completed",
+    "last_successful_run_id": "868fa54584f14a0d9b0f208e50a1ed48",
+    "last_successful_branch": "feat/sch073-06-durable-store",
+    "last_successful_commit": "6de4d12462c8fae444e0c6f237092e45f703be31",
+    "completed_at": "2026-09-06T11:32:54+00:00",
+    "completion_evidence": {
+      "task": "sch073-06-durable-store",
+      "prd_id": "sch073-06-durable-store",
+      "provider": "codex",
+      "model": "gpt-6-astra",
+      "post_path": "/tmp/sch073-mcp-stage-base-20260906/.opentalon/kb/posts/2026_09_06_POST_154tw7nz6j_home_horse.md",
+      "post_status": "present",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "868fa54584f14a0d9b0f208e50a1ed48",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion": {
+    "run_id": "868fa54584f14a0d9b0f208e50a1ed48",
+    "task": "sch073-06-durable-store",
+    "completed_at": "2026-09-06T11:32:54+00:00",
+    "branch": "feat/sch073-06-durable-store",
+    "commit": "6de4d12462c8fae444e0c6f237092e45f703be31",
+    "final_status": "success",
+    "previous_status": "approved",
+    "lifecycle": {
+      "run_status": "completed",
+      "last_successful_run_id": "868fa54584f14a0d9b0f208e50a1ed48",
+      "last_successful_branch": "feat/sch073-06-durable-store",
+      "last_successful_commit": "6de4d12462c8fae444e0c6f237092e45f703be31",
+      "completed_at": "2026-09-06T11:32:54+00:00",
+      "completion_evidence": {
+        "task": "sch073-06-durable-store",
+        "prd_id": "sch073-06-durable-store",
+        "provider": "codex",
+        "model": "gpt-6-astra",
+        "post_path": "/tmp/sch073-mcp-stage-base-20260906/.opentalon/kb/posts/2026_09_06_POST_154tw7nz6j_home_horse.md",
+        "post_status": "present",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "868fa54584f14a0d9b0f208e50a1ed48",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
+    },
+    "completion_evidence": {
+      "task": "sch073-06-durable-store",
+      "prd_id": "sch073-06-durable-store",
+      "provider": "codex",
+      "model": "gpt-6-astra",
+      "post_path": "/tmp/sch073-mcp-stage-base-20260906/.opentalon/kb/posts/2026_09_06_POST_154tw7nz6j_home_horse.md",
+      "post_status": "present",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "868fa54584f14a0d9b0f208e50a1ed48",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion_history": [
+    {
+      "run_id": "868fa54584f14a0d9b0f208e50a1ed48",
+      "task": "sch073-06-durable-store",
+      "completed_at": "2026-09-06T11:32:54+00:00",
+      "branch": "feat/sch073-06-durable-store",
+      "commit": "6de4d12462c8fae444e0c6f237092e45f703be31",
+      "final_status": "success",
+      "previous_status": "approved",
+      "lifecycle": {
+        "run_status": "completed",
+        "last_successful_run_id": "868fa54584f14a0d9b0f208e50a1ed48",
+        "last_successful_branch": "feat/sch073-06-durable-store",
+        "last_successful_commit": "6de4d12462c8fae444e0c6f237092e45f703be31",
+        "completed_at": "2026-09-06T11:32:54+00:00",
+        "completion_evidence": {
+          "task": "sch073-06-durable-store",
+          "prd_id": "sch073-06-durable-store",
+          "provider": "codex",
+          "model": "gpt-6-astra",
+          "post_path": "/tmp/sch073-mcp-stage-base-20260906/.opentalon/kb/posts/2026_09_06_POST_154tw7nz6j_home_horse.md",
+          "post_status": "present",
+          "test_gate": {
+            "all_passed": true,
+            "commands": [],
+            "run_id": "868fa54584f14a0d9b0f208e50a1ed48",
+            "skipped": true,
+            "skipped_reason": "no machine-runnable commands in success_metrics"
+          }
+        }
+      },
+      "completion_evidence": {
+        "task": "sch073-06-durable-store",
+        "prd_id": "sch073-06-durable-store",
+        "provider": "codex",
+        "model": "gpt-6-astra",
+        "post_path": "/tmp/sch073-mcp-stage-base-20260906/.opentalon/kb/posts/2026_09_06_POST_154tw7nz6j_home_horse.md",
+        "post_status": "present",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "868fa54584f14a0d9b0f208e50a1ed48",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
+    }
+  ]
 }
