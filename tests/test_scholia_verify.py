@@ -31,7 +31,7 @@ assert _SPEC is not None and _SPEC.loader is not None
 verify = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(verify)
 
-RELEASE = "0.7.2"
+RELEASE = "0.7.3"
 GRAMMAR = "0.6.2"
 
 PLUGIN_SCENARIO_IDS = [s["id"] for s in verify.MANIFEST if "canonical-plugin" in s["arms"]]
@@ -414,7 +414,7 @@ def test_skill_frontmatter_declares_release_and_grammar_axes():
     }
     allowed = {"name", "description", "license", "allowed-tools", "metadata", "compatibility"}
     assert {"name", "description"} <= top_level_keys <= allowed
-    assert re.search(r'^\s+version:\s*"0\.7\.2"\s*$', block, re.MULTILINE)
+    assert re.search(r'^\s+version:\s*"0\.7\.3"\s*$', block, re.MULTILINE)
     assert re.search(r'^\s+grammar:\s*"0\.6\.2"\s*$', block, re.MULTILINE)
     assert verify.VERIFY_VERSION == RELEASE
     assert verify.STABLE_GRAMMAR_VERSION == GRAMMAR

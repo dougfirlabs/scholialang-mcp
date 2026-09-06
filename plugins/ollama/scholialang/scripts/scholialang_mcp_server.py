@@ -21,7 +21,7 @@ from pathlib import Path
 PROTOCOL_VERSION = "2026-07-28"
 SUPPORTED_PROTOCOL_VERSIONS = ("2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26")
 SERVER_NAME = "scholialang"
-SERVER_VERSION = "0.7.2"
+SERVER_VERSION = "0.7.3"
 
 # MCP 2026-07-28 ``_meta`` keys (SEP-2575 / SEP-2322) and the error code for a
 # version the server does not support (-32022 per the 2026-07-28 error-code
@@ -36,7 +36,7 @@ UNSUPPORTED_PROTOCOL_VERSION = -32022
 # returns may be shared through a cross-client cache.
 CACHEABLE_TTL_MS = 300_000
 CACHE_SCOPE = "private"
-MIN_VALIDATOR_VERSION = (0, 7, 2)
+MIN_VALIDATOR_VERSION = (0, 7, 3)
 MAX_TEXT = 6000
 
 # A stdio MCP server can outlive, or be started independently of, a host's
@@ -2736,7 +2736,7 @@ def list_tools():
         "scholia_trace_export": "Compatibility alias for scholia_dag_export.",
         "scholia_catalog": "List Scholialang atoms, operators, relations, and resources.",
         "scholia_lookup": "Lookup a Scholialang atom, operator, or relation.",
-        "scholia_lint_snippet": "Validate a Scholia snippet against the stable Scholia v0.6.2 language grammar using the 0.7.2 validator (closed-set atoms, canonical_id/fingerprint well-formedness, references, closure rules, and warnings). Pass mode='tag_balance' for the legacy tag-only check.",
+        "scholia_lint_snippet": "Validate a Scholia snippet against the stable Scholia v0.6.2 language grammar using the 0.7.3 validator (closed-set atoms, canonical_id/fingerprint well-formedness, references, closure rules, and warnings). Pass mode='tag_balance' for the legacy tag-only check.",
         "scholia_lint_trace": "Validate a Scholia trace and return per-rule structured errors plus counts. Use for CI gates and dashboard rendering.",
     }
     return [

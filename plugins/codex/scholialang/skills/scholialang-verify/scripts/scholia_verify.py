@@ -42,9 +42,9 @@ import sys
 import tomllib
 from pathlib import Path
 
-VERIFY_VERSION = "0.7.2"
+VERIFY_VERSION = "0.7.3"
 SCHEMA_VERSION = 1
-# The stable Scholia language grammar. Release 0.7.2 implements grammar
+# The stable Scholia language grammar. Release 0.7.3 implements grammar
 # v0.6.2 — distinct axes, expected alignment, never a downgrade.
 STABLE_GRAMMAR_VERSION = "0.6.2"
 SKILL_NAME = "scholialang-verify"

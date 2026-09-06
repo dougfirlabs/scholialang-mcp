@@ -2,9 +2,9 @@
   "manifest_version": "0.4",
   "name": "scholialang",
   "display_name": "Scholialang",
-  "version": "0.7.2",
-  "description": "Scholialang plugin 0.7.2: local reasoning DAG and stable Scholia v0.6.2 grammar validation for Claude Desktop.",
-  "long_description": "Scholialang plugin release 0.7.2 gives Claude Desktop an explicit, local evidence graph for goals, hypotheses, observations, evidence, findings, decisions, actions, contradictions, and conclusions. It implements the stable Scholia v0.6.2 language grammar. Traces are stored in a local SQLite database under the user's home directory. The extension makes no network calls and requires no account or API key.",
+  "version": "0.7.3",
+  "description": "Scholialang plugin 0.7.3: local reasoning DAG and stable Scholia v0.6.2 grammar validation for Claude Desktop.",
+  "long_description": "Scholialang plugin release 0.7.3 gives Claude Desktop an explicit, local evidence graph for goals, hypotheses, observations, evidence, findings, decisions, actions, contradictions, and conclusions. It implements the stable Scholia v0.6.2 language grammar. Traces are stored in a local SQLite database under the user's home directory. The extension makes no network calls and requires no account or API key.",
   "author": {
     "name": "Doug Fir Labs",
     "url": "https://dougfirlabs.com"

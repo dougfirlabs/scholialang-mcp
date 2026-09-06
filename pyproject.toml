@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scholialang-mcp"
-version = "0.7.2"
+version = "0.7.3"
 description = "MCP, LSP, and host-plugin tooling for Scholia — preserve agent reasoning state and reduce context cost across long-horizon work"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,7 +12,7 @@ license = "MIT OR Apache-2.0"
 license-files = ["LICENSE-MIT", "LICENSE-APACHE"]
 authors = [{name = "Doug Fir Labs"}]
 dependencies = [
-    "scholialang>=0.7.2,<0.8",
+    "scholialang>=0.7.3,<0.8",
 ]
 keywords = ["scholia", "scholialang", "mcp", "lsp", "agents"]
 

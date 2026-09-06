@@ -1,7 +1,7 @@
 {
   "name": "scholialang",
-  "version": "0.7.2",
-  "description": "Scholialang plugin 0.7.2: local per-project auto-emit tracing, a structured-reasoning DAG, and validation of the stable Scholia v0.6.2 language grammar.",
+  "version": "0.7.3",
+  "description": "Scholialang plugin 0.7.3: local per-project auto-emit tracing, a structured-reasoning DAG, and validation of the stable Scholia v0.6.2 language grammar.",
   "author": {
     "name": "Doug Fir Labs",
     "url": "https://scholialang.org/"
@@ -23,7 +23,7 @@
   "interface": {
     "displayName": "Scholialang",
     "shortDescription": "Local structured-reasoning DAG + validator for Claude Code.",
-    "longDescription": "Scholia helps agentic systems preserve reasoning state, use tools without quality loss, and reduce context cost across long-horizon work. Plugin release 0.7.2 lets Claude Code capture explicit reasoning as a local SQLite-backed DAG, lint snippets against the stable Scholia v0.6.2 language grammar, and query prior decisions for token-efficient recall across sessions.",
+    "longDescription": "Scholia helps agentic systems preserve reasoning state, use tools without quality loss, and reduce context cost across long-horizon work. Plugin release 0.7.3 lets Claude Code capture explicit reasoning as a local SQLite-backed DAG, lint snippets against the stable Scholia v0.6.2 language grammar, and query prior decisions for token-efficient recall across sessions.",
     "developerName": "Doug Fir Labs",
     "category": "Coding",
     "capabilities": [

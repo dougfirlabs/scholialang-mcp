@@ -36,10 +36,10 @@ This repo provides:
 
 The repo is intentionally separate from `scholialang`, which contains the
 language model, parser, validator, and serializers. This package depends on
-`scholialang>=0.7.2,<0.8` and tracks the `scholialang-spec` additive
+`scholialang>=0.7.3,<0.8` and tracks the `scholialang-spec` additive
 `fingerprint=` contract (over the v0.6.2 shared conformance corpus).
 
-> **Two version axes:** `0.7.2` is the Python package/plugin release. `v0.6.2`
+> **Two version axes:** `0.7.3` is the Python package/plugin release. `v0.6.2`
 > is the stable Scholia language grammar it implements. References to “v0.6”
 > in grammar documentation do not mean that an older `0.6.x` package is
 > installed. Public UI and bundle copy should always name both axes.

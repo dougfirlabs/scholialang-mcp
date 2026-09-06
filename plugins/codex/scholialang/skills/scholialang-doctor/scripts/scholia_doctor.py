@@ -34,10 +34,10 @@ import tomllib
 from importlib.metadata import Distribution
 from pathlib import Path
 
-DOCTOR_VERSION = "0.7.2"
+DOCTOR_VERSION = "0.7.3"
 SCHEMA_VERSION = 1
 # The stable Scholia language grammar. The implementation release (package,
-# plugin, vendored validator) is a DISTINCT axis: release 0.7.2 implements
+# plugin, vendored validator) is a DISTINCT axis: release 0.7.3 implements
 # grammar v0.6.2. That relationship is expected alignment, never a downgrade.
 STABLE_GRAMMAR_VERSION = "0.6.2"
 

@@ -46,9 +46,21 @@ from .atoms import (
     ATOM_KINDS,
     CANONICAL_OPERATORS,
     CRITICALITY_RANK,
+    EVENT_TYPE_RE,
+    GRAMMAR_PROFILES,
+    JSON_SAFE_INT_MAX,
+    JSON_SAFE_INT_MIN,
+    MAP_VALUE_TYPES,
     compute_canonical_id,
     PSEUDO_ATOM_KINDS,
+    SCHOLIA_GRAMMAR_VERSION,
     SCHOLIA_VALIDATOR_VERSION,
+    SEMANTIC_BODY_REQUIRED,
+    SEMANTIC_ID_PATTERNS,
+    SEMANTIC_KINDS,
+    SEMANTIC_OPAQUE_FIELDS,
+    SEMANTIC_REF_FIELDS,
+    TASK_STATUSES,
     V031_EDGE_TYPES,
     V031_EFFECT_KINDS,
     V031_LOCATION_RE,
@@ -64,9 +76,11 @@ from .atoms import (
     Edge,
     Effect,
     Evidence,
+    Event,
     Finding,
     Goal,
     Hypothesis,
+    Map,
     Meta,
     Observation,
     Ref,
@@ -74,10 +88,12 @@ from .atoms import (
     Review,
     Step,
     Storing,
+    Task,
     Uncertainty,
     is_valid_fingerprint,
     is_valid_location,
     parse_operators_from_content,
+    semantic_structural_violations,
 )
 
 
@@ -104,6 +120,29 @@ RULE_CANONICAL_ID_WELL_FORMED = "canonical_id_well_formed"
 # absent). See docs/scholia/FINGERPRINT.md §3.
 RULE_FINGERPRINT_WELL_FORMED = "fingerprint_well_formed"
 
+# v0.7.3-candidate — proposed Map/Event/Task semantic rules (hard-fail,
+# vacuous when no semantic atom is present). The first three mirror the
+# parse-phase structural strictness for Python-constructed atoms.
+RULE_SEMANTIC_CHILDREN_EMPTY = "semantic_children_empty"
+RULE_SEMANTIC_OPERATORS_LIST = "semantic_operators_list"
+RULE_MAP_ENTRIES_SHAPE = "map_entries_shape"
+RULE_SEMANTIC_ID_SHAPE = "semantic_id_shape"
+RULE_SEMANTIC_ID_UNIQUE = "semantic_id_unique"
+RULE_MAP_REQUIRED_FIELDS = "map_required_fields"
+RULE_MAP_VALUE_TYPE = "map_value_type"
+RULE_MAP_ENTRIES_TYPED = "map_entries_typed"
+RULE_MAP_REF_RESOLVES = "map_ref_resolves"
+RULE_EVENT_REQUIRED_FIELDS = "event_required_fields"
+RULE_EVENT_TYPE_TOKEN = "event_type_token"
+RULE_EVENT_TIMESTAMP_SHAPE = "event_timestamp_shape"
+RULE_EVENT_OCCURRENCE_UNIQUE = "event_occurrence_unique"
+RULE_TASK_REQUIRED_FIELDS = "task_required_fields"
+RULE_TASK_STATUS_ENUM = "task_status_enum"
+RULE_TASK_EVIDENCE_REQUIRED = "task_evidence_required"
+RULE_SEMANTIC_REF_TARGET_KIND = "semantic_ref_target_kind"
+# v0.7 — explicit grammar-profile negotiation outcome (hard-fail).
+RULE_GRAMMAR_PROFILE_UNSUPPORTED = "grammar_profile_unsupported"
+
 RULE_NAMES: tuple[str, ...] = (
     RULE_WELL_FORMED,
     RULE_REFERENCE_COMPLETE,
@@ -124,6 +163,24 @@ RULE_NAMES: tuple[str, ...] = (
     RULE_MIN_CONFIDENCE_CEILING,
     RULE_CANONICAL_ID_WELL_FORMED,
     RULE_FINGERPRINT_WELL_FORMED,
+    RULE_SEMANTIC_CHILDREN_EMPTY,
+    RULE_SEMANTIC_OPERATORS_LIST,
+    RULE_MAP_ENTRIES_SHAPE,
+    RULE_SEMANTIC_ID_SHAPE,
+    RULE_SEMANTIC_ID_UNIQUE,
+    RULE_MAP_REQUIRED_FIELDS,
+    RULE_MAP_VALUE_TYPE,
+    RULE_MAP_ENTRIES_TYPED,
+    RULE_MAP_REF_RESOLVES,
+    RULE_EVENT_REQUIRED_FIELDS,
+    RULE_EVENT_TYPE_TOKEN,
+    RULE_EVENT_TIMESTAMP_SHAPE,
+    RULE_EVENT_OCCURRENCE_UNIQUE,
+    RULE_TASK_REQUIRED_FIELDS,
+    RULE_TASK_STATUS_ENUM,
+    RULE_TASK_EVIDENCE_REQUIRED,
+    RULE_SEMANTIC_REF_TARGET_KIND,
+    RULE_GRAMMAR_PROFILE_UNSUPPORTED,
 )
 
 WARNING_RULE_NAMES: tuple[str, ...] = (
@@ -232,9 +289,14 @@ def _step_ids(trace: list[Step]) -> set[str]:
 
 
 def _iter_operator_refs(atom: Atom):
-    """Yield every ``OP:target`` pair declared on an atom's ``operators``."""
+    """Yield every ``OP:target`` pair declared on an atom's ``operators``.
+
+    Non-string tokens are skipped defensively — a malformed operators
+    list on a v0.7 semantic atom is reported by the
+    ``semantic_operators_list`` rule instead of crashing the walk.
+    """
     for token in atom.operators:
-        if ":" in token:
+        if isinstance(token, str) and ":" in token:
             op, target = token.split(":", 1)
             yield op, target
 
@@ -826,8 +888,9 @@ def check_action_recorded(
                     rule=RULE_ACTION_RECORDED,
                     atom_id=action_id,
                     message=(
-                        "Action has no recording Finding/Concluding (neither "
-                        "nested, immediate sibling, nor later linked result)."
+                        f"Action '{action_id or '?'}' has no recording "
+                        "Finding/Concluding (neither nested, immediate "
+                        "sibling, nor later linked result)."
                     ),
                 )
             )
@@ -1511,6 +1574,668 @@ def check_min_confidence_ceiling(
     return warnings
 
 
+# ── v0.7.3-candidate — Map/Event/Task semantic rules ─────────────────
+#
+# All rules are vacuous when the trace carries no semantic atom, so
+# legacy traces validate byte-identically to 0.7.2 behavior. Reference
+# resolution is against the COMPLETE trace (forward references allowed)
+# by declared local atom id or by canonical id; targets are atoms,
+# never Steps. Nothing here executes work: ``runtime_ref`` /
+# ``external_ref`` stay opaque strings.
+
+
+def _semantic_atoms(trace: list[Step]) -> list[Atom]:
+    return [a for a in _walk_atoms(trace) if a.kind in SEMANTIC_KINDS]
+
+
+def _declared_atom_index(trace: list[Step]) -> dict[str, Atom]:
+    """Declared-id → atom index for semantic reference resolution.
+
+    Unlike :func:`_build_id_index` this maps ONLY explicitly declared
+    atom ids (no Storing names, no content-derived assignment names) —
+    a semantic reference must name a declared atom. First declaration
+    wins; duplicates are reported by ``semantic_id_unique``.
+    """
+    index: dict[str, Atom] = {}
+    for atom in _walk_atoms(trace):
+        if atom.id and atom.id not in index:
+            index[atom.id] = atom
+    return index
+
+
+def _resolve_semantic_target(
+    value: str,
+    atom_index: dict[str, Atom],
+    canonical_index: dict[str, Atom],
+) -> Optional[Atom]:
+    """Resolve a semantic reference by declared local id or canonical id."""
+    target = atom_index.get(value)
+    if target is not None:
+        return target
+    return canonical_index.get(value)
+
+
+def _is_nonempty_str(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def check_semantic_structure(
+    trace: list[Step], _index: dict[str, Atom]
+) -> list[ValidationError]:
+    """v0.7 — decode-parity structural rules for constructed atoms.
+
+    Python-constructed Map/Event/Task instances must fail ``validate()``
+    under the same structural constraints the decoders enforce at parse:
+    ``operators`` a list of strings, ``children`` empty, ``entries`` a
+    real string-keyed mapping.
+    """
+    errors: list[ValidationError] = []
+    for atom in _semantic_atoms(trace):
+        for rule, message in semantic_structural_violations(atom):
+            errors.append(
+                ValidationError(rule=rule, atom_id=atom.id or "", message=message)
+            )
+    return errors
+
+
+def check_semantic_id_shape(
+    trace: list[Step], _index: dict[str, Atom]
+) -> list[ValidationError]:
+    """v0.7 — every semantic atom carries a kind-prefixed trace-local id."""
+    errors: list[ValidationError] = []
+    for atom in _semantic_atoms(trace):
+        pattern = SEMANTIC_ID_PATTERNS[atom.kind]
+        if not atom.id:
+            errors.append(
+                ValidationError(
+                    rule=RULE_SEMANTIC_ID_SHAPE,
+                    atom_id="",
+                    message=(
+                        f"<{atom.kind}> requires a trace-local id with "
+                        f"prefix '{atom.kind}_' followed by ASCII letters, "
+                        "digits, or underscores; the id is missing."
+                    ),
+                )
+            )
+            continue
+        if not pattern.match(atom.id):
+            errors.append(
+                ValidationError(
+                    rule=RULE_SEMANTIC_ID_SHAPE,
+                    atom_id=atom.id,
+                    message=(
+                        f"<{atom.kind}> id {atom.id!r} must match "
+                        f"'{atom.kind}_' followed by one or more ASCII "
+                        "letters, digits, or underscores "
+                        f"([A-Za-z0-9_]+)."
+                    ),
+                )
+            )
+    return errors
+
+
+def check_semantic_id_unique(
+    trace: list[Step], _index: dict[str, Atom]
+) -> list[ValidationError]:
+    """v0.7 — no id collision involving a semantic atom, trace-wide.
+
+    A collision between a semantic atom and ANY other id holder — a
+    second semantic atom, a legacy atom, or a Step — is an error.
+    Legacy-only duplicate handling is deliberately unchanged.
+    """
+    holders: dict[str, list[Any]] = {}
+    for step in trace:
+        if step.id:
+            holders.setdefault(step.id, []).append(step)
+    for atom in _walk_atoms(trace):
+        if atom.id:
+            holders.setdefault(atom.id, []).append(atom)
+
+    errors: list[ValidationError] = []
+    for shared_id, owners in holders.items():
+        if len(owners) < 2:
+            continue
+        semantic_owners = [
+            o for o in owners if getattr(o, "kind", "Step") in SEMANTIC_KINDS
+        ]
+        if not semantic_owners:
+            continue
+        kinds = ", ".join(
+            "Step" if isinstance(o, Step) else o.kind for o in owners
+        )
+        errors.append(
+            ValidationError(
+                rule=RULE_SEMANTIC_ID_UNIQUE,
+                atom_id=shared_id,
+                message=(
+                    f"id {shared_id!r} is declared {len(owners)} times "
+                    f"({kinds}); an id collision involving a v0.7 semantic "
+                    "atom is an error anywhere in the trace, including "
+                    "against Step and legacy atom ids."
+                ),
+            )
+        )
+    return errors
+
+
+def _map_value_violation(value_type: str, value: Any) -> Optional[str]:
+    """Return the reason ``value`` violates ``value_type``, or ``None``."""
+    if value_type == "string":
+        if not isinstance(value, str):
+            return f"expected a string, got {value!r} ({type(value).__name__})"
+        return None
+    if value_type == "integer":
+        if isinstance(value, bool):
+            return f"expected a true integer, got the boolean {value!r} (bool is not integer)"
+        if not isinstance(value, int):
+            return f"expected a true integer, got {value!r} ({type(value).__name__})"
+        if not JSON_SAFE_INT_MIN <= value <= JSON_SAFE_INT_MAX:
+            return (
+                f"integer {value!r} is outside the interoperable JSON "
+                f"exact-integer range [{JSON_SAFE_INT_MIN}, {JSON_SAFE_INT_MAX}]"
+            )
+        return None
+    if value_type == "boolean":
+        if not isinstance(value, bool):
+            return f"expected a bool exactly, got {value!r} ({type(value).__name__})"
+        return None
+    if value_type == "atom_ref":
+        if not isinstance(value, str) or not value.strip():
+            return (
+                f"expected a nonempty atom-reference string, got {value!r} "
+                f"({type(value).__name__})"
+            )
+        return None
+    return None
+
+
+def check_map_rules(
+    trace: list[Step], _index: dict[str, Atom]
+) -> list[ValidationError]:
+    """v0.7 — Map required fields, value_type enum, and typed entries."""
+    errors: list[ValidationError] = []
+    for atom in _semantic_atoms(trace):
+        if not isinstance(atom, Map):
+            continue
+        atom_id = atom.id or ""
+        value_type = atom.value_type
+        entries = atom.entries
+        if value_type is None:
+            errors.append(
+                ValidationError(
+                    rule=RULE_MAP_REQUIRED_FIELDS,
+                    atom_id=atom_id,
+                    message="<Map> requires value_type; it is missing.",
+                )
+            )
+        elif not isinstance(value_type, str) or value_type not in MAP_VALUE_TYPES:
+            errors.append(
+                ValidationError(
+                    rule=RULE_MAP_VALUE_TYPE,
+                    atom_id=atom_id,
+                    message=(
+                        f"<Map> value_type must be exactly one of "
+                        f"{sorted(MAP_VALUE_TYPES)}; got {value_type!r}."
+                    ),
+                )
+            )
+        if entries is None:
+            errors.append(
+                ValidationError(
+                    rule=RULE_MAP_REQUIRED_FIELDS,
+                    atom_id=atom_id,
+                    message=(
+                        "<Map> requires entries (a possibly-empty mapping); "
+                        "it is missing."
+                    ),
+                )
+            )
+        if not isinstance(atom.content, str):
+            errors.append(
+                ValidationError(
+                    rule=RULE_MAP_REQUIRED_FIELDS,
+                    atom_id=atom_id,
+                    message=(
+                        f"<Map> body must be a string when present; got "
+                        f"{atom.content!r}."
+                    ),
+                )
+            )
+        if not isinstance(entries, dict) or not isinstance(value_type, str):
+            continue
+        if value_type not in MAP_VALUE_TYPES:
+            continue
+        for key, value in entries.items():
+            if not isinstance(key, str):
+                # Reported structurally by map_entries_shape; skip typing.
+                continue
+            if not key.strip():
+                errors.append(
+                    ValidationError(
+                        rule=RULE_MAP_ENTRIES_TYPED,
+                        atom_id=atom_id,
+                        message=(
+                            f"<Map> entries key {key!r} is empty or "
+                            "whitespace-only; keys must be nonempty strings."
+                        ),
+                    )
+                )
+            violation = _map_value_violation(value_type, value)
+            if violation:
+                errors.append(
+                    ValidationError(
+                        rule=RULE_MAP_ENTRIES_TYPED,
+                        atom_id=atom_id,
+                        message=(
+                            f"<Map> entries[{key!r}] violates the declared "
+                            f"homogeneous value_type {value_type!r}: {violation}. "
+                            "Floats, NaN, infinities, nulls, arrays, nested "
+                            "objects, and mixed types are rejected."
+                        ),
+                    )
+                )
+    return errors
+
+
+def check_map_ref_resolves(
+    trace: list[Step], _index: dict[str, Atom]
+) -> list[ValidationError]:
+    """v0.7 — Map atom_ref entries resolve to a declared non-Step atom.
+
+    A Map must not refer to itself, and references are never executed,
+    dereferenced externally, or treated as authority.
+    """
+    errors: list[ValidationError] = []
+    atom_index = _declared_atom_index(trace)
+    canonical_index = _build_canonical_id_index(trace)
+    step_ids = _step_ids(trace)
+    for atom in _semantic_atoms(trace):
+        if not isinstance(atom, Map):
+            continue
+        if atom.value_type != "atom_ref" or not isinstance(atom.entries, dict):
+            continue
+        atom_id = atom.id or ""
+        for key, value in atom.entries.items():
+            if not _is_nonempty_str(value):
+                continue  # typed rule reports the shape problem
+            target = _resolve_semantic_target(value, atom_index, canonical_index)
+            if target is None:
+                if value in step_ids:
+                    errors.append(
+                        ValidationError(
+                            rule=RULE_MAP_REF_RESOLVES,
+                            atom_id=atom_id,
+                            message=(
+                                f"<Map> entries[{key!r}]={value!r} names a "
+                                "Step; atom_ref values must resolve to a "
+                                "declared atom of any kind other than Step."
+                            ),
+                        )
+                    )
+                else:
+                    errors.append(
+                        ValidationError(
+                            rule=RULE_MAP_REF_RESOLVES,
+                            atom_id=atom_id,
+                            message=(
+                                f"<Map> entries[{key!r}]={value!r} is "
+                                "dangling — it does not resolve to any "
+                                "declared atom id or canonical id in this "
+                                "trace."
+                            ),
+                        )
+                    )
+                continue
+            if target is atom or (
+                atom.id and value == atom.id
+            ) or (
+                atom.canonical_id and value == atom.canonical_id
+            ):
+                errors.append(
+                    ValidationError(
+                        rule=RULE_MAP_REF_RESOLVES,
+                        atom_id=atom_id,
+                        message=(
+                            f"<Map> entries[{key!r}]={value!r} refers to "
+                            "this Map itself; a Map must not refer to itself."
+                        ),
+                    )
+                )
+    return errors
+
+
+_RFC3339_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}[Tt ]\d{2}:\d{2}:\d{2}(?:\.\d+)?"
+    r"(?:[Zz]|[+-]\d{2}:\d{2})$"
+)
+
+
+def _rfc3339_violation(value: Any) -> Optional[str]:
+    """Return why ``value`` is not an RFC3339 timestamp with timezone."""
+    if not isinstance(value, str) or not value.strip():
+        return f"expected an RFC3339 timestamp string, got {value!r}"
+    if not _RFC3339_RE.match(value):
+        return (
+            f"{value!r} is not RFC3339-shaped with an explicit timezone "
+            "offset (naive timestamps are rejected)"
+        )
+    from datetime import datetime
+
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00").replace("z", "+00:00"))
+    except ValueError:
+        return f"{value!r} names an impossible date/time"
+    if parsed.tzinfo is None:
+        return f"{value!r} carries no explicit timezone"
+    return None
+
+
+def check_event_rules(
+    trace: list[Step], _index: dict[str, Atom]
+) -> list[ValidationError]:
+    """v0.7 — Event required fields, type token, timestamp, occurrence key."""
+    errors: list[ValidationError] = []
+    events: list[Event] = [
+        a for a in _semantic_atoms(trace) if isinstance(a, Event)
+    ]
+    for atom in events:
+        atom_id = atom.id or ""
+        for field_name in ("source", "occurrence_id", "event_type"):
+            value = getattr(atom, field_name)
+            if not _is_nonempty_str(value):
+                errors.append(
+                    ValidationError(
+                        rule=RULE_EVENT_REQUIRED_FIELDS,
+                        atom_id=atom_id,
+                        message=(
+                            f"<Event> requires {field_name} as a nonempty "
+                            f"string; got {value!r}."
+                        ),
+                    )
+                )
+        if not _is_nonempty_str(atom.content):
+            errors.append(
+                ValidationError(
+                    rule=RULE_EVENT_REQUIRED_FIELDS,
+                    atom_id=atom_id,
+                    message=(
+                        "<Event> requires nonempty content — the body "
+                        "describes what was recorded."
+                    ),
+                )
+            )
+        event_type = atom.event_type
+        if (
+            isinstance(event_type, str)
+            and event_type.strip()
+            and not EVENT_TYPE_RE.match(event_type)
+        ):
+            errors.append(
+                ValidationError(
+                    rule=RULE_EVENT_TYPE_TOKEN,
+                    atom_id=atom_id,
+                    message=(
+                        f"<Event> event_type {atom.event_type!r} must match "
+                        "[A-Za-z][A-Za-z0-9_.-]* (a producer-defined "
+                        "classification token, not a new atom kind)."
+                    ),
+                )
+            )
+        if atom.timestamp is not None:
+            violation = _rfc3339_violation(atom.timestamp)
+            if violation:
+                errors.append(
+                    ValidationError(
+                        rule=RULE_EVENT_TIMESTAMP_SHAPE,
+                        atom_id=atom_id,
+                        message=(
+                            f"<Event> timestamp: {violation}. RFC3339 with "
+                            "an explicit timezone is required; the "
+                            "timestamp is excluded from canonical identity."
+                        ),
+                    )
+                )
+        for field_name in SEMANTIC_OPAQUE_FIELDS["Event"]:
+            value = getattr(atom, field_name)
+            if value is not None and not _is_nonempty_str(value):
+                errors.append(
+                    ValidationError(
+                        rule=RULE_EVENT_REQUIRED_FIELDS,
+                        atom_id=atom_id,
+                        message=(
+                            f"<Event> {field_name}, when present, must be a "
+                            f"nonempty opaque string; got {value!r}."
+                        ),
+                    )
+                )
+
+    seen_pairs: dict[tuple[str, str], Event] = {}
+    for atom in events:
+        source, occurrence_id = atom.source, atom.occurrence_id
+        if not (
+            isinstance(source, str)
+            and source.strip()
+            and isinstance(occurrence_id, str)
+            and occurrence_id.strip()
+        ):
+            continue
+        pair = (source, occurrence_id)
+        first = seen_pairs.get(pair)
+        if first is None:
+            seen_pairs[pair] = atom
+            continue
+        errors.append(
+            ValidationError(
+                rule=RULE_EVENT_OCCURRENCE_UNIQUE,
+                atom_id=atom.id or "",
+                message=(
+                    f"<Event> occurrence pair (source={atom.source!r}, "
+                    f"occurrence_id={atom.occurrence_id!r}) duplicates "
+                    f"{first.id or '?'} in this trace; the pair identifies "
+                    "one occurrence even when bodies match — transport "
+                    "deduplication belongs upstream of semantic insertion."
+                ),
+            )
+        )
+    return errors
+
+
+def check_task_rules(
+    trace: list[Step], _index: dict[str, Atom]
+) -> list[ValidationError]:
+    """v0.7 — Task required fields, status enum, evidence requirement.
+
+    ``status`` values are descriptive claims only; runtime lifecycle
+    states are rejected by the closed enum. Validating a satisfied Task
+    checks the shape/resolution of its evidence reference — never the
+    truth of the evidence, and never execution of anything.
+    """
+    errors: list[ValidationError] = []
+    for atom in _semantic_atoms(trace):
+        if not isinstance(atom, Task):
+            continue
+        atom_id = atom.id or ""
+        status = atom.status
+        if status is None:
+            errors.append(
+                ValidationError(
+                    rule=RULE_TASK_REQUIRED_FIELDS,
+                    atom_id=atom_id,
+                    message="<Task> requires status; it is missing.",
+                )
+            )
+        elif not isinstance(status, str) or status not in TASK_STATUSES:
+            errors.append(
+                ValidationError(
+                    rule=RULE_TASK_STATUS_ENUM,
+                    atom_id=atom_id,
+                    message=(
+                        f"<Task> status must be exactly one of "
+                        f"{sorted(TASK_STATUSES)}; got {status!r}. Runtime "
+                        "lifecycle states (queued, working, input_required, "
+                        "cancelled, expired, paused) are never legal in the "
+                        "semantic status enum."
+                    ),
+                )
+            )
+        if not _is_nonempty_str(atom.content):
+            errors.append(
+                ValidationError(
+                    rule=RULE_TASK_REQUIRED_FIELDS,
+                    atom_id=atom_id,
+                    message=(
+                        "<Task> requires nonempty content — the body "
+                        "describes the work obligation."
+                    ),
+                )
+            )
+        if status in {"satisfied", "unsatisfied"} and not _is_nonempty_str(
+            atom.evidence_ref
+        ):
+            errors.append(
+                ValidationError(
+                    rule=RULE_TASK_EVIDENCE_REQUIRED,
+                    atom_id=atom_id,
+                    message=(
+                        f"<Task> status={status!r} requires evidence_ref so "
+                        "the verdict has an explicit reference; it is "
+                        "missing. (No evidence reference is required for "
+                        "open or withdrawn.)"
+                    ),
+                )
+            )
+        for field_name in SEMANTIC_OPAQUE_FIELDS["Task"]:
+            value = getattr(atom, field_name)
+            if value is not None and not _is_nonempty_str(value):
+                errors.append(
+                    ValidationError(
+                        rule=RULE_TASK_REQUIRED_FIELDS,
+                        atom_id=atom_id,
+                        message=(
+                            f"<Task> {field_name}, when present, must be a "
+                            f"nonempty opaque string; got {value!r}."
+                        ),
+                    )
+                )
+    return errors
+
+
+def check_semantic_ref_target_kind(
+    trace: list[Step], _index: dict[str, Atom]
+) -> list[ValidationError]:
+    """v0.7 — typed reference fields resolve to their permitted kinds.
+
+    Dangling and wrong-kind targets are rejected. Opaque correlators
+    (``external_ref`` / ``runtime_ref``) are NOT reference fields and
+    are never resolved here.
+    """
+    errors: list[ValidationError] = []
+    atom_index = _declared_atom_index(trace)
+    canonical_index = _build_canonical_id_index(trace)
+    for atom in _semantic_atoms(trace):
+        ref_fields = SEMANTIC_REF_FIELDS.get(atom.kind)
+        if not ref_fields:
+            continue
+        atom_id = atom.id or ""
+        for field_name, allowed_kinds in ref_fields.items():
+            value = getattr(atom, field_name)
+            if value is None:
+                continue
+            if not _is_nonempty_str(value):
+                errors.append(
+                    ValidationError(
+                        rule=RULE_SEMANTIC_REF_TARGET_KIND,
+                        atom_id=atom_id,
+                        message=(
+                            f"<{atom.kind}> {field_name} must be a nonempty "
+                            f"reference string; got {value!r}."
+                        ),
+                    )
+                )
+                continue
+            target = _resolve_semantic_target(value, atom_index, canonical_index)
+            if target is None:
+                errors.append(
+                    ValidationError(
+                        rule=RULE_SEMANTIC_REF_TARGET_KIND,
+                        atom_id=atom_id,
+                        message=(
+                            f"<{atom.kind}> {field_name}={value!r} is "
+                            "dangling — it does not resolve to any declared "
+                            "atom id or canonical id in this trace."
+                        ),
+                    )
+                )
+                continue
+            if target.kind not in allowed_kinds:
+                errors.append(
+                    ValidationError(
+                        rule=RULE_SEMANTIC_REF_TARGET_KIND,
+                        atom_id=atom_id,
+                        message=(
+                            f"<{atom.kind}> {field_name}={value!r} resolves "
+                            f"to a <{target.kind}>; the permitted target "
+                            f"kind(s) for this field: "
+                            f"{', '.join(allowed_kinds)}."
+                        ),
+                    )
+                )
+    return errors
+
+
+def check_grammar_profile(
+    trace: list[Step], profile: Optional[str]
+) -> list[ValidationError]:
+    """v0.7 — explicit grammar-profile validation entry point.
+
+    ``profile=None`` selects the current grammar
+    (``SCHOLIA_GRAMMAR_VERSION``) for unversioned local input. A caller
+    crossing a negotiated boundary passes the profile explicitly: under
+    the legacy ``0.6.2`` profile every v0.7 semantic kind is rejected
+    with a structured unsupported-version diagnostic — never silently
+    rewritten to a legacy kind — and an unknown profile is itself
+    rejected the same way.
+    """
+    if profile is None:
+        return []
+    allowed = GRAMMAR_PROFILES.get(profile)
+    if allowed is None:
+        return [
+            ValidationError(
+                rule=RULE_GRAMMAR_PROFILE_UNSUPPORTED,
+                atom_id="",
+                message=(
+                    f"unsupported grammar profile {profile!r}: this "
+                    f"validator (package {SCHOLIA_VALIDATOR_VERSION}) "
+                    f"supports profiles "
+                    f"{sorted(GRAMMAR_PROFILES)} — negotiate a supported "
+                    "grammar version instead of assuming forward "
+                    "compatibility."
+                ),
+            )
+        ]
+    errors: list[ValidationError] = []
+    for atom in _walk_atoms(trace):
+        if atom.kind in PSEUDO_ATOM_KINDS:
+            continue
+        if atom.kind not in allowed:
+            errors.append(
+                ValidationError(
+                    rule=RULE_GRAMMAR_PROFILE_UNSUPPORTED,
+                    atom_id=atom.id or "",
+                    message=(
+                        f"<{atom.kind}> is not part of grammar profile "
+                        f"{profile}; the {profile} catalog has "
+                        f"{len(allowed)} kinds. Unsupported kind under the "
+                        "selected profile — surface this diagnostic to the "
+                        "producer (never down-convert to a legacy kind) or "
+                        f"negotiate grammar {SCHOLIA_GRAMMAR_VERSION}."
+                    ),
+                )
+            )
+    return errors
+
+
 # ── Orchestration ────────────────────────────────────────────────────
 
 
@@ -1534,6 +2259,18 @@ _RULES: tuple[
     (RULE_CRITICALITY_NON_DECREASING, check_criticality_non_decreasing),
     (RULE_CANONICAL_ID_WELL_FORMED, check_canonical_id_well_formed),
     (RULE_FINGERPRINT_WELL_FORMED, check_fingerprint_well_formed),
+    # v0.7.3-candidate — Map/Event/Task semantic rules. The structure
+    # check can emit three rule names (children/operators/entries-shape
+    # mirrors); it is registered under the children rule and its errors
+    # are re-bucketed by their own rule names in validate().
+    (RULE_SEMANTIC_CHILDREN_EMPTY, check_semantic_structure),
+    (RULE_SEMANTIC_ID_SHAPE, check_semantic_id_shape),
+    (RULE_SEMANTIC_ID_UNIQUE, check_semantic_id_unique),
+    (RULE_MAP_REQUIRED_FIELDS, check_map_rules),
+    (RULE_MAP_REF_RESOLVES, check_map_ref_resolves),
+    (RULE_EVENT_REQUIRED_FIELDS, check_event_rules),
+    (RULE_TASK_REQUIRED_FIELDS, check_task_rules),
+    (RULE_SEMANTIC_REF_TARGET_KIND, check_semantic_ref_target_kind),
 )
 
 _WARNING_RULES: tuple[
@@ -1549,7 +2286,12 @@ _WARNING_RULES: tuple[
 )
 
 
-def validate(trace: list[Step], *, graph: Any = None) -> ValidationResult:
+def validate(
+    trace: list[Step],
+    *,
+    graph: Any = None,
+    profile: Optional[str] = None,
+) -> ValidationResult:
     """Run all rules against ``trace`` and return a ``ValidationResult``.
 
     Warning rules are non-fatal: ``ok`` is true when there are no
@@ -1557,6 +2299,14 @@ def validate(trace: list[Step], *, graph: Any = None) -> ValidationResult:
     duck-typed; when it exposes ``has_edge(...)``, Rule 4 can recognize
     a persisted ``records_result`` edge without coupling this package to
     a particular graph implementation.
+
+    ``profile`` (v0.7) is the explicit grammar-profile entry point:
+    ``None`` validates under the current grammar
+    (``SCHOLIA_GRAMMAR_VERSION``); ``"0.6.2"`` additionally rejects
+    every v0.7 semantic kind with a structured
+    ``grammar_profile_unsupported`` diagnostic; an unknown profile is
+    rejected outright the same way. Selecting a profile never rewrites
+    or down-converts atoms.
     """
     index = _build_id_index(trace)
     errors: list[ValidationError] = []
@@ -1573,7 +2323,15 @@ def validate(trace: list[Step], *, graph: Any = None) -> ValidationResult:
         else:
             rule_errors = rule(trace, index)
         errors.extend(rule_errors)
-        errors_by_rule[name] = rule_errors
+        for error in rule_errors:
+            # Semantic rule functions may emit more than one rule name
+            # (e.g. the structure mirror); bucket each error by its own
+            # declared rule so errors_by_rule stays exact.
+            bucket = error.rule if error.rule in errors_by_rule else name
+            errors_by_rule[bucket].append(error)
+    profile_errors = check_grammar_profile(trace, profile)
+    errors.extend(profile_errors)
+    errors_by_rule[RULE_GRAMMAR_PROFILE_UNSUPPORTED].extend(profile_errors)
     for name, rule in _WARNING_RULES:
         rule_warnings = rule(trace, index)
         warnings.extend(rule_warnings)

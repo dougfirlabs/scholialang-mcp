@@ -1,7 +1,8 @@
 """Provenance, byte-parity, and shared conformance gates.
 
-The vendored engine tracks the scholialang 0.7.2 release (additive
-``fingerprint=`` support). The shared action_recorded conformance corpus is
+The vendored engine tracks the accepted scholialang 0.7.3 release (canonical
+reference-target and collision-identity fix; ``fingerprint=`` support arrived
+in 0.7.1). The shared action_recorded conformance corpus is
 still cut at spec v0.6.2 — an additive validator revision must keep passing it
 byte-for-byte, which is exactly what these gates assert.
 """
@@ -17,10 +18,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-# Vendored validator engine: re-vendored from the scholialang 0.7.2 release
-# commit (additive fingerprint= support).
-VENDORED_VALIDATOR_VERSION = "0.7.2"
-SCHOLIALANG_COMMIT = "c6ff32a5b028ac40fd1c12303c3eb37700f51dca"
+# Vendored validator engine: re-vendored from the accepted scholialang 0.7.3
+# release commit (canonical reference-target and collision-identity fix).
+VENDORED_VALIDATOR_VERSION = "0.7.3"
+SCHOLIALANG_COMMIT = "9a86a4645c49074c4a415ade01093bff0e2ca70c"
 # Shared action_recorded conformance corpus: unchanged, still cut at spec
 # v0.6.2 (fingerprint fixtures live separately in scholialang-spec).
 SPEC_CORPUS_VERSION = "0.6.2"
@@ -133,7 +134,8 @@ def test_vendored_engine_passes_all_shared_action_recorded_cases():
 
 
 def test_vendored_engine_recognizes_fingerprint_attribute():
-    """0.7.2 parity: the offline vendored validator recognizes the additive
+    """0.7.x parity (additive since 0.7.1, preserved by the 0.7.3
+    re-vendor): the offline vendored validator recognizes the additive
     ``fingerprint=`` attribute on ``<Observation>`` and enforces the
     ``fingerprint_well_formed`` rule (FINGERPRINT.md §3) without any network or
     PyPI install. This is the offline parity gate for the re-vendored snapshot.

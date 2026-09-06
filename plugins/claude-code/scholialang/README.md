@@ -244,7 +244,7 @@ to see which engine is in use:
 - `scholialang-package` — the installed pip package
 - `scholialang-vendored` — the bundled fallback
 
-To force the package path, `python -m pip install "scholialang>=0.7.2,<0.8"`
+To force the package path, `python -m pip install "scholialang>=0.7.3,<0.8"`
 and restart Claude Code.
 
 ## Safety Model

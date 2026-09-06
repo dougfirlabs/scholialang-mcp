@@ -7,13 +7,13 @@
   },
   "metadata": {
     "description": "Scholia tooling for Claude Code — preserve reasoning state, use tools without quality loss, and reduce context cost across long-horizon work.",
-    "version": "0.7.2"
+    "version": "0.7.3"
   },
   "plugins": [
     {
       "name": "scholialang",
       "source": "./plugins/claude-code/scholialang",
-      "description": "Scholialang plugin 0.7.2: local auto-emit tracing, a structured-reasoning DAG, stable Scholia v0.6.2 language validation, and Codex/Claude Code rollout import.",
+      "description": "Scholialang plugin 0.7.3: local auto-emit tracing, a structured-reasoning DAG, stable Scholia v0.6.2 language validation, and Codex/Claude Code rollout import.",
       "category": "Coding"
     }
   ]

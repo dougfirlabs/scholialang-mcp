@@ -43,7 +43,7 @@ import shutil
 import sys
 from pathlib import Path
 
-MATERIALIZER_VERSION = "0.7.2"
+MATERIALIZER_VERSION = "0.7.3"
 SCHEMA_VERSION = 1
 STABLE_GRAMMAR_VERSION = "0.6.2"
 

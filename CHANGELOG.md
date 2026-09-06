@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.7.3
+
+- **Rebind to the accepted scholialang 0.7.3 core.** Re-vendored the offline
+  validator snapshot from the accepted `scholialang` 0.7.3 release commit
+  `9a86a4645c49074c4a415ade01093bff0e2ca70c` (canonical reference-target
+  preservation and exact collision identity in the registry/serializer). The
+  language grammar remains Scholia v0.6.2; `UPSTREAM.json` cites the 0.7.3
+  provenance and `SCHOLIA_VALIDATOR_VERSION` reads `0.7.3` across all three
+  host plugins.
+- **Dependency advance.** Bumped the `scholialang` dependency floor to
+  `>=0.7.3,<0.8` and the plugin servers' installed-package acceptance floor
+  (`MIN_VALIDATOR_VERSION`) to `(0, 7, 3)`, so an installed 0.7.2 core can no
+  longer outrank the vendored 0.7.3 engine.
+- **Exact-artifact input receipt.** The accepted core wheel/sdist identities
+  are recorded in `docs/receipts/scholialang-0.7.3-input-receipt.md` (wheel
+  sha256 `bbe08813bb0431824fa82db6b086ff2aafca5f6024e0b377dcfa7d37c25c1831`,
+  sdist sha256
+  `457fe675175adf2c3166eeb55ffe86f8e9e0fb72b5acea54615ac3401c2557b2`);
+  vendoring consumed that exact accepted source, not a package index. No PyPI
+  publication occurred for this rebind.
+
 ## v0.7.2
 
 - Repair the public DAG-to-grammar contract: XML exports now use canonical
