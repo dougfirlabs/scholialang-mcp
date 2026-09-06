@@ -1,6 +1,6 @@
 {
   "kind": "prd", "schema_version": 1, "status": "approved",
-  "group_id": "sch073-mcp-next-steps-20260906", "run_policy": "gated_stack",
+  "group_id": "sch073-mcp-next-steps-astra-20260906", "run_policy": "gated_stack",
   "approval": {"approved": true, "execution_authorized": true, "merge_authorized": true, "release_authorized": false},
   "authority": "Darren approved execution and cumulative integration. No production activation, PyPI publication, or Cloud propagation.",
   "evidence_contract": "Bind each adapter to pinned protocol/schema revisions and exact candidate SHA; preserve wire captures, capability negotiation, identity/idempotency/cancellation/reconnect evidence, and independent review.",
@@ -13,7 +13,7 @@
   "acceptance": ["Real wire tests pass against pinned fixtures.", "Independent capabilities negotiate separately.", "Unsupported and unbound contexts fail closed.", "Default-off and observe semantics advertise/execute nothing."],
   "verification": "Run real stdio interoperability plus adversarial identity, idempotency, cancellation, reconnect, and policy tests; independently adjudicate.", "out_of_scope": ["legacy wire inventions", "HTTP transport", "production activation", "PyPI publication", "Cloud propagation"],
   "rollback": "Keep each extension default-off and revert only the adapter candidate if a conformance facet fails.", "success_metrics": ["three real adapters implemented", "wire matrix green", "policy fail-closed evidence complete"],
-  "target_repo": "scholialang-mcp", "target_root": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control", "allowed_drivers": ["claude"],
-  "coordination_metadata": {"job_id":"sch073-j07-real-adapters","launch_ready":true,"gui_port":7709,"source_branch":"feat/sch073-mcp-control-20260905","source_tip":"ba31107d8205b02744e9647f9a251cadbe6a50ca","launch_model":"claude-fable-5","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only"},
-  "launch_contract": {"project":"scholialang-mcp-sch073","port":7709,"source_branch":"feat/sch073-mcp-control-20260905","execution_mode":"skolem_worktree","driver":"claude","model":"claude-fable-5","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only","protected_merge_authorized":true}
+  "target_repo": "scholialang-mcp", "target_root": "/tmp/sch073-mcp-stage-base-20260906", "allowed_drivers": ["codex"],
+  "coordination_metadata": {"job_id":"sch073-j07-real-adapters","launch_ready":true,"gui_port":7706,"source_branch":"integration/sch073-mcp-stage-base-20260906","source_tip":"0898c634867168cd7021aa1f2c73f757bd973371","launch_model":"gpt-6-astra","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only"},
+  "launch_contract": {"project":"scholialang-mcp-stage-base-20260906","port":7706,"source_branch":"integration/sch073-mcp-stage-base-20260906","execution_mode":"sequential","driver":"codex","model":"gpt-6-astra","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only","protected_merge_authorized":true}
 }

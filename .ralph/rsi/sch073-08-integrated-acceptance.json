@@ -1,6 +1,6 @@
 {
   "kind": "prd", "schema_version": 1, "status": "approved",
-  "group_id": "sch073-mcp-next-steps-20260906", "run_policy": "gated_stack",
+  "group_id": "sch073-mcp-next-steps-astra-20260906", "run_policy": "gated_stack",
   "approval": {"approved": true, "execution_authorized": true, "merge_authorized": true, "release_authorized": false},
   "authority": "Darren approved cumulative acceptance and merge preparation. PyPI release, production activation, and Scholialang-cloud propagation remain separate gates.",
   "evidence_contract": "Test the combined immutable candidate from a clean export; verify ancestry, remote parity, cross-PRD interfaces, full regression, protocol evidence, rollback refs, and public-evidence hygiene.",
@@ -13,7 +13,7 @@
   "acceptance": ["Combined candidate passes all required tests and real adapter checks.", "All caveats are explicit and non-blocking or named as blockers.", "Exact final SHA and rollback ref are recorded.", "One merge-ready package is published for review."],
   "verification": "Run cumulative clean-export tests and independent PM adjudication; stop before any release or Cloud propagation.", "out_of_scope": ["PyPI release", "production activation", "Scholialang-cloud propagation", "unapproved downstream OT implementation"],
   "rollback": "Provide exact revert/branch rollback instructions and preserve each predecessor receipt.", "success_metrics": ["cumulative candidate green", "independent verdict pass or pass_with_caveats", "merge package complete"],
-  "target_repo": "scholialang-mcp", "target_root": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control", "allowed_drivers": ["claude"],
-  "coordination_metadata": {"job_id":"sch073-j08-integrated-acceptance","launch_ready":true,"gui_port":7709,"source_branch":"feat/sch073-mcp-control-20260905","source_tip":"ba31107d8205b02744e9647f9a251cadbe6a50ca","launch_model":"claude-fable-5","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only"},
-  "launch_contract": {"project":"scholialang-mcp-sch073","port":7709,"source_branch":"feat/sch073-mcp-control-20260905","execution_mode":"skolem_worktree","driver":"claude","model":"claude-fable-5","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only","protected_merge_authorized":true}
+  "target_repo": "scholialang-mcp", "target_root": "/tmp/sch073-mcp-stage-base-20260906", "allowed_drivers": ["codex"],
+  "coordination_metadata": {"job_id":"sch073-j08-integrated-acceptance","launch_ready":true,"gui_port":7706,"source_branch":"integration/sch073-mcp-stage-base-20260906","source_tip":"0898c634867168cd7021aa1f2c73f757bd973371","launch_model":"gpt-6-astra","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only"},
+  "launch_contract": {"project":"scholialang-mcp-stage-base-20260906","port":7706,"source_branch":"integration/sch073-mcp-stage-base-20260906","execution_mode":"sequential","driver":"codex","model":"gpt-6-astra","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only","protected_merge_authorized":true}
 }
