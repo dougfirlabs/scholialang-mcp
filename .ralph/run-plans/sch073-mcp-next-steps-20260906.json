@@ -16,7 +16,7 @@
   "post_run_atlas_refresh": {"mode":"report_only","include_touched":true,"include_referenced":true,"include_neighbors":false,"neighbor_depth":0,"notify":true},
   "wave_boundary": "hold_for_adjudication",
   "waves": [
-    {"wave_id":"w1-core073-vendoring","tracks":[{"track_id":"core073-vendoring","mode":"sequential","target_queue":"rsi","prds":["sch073-05-core073-vendoring"],"dependencies":["sch073-04-capability-contract-scholialang-mcp"],"source_branch":"feat/sch073-mcp-control-20260905","branch_freshness_mode":"current"}]},
+    {"wave_id":"w1-core073-vendoring","tracks":[{"track_id":"core073-vendoring","mode":"sequential","target_queue":"rsi","prds":["sch073-05-core073-vendoring"],"dependencies":[],"source_branch":"feat/sch073-mcp-control-20260905","branch_freshness_mode":"current"}]},
     {"wave_id":"w2-durable-store","tracks":[{"track_id":"durable-store","mode":"sequential","target_queue":"rsi","prds":["sch073-06-durable-store"],"dependencies":["sch073-05-core073-vendoring"],"source_branch":"feat/sch073-mcp-control-20260905","branch_freshness_mode":"current"}]},
     {"wave_id":"w3-real-adapters","tracks":[{"track_id":"real-adapters","mode":"sequential","target_queue":"rsi","prds":["sch073-07-real-adapters"],"dependencies":["sch073-06-durable-store"],"source_branch":"feat/sch073-mcp-control-20260905","branch_freshness_mode":"current"}]},
     {"wave_id":"w4-integrated-acceptance","tracks":[{"track_id":"integrated-acceptance","mode":"sequential","target_queue":"rsi","prds":["sch073-08-integrated-acceptance"],"dependencies":["sch073-07-real-adapters"],"source_branch":"feat/sch073-mcp-control-20260905","branch_freshness_mode":"current"}]}
