@@ -2,8 +2,8 @@
 name: scholialang-verify
 description: Use when someone asks whether Scholialang actually works end to end, whether the advertised MCP tools, DAG lifecycle, validator rules, or an installed wheel behave as documented, or when a release or plugin copy needs functional verification beyond version parity. Runs a deterministic scenario battery (positive, negative, composition, installed-artifact) against isolated sandboxes and reports pass, incomplete, or fail per scenario. It never touches the user's real DAG store or configuration.
 metadata:
-  version: "0.7.2"
-  grammar: "0.6.2"
+  version: "0.7.3"
+  grammar: "0.7.0"
 ---
 
 # Scholialang Verify
@@ -22,7 +22,7 @@ python3 scripts/scholia_verify.py --root <checkout> --evidence-dir <dir> --json
 
 # One arm at a time, or with a prebuilt wheel fixture:
 python3 scripts/scholia_verify.py --root <checkout> --evidence-dir <dir> \
-  --arm canonical-plugin --arm installed-wheel --wheel dist/scholialang_mcp-0.7.2-py3-none-any.whl
+  --arm canonical-plugin --arm installed-wheel --wheel dist/scholialang_mcp-0.7.3-py3-none-any.whl
 
 # Print the scenario manifest without running anything:
 python3 scripts/scholia_verify.py --list --evidence-dir <dir>

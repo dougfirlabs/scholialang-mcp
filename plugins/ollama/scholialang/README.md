@@ -11,7 +11,7 @@ surfaces.
 
 - `scripts/scholialang_mcp_server.py` — the same stdio MCP server used by
   the Codex and Claude Code plugins. Local SQLite-backed DAG storage at
-  `~/.scholialang/scholialang.sqlite3`. Package 0.7.2 validation of the stable Scholia v0.6.2 language grammar
+  `~/.scholialang/scholialang.sqlite3`. Package 0.7.3 validation of the Scholia v0.7.0 language grammar
   (`scholia_lint_snippet`, `scholia_lint_trace`).
 - `scripts/_scholia_vendored/` — vendored validator/parser/atoms snapshot
   used when `pip install scholialang` is not available in the host
@@ -79,7 +79,7 @@ active:
 - `scholialang-package` — installed pip package
 - `scholialang-vendored` — bundled snapshot
 
-To force the package path, `python -m pip install "scholialang>=0.7.2,<0.8"` in
+To force the package path, `python -m pip install "scholialang>=0.7.3,<0.8"` in
 the environment the harness uses to spawn the MCP server.
 
 ## Storage

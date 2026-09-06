@@ -1,22 +1,37 @@
 {
-  "commit": "c6ff32a5b028ac40fd1c12303c3eb37700f51dca",
+  "artifacts": {
+    "pyyaml-6.0.3-py3-none-any.whl": "313f164096b8f47badd9de8fcec66acf1cb59145c191e71249f3dd60497d2297",
+    "pyyaml-6.0.3.tar.gz": "d76623373421df22fb4cf8817020cbb7ef15c725b9d5e45f17e189bfc384190f",
+    "scholialang-0.7.3-py3-none-any.whl": "76c9e9a15cb3039bcf59a63b4727271cc9933745eecd4280712c5df65616317a",
+    "scholialang-0.7.3.tar.gz": "45c710fe24f1713ae54a57740b991b506dbb124af36c8ca0698a70f54915e88d"
+  },
+  "commit": "9a86a4645c49074c4a415ade01093bff0e2ca70c",
+  "dependencies": [
+    "PyYAML>=6.0"
+  ],
   "files": {
     "atoms.py": {
       "source_path": "src/scholialang/atoms.py",
-      "source_sha256": "b7ede1fc56865b05774a5e25fb3825fd7dad08b2ab69df3d8ecd489b6850ee0d",
-      "vendored_sha256": "b7ede1fc56865b05774a5e25fb3825fd7dad08b2ab69df3d8ecd489b6850ee0d"
+      "source_sha256": "7f293758f4ed8c2353e45653b2f9c34dded79a0871b6a610c52bba278d3a63eb",
+      "vendored_sha256": "7f293758f4ed8c2353e45653b2f9c34dded79a0871b6a610c52bba278d3a63eb"
     },
     "parser.py": {
       "source_path": "src/scholialang/parser.py",
-      "source_sha256": "69ba81f85802c64a465c6b8e10e445ee30a66d1dc7efce21918b71a45a17db20",
-      "vendored_sha256": "e126c6a785958f586e724dbf86074903e75aef960ec99b04367ab07f1c199431"
+      "source_sha256": "9252f1029792b7040fa824745efcb9df07eefee7eacb6397d01a590b543ce7c1",
+      "vendored_sha256": "179909fd4398a415b6fe8fbafb8f941dd8b957c22d90107a8634571b15e44a9e"
+    },
+    "serializer.py": {
+      "source_path": "src/scholialang/serializer.py",
+      "source_sha256": "d39771ede62338096ada5bcc4c1d8205b622b5162f79115c0bdf55e8d27074ed",
+      "vendored_sha256": "15bee5f0c5adbff98d958cdfdea97a31efb89d2025a55227c4d83273a0572579"
     },
     "validator.py": {
       "source_path": "src/scholialang/validator.py",
-      "source_sha256": "6a86e0556967bd340ed3e60707c4301b8839e72cfb98ff218ea605793968cd9b",
-      "vendored_sha256": "9d00ed09205dee74d8d415ae3cce1b695e6f9d593849180b9e58bc92dfea9942"
+      "source_sha256": "408c0ae870781e22e87241e706813fad6d0bf7f76732808a1311e9331e4946c2",
+      "vendored_sha256": "41e949d720a3b8a70c9efc25dfa4e766753c44dedbfafbe5c632a6e204069ac4"
     }
   },
+  "grammar_version": "0.7.0",
   "import_rewrites": {
     "parser.py": [
       {
@@ -28,6 +43,12 @@
         "to": "from . import atoms as _atoms_module"
       }
     ],
+    "serializer.py": [
+      {
+        "from": "from scholialang.atoms import (",
+        "to": "from .atoms import ("
+      }
+    ],
     "validator.py": [
       {
         "from": "from scholialang.atoms import (",
@@ -35,7 +56,8 @@
       }
     ]
   },
+  "license": "MIT OR Apache-2.0",
   "schema": 1,
   "source": "https://github.com/dougfirlabs/scholialang",
-  "validator_version": "0.7.2"
+  "validator_version": "0.7.3"
 }

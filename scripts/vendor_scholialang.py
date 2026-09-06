@@ -13,14 +13,17 @@ import hashlib
 import json
 import re
 import subprocess
+import tarfile
+import zipfile
 from pathlib import Path
 
 
-RELEASE_VERSION = "0.7.2"
+RELEASE_VERSION = "0.7.3"
 SOURCE_FILES = {
     "atoms.py": "src/scholialang/atoms.py",
     "parser.py": "src/scholialang/parser.py",
     "validator.py": "src/scholialang/validator.py",
+    "serializer.py": "src/scholialang/serializer.py",
 }
 IMPORT_REWRITES = {
     "parser.py": (
@@ -28,6 +31,9 @@ IMPORT_REWRITES = {
         ("from scholialang import atoms as _atoms_module", "from . import atoms as _atoms_module"),
     ),
     "validator.py": (
+        ("from scholialang.atoms import (", "from .atoms import ("),
+    ),
+    "serializer.py": (
         ("from scholialang.atoms import (", "from .atoms import ("),
     ),
 }
@@ -73,6 +79,13 @@ def main() -> int:
 
     commit = _git(source_repo, "rev-parse", "--verify", f"{args.commit}^{{commit}}").decode().strip()
     repo_root = Path(__file__).resolve().parents[1]
+    artifact_dir = repo_root / "vendor" / "core"
+    receipt = json.loads((artifact_dir / "RECEIPT.json").read_text())
+    if commit != receipt["commit"]:
+        raise SystemExit("source commit differs from accepted core receipt")
+    for name, digest in receipt["artifacts"].items():
+        if _sha256((artifact_dir / name).read_bytes()) != digest:
+            raise SystemExit(f"accepted artifact hash mismatch: {name}")
     destination = (
         repo_root
         / "plugins"
@@ -86,6 +99,14 @@ def main() -> int:
     provenance_files: dict[str, dict[str, str]] = {}
     for name, source_path in SOURCE_FILES.items():
         source = _git(source_repo, "show", f"{commit}:{source_path}")
+        with zipfile.ZipFile(artifact_dir / "scholialang-0.7.3-py3-none-any.whl") as wheel:
+            wheel_source = wheel.read(f"scholialang/{name}")
+        with tarfile.open(artifact_dir / "scholialang-0.7.3.tar.gz") as sdist:
+            member = sdist.extractfile(f"scholialang-0.7.3/{source_path}")
+            assert member is not None
+            sdist_source = member.read()
+        if source != wheel_source or source != sdist_source:
+            raise SystemExit(f"accepted source/wheel/sdist mismatch: {name}")
         vendored = _rewrite_imports(name, source)
         compile(vendored, f"{commit}:{source_path}", "exec")
         rendered[name] = vendored
@@ -111,12 +132,21 @@ def main() -> int:
     destination.mkdir(parents=True, exist_ok=True)
     for name, payload in rendered.items():
         (destination / name).write_bytes(payload)
+    for name in ("LICENSE-MIT", "LICENSE-APACHE"):
+        payload = _git(source_repo, "show", f"{commit}:{name}")
+        if payload != (artifact_dir / name).read_bytes():
+            raise SystemExit(f"accepted license mismatch: {name}")
+        (destination / name).write_bytes(payload)
 
     provenance = {
         "schema": 1,
         "source": "https://github.com/dougfirlabs/scholialang",
         "commit": commit,
         "validator_version": actual_version,
+        "grammar_version": receipt["grammar_version"],
+        "artifacts": receipt["artifacts"],
+        "license": receipt["license"],
+        "dependencies": receipt["dependencies"],
         "files": provenance_files,
         "import_rewrites": {
             name: [{"from": old, "to": new} for old, new in rewrites]

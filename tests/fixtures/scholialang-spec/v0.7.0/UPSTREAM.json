@@ -1,0 +1,10 @@
+{
+  "core_commit": "9a86a4645c49074c4a415ade01093bff0e2ca70c",
+  "files": {
+    "coverage-inventory.json": "eed5d0c6d4ed982a8115e85bc6354b9c37695468f403dd4321bff0612a82366d",
+    "run_spec_conformance.py": "cb6c4fe0f23d40e9cdbf29e500c0a432a95e1211eee57804d798087913ce386d",
+    "semantic_atoms.json": "8ef6db811290522e6234fbc9d1b748d567aaa3b78f86c536527c98e77a8f3a6e"
+  },
+  "spec_commit": "4e19eae3e55566dac450c0dbf7bcba03d12afc50",
+  "spec_version": "0.7.0"
+}

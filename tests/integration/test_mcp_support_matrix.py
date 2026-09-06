@@ -40,7 +40,7 @@ UNSUPPORTED_PROBE_VERSION = "1999-01-01"
 
 def _spawn(cmd: list[str]) -> "subprocess.Popen[str]":
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(ROOT / "src")
+    env["PYTHONPATH"] = "" if env.get("MCP_EXPECT_IMPORT_PREFIX") else str(ROOT / "src")
     return subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE,

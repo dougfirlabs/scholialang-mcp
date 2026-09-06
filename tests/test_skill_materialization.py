@@ -29,8 +29,8 @@ assert _SPEC is not None and _SPEC.loader is not None
 mat = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(mat)
 
-RELEASE = "0.7.2"
-GRAMMAR = "0.6.2"
+RELEASE = "0.7.3"
+GRAMMAR = "0.7.0"
 
 
 def _copy_skills(destination: Path) -> Path:
@@ -223,11 +223,11 @@ def test_mismatched_metadata_version_is_rejected(tmp_path):
     checkout = _copy_skills(tmp_path / "checkout")
     path = _canonical_skill_md(checkout, "scholialang-verify")
     path.write_text(
-        path.read_text(encoding="utf-8").replace('version: "0.7.2"', 'version: "0.7.1"', 1),
+        path.read_text(encoding="utf-8").replace('version: "0.7.3"', 'version: "0.7.1"', 1),
         encoding="utf-8",
     )
     issues = mat.validate_skill(checkout, "scholialang-verify")
-    assert any("metadata.version must be '0.7.2'" in issue for issue in issues)
+    assert any("metadata.version must be '0.7.3'" in issue for issue in issues)
 
 
 def test_broken_relative_script_reference_is_rejected(tmp_path):

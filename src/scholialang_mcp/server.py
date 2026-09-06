@@ -35,7 +35,7 @@ SUPPORTED_MCP_PROTOCOL_VERSIONS = (
     "2025-03-26",
     "2024-11-05",
 )
-SERVER_VERSION = "0.7.2"
+SERVER_VERSION = "0.7.3"
 
 # MCP 2026-07-28 ``_meta`` keys (SEP-2575 / SEP-2322 / SEP-2549).
 META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion"
@@ -276,7 +276,7 @@ class ScholiaMCPServer:
                 "status": "unsupported",
                 "error": "regenerate_unavailable",
                 "path": path,
-                "hint": "regeneration is host-adapter specific in scholialang-mcp v0.7.2",
+                "hint": "regeneration is host-adapter specific in scholialang-mcp v0.7.3",
             }
         return {"status": "accepted", "path": path}
 

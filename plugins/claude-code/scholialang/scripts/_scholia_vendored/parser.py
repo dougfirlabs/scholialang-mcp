@@ -23,6 +23,7 @@ quirks handled here:
 """
 from __future__ import annotations
 
+import json
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -32,6 +33,7 @@ from .atoms import (
     ATOM_KINDS,
     PSEUDO_ATOM_KINDS,
     OPERATORS,
+    SEMANTIC_KINDS,
     V031_EDGE_TYPES,
     V031_EFFECT_KINDS,
     V031_LOCATION_RE,
@@ -45,6 +47,7 @@ from .atoms import (
     Finding,
     Goal,
     Handoff,
+    Map,
     Step,
     Storing,
     atom_class_for_kind,
@@ -150,7 +153,18 @@ _ALLOWED_ATTRS_BY_KIND: dict[str, frozenset[str]] = _build_allowed_attrs_by_kind
 
 
 class ScholiaParseError(ValueError):
-    """Raised when input is not a parseable Scholia trace."""
+    """Raised when input is not a parseable Scholia trace.
+
+    ``rule`` (v0.7, optional) carries the conformance rule code for the
+    parse-phase failure when one applies (e.g. ``unknown_kind``,
+    ``semantic_unknown_field``) so conformance harnesses can dispatch
+    without message-pattern matching. Older call sites that pass only a
+    message are unchanged.
+    """
+
+    def __init__(self, message: str, *, rule: str | None = None):
+        super().__init__(message)
+        self.rule = rule
 
 
 # ── Pre-pass — normalise XML-ish quirks ──────────────────────────────
@@ -415,11 +429,14 @@ def _validate_attrs(kind: str, attrs: dict[str, str]) -> None:
     # for callers/tests that key on them. The generic closed-set check
     # at the end catches everything else.
     if "timestamp" in attrs:
-        if kind not in {"Observation", "Action"}:
+        # v0.7 — <Event> carries its own optional RFC3339 timestamp; its
+        # timezone/possibility contract is a VALIDATE-phase rule
+        # (event_timestamp_shape), so the parser accepts the raw string.
+        if kind not in {"Observation", "Action", "Event"}:
             raise ScholiaParseError(
-                "timestamp is only valid on <Observation> and <Action>."
+                "timestamp is only valid on <Observation>, <Action>, and <Event>."
             )
-        if not _is_iso8601(attrs["timestamp"]):
+        if kind != "Event" and not _is_iso8601(attrs["timestamp"]):
             raise ScholiaParseError(
                 f"<{kind}> timestamp must be ISO-8601; got {attrs['timestamp']!r}."
             )
@@ -441,7 +458,21 @@ def _validate_attrs(kind: str, attrs: dict[str, str]) -> None:
     # closed-set posture had a hole. Fixed here. Atoms whose paren-arg
     # form accepts arbitrary operator-supplied keys (Storing, Print)
     # skip this check; see ``_OPEN_NAMESPACE_KINDS`` above.
-    if kind not in _OPEN_NAMESPACE_KINDS:
+    if kind in SEMANTIC_KINDS:
+        # v0.7 — the new kinds close their field set even harder than the
+        # legacy posture: the parser-sidecar ``value`` attribute (a
+        # paren-arg desugar artifact) is NOT legal on them.
+        allowed = _ALLOWED_ATTRS_BY_KIND.get(kind, frozenset()) - _UNIVERSAL_WIRE_ATTRS
+        unknown = set(attrs.keys()) - allowed
+        if unknown:
+            raise ScholiaParseError(
+                f"<{kind}> has unknown field(s) {sorted(unknown)!r}; "
+                f"the closed per-kind field set is {sorted(allowed)!r} "
+                "(unknown fields on the v0.7 semantic kinds are rejected "
+                "across XML, JSON, YAML, and dictionary input).",
+                rule="semantic_unknown_field",
+            )
+    elif kind not in _OPEN_NAMESPACE_KINDS:
         allowed = _ALLOWED_ATTRS_BY_KIND.get(kind, frozenset())
         unknown = set(attrs.keys()) - allowed
         if unknown:
@@ -539,6 +570,57 @@ def _validate_v031_attrs(kind: str, attrs: dict[str, str]) -> None:
                     )
 
 
+def _decode_map_entries_attr(raw: str) -> dict[str, object]:
+    """Decode the XML ``entries`` attribute — an embedded JSON object.
+
+    v0.7 parse-phase contract (rule ``map_entries_shape``): the value
+    must decode to a JSON object; duplicate keys and nonfinite tokens
+    (``NaN`` / ``Infinity``) are rejected while decoding, before they
+    can silently destroy information. Typed-value violations (floats,
+    nulls, arrays, …) are validate-phase and pass through here.
+    """
+
+    def _pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        decoded: dict[str, object] = {}
+        for key, value in pairs:
+            if key in decoded:
+                raise ScholiaParseError(
+                    f"<Map> entries contains duplicate key {key!r}; keys "
+                    "must be unique — duplicates are rejected while "
+                    "decoding rather than silently overwritten.",
+                    rule="map_entries_shape",
+                )
+            decoded[key] = value
+        return decoded
+
+    def _reject_nonfinite(token: str) -> object:
+        raise ScholiaParseError(
+            f"<Map> entries contains the nonfinite JSON token {token!r}; "
+            "NaN and infinities are not interoperable JSON values.",
+            rule="map_entries_shape",
+        )
+
+    try:
+        decoded = json.loads(
+            raw, object_pairs_hook=_pairs, parse_constant=_reject_nonfinite
+        )
+    except ScholiaParseError:
+        raise
+    except ValueError as exc:
+        raise ScholiaParseError(
+            f"<Map> entries must be a JSON object in the XML attribute; "
+            f"decoding failed: {exc}",
+            rule="map_entries_shape",
+        ) from exc
+    if not isinstance(decoded, dict):
+        raise ScholiaParseError(
+            f"<Map> entries must be a JSON object mapping string keys to "
+            f"values; got {type(decoded).__name__}.",
+            rule="map_entries_shape",
+        )
+    return decoded
+
+
 def _build_pseudo_atom(kind: str) -> Atom:
     atom = Atom()
     atom.kind = kind
@@ -553,11 +635,21 @@ def _build_atom(elem: Element, *, parent_kind: str | None = None) -> Atom:
     cls = atom_class_for_kind(kind)
     if cls is None:
         raise ScholiaParseError(
-            f"Unknown Scholia atom: <{kind}> (not in v0.2 catalog)."
+            f"Unknown Scholia atom: <{kind}> (not in v0.2 catalog).",
+            rule="unknown_kind",
         )
     if kind == "Alternative" and parent_kind != "Deciding":
         raise ScholiaParseError("<Alternative> is only valid inside <Deciding>.")
     _validate_attrs(kind, dict(elem.attrib))
+    if kind in SEMANTIC_KINDS and len(list(elem)):
+        # v0.7 — new kinds carry no nested child atoms (or any child
+        # elements) in this revision; relationships use explicit
+        # reference fields instead.
+        raise ScholiaParseError(
+            f"<{kind}> must have empty children — the v0.7 semantic kinds "
+            "carry no nested child atoms; use explicit reference fields.",
+            rule="semantic_children_empty",
+        )
 
     if cls is Concluding:
         try:
@@ -580,6 +672,10 @@ def _build_atom(elem: Element, *, parent_kind: str | None = None) -> Atom:
         atom.id = elem.attrib.get("id")
     if isinstance(atom, Storing) and atom.value and not atom.name:
         atom.name = atom.value
+    if isinstance(atom, Map) and isinstance(atom.entries, str):
+        # v0.7 — the XML wire carries entries as an embedded JSON object;
+        # decode (rejecting duplicates/nonfinite tokens) before hashing.
+        atom.entries = _decode_map_entries_attr(atom.entries)
     atom.content = _text_of(elem)
     atom.operators = _extract_operators(atom.content)
 
@@ -765,7 +861,8 @@ def _build_step(elem: Element) -> Step:
         if child_kind not in ATOM_KINDS and child_kind not in PSEUDO_ATOM_KINDS:
             raise ScholiaParseError(
                 f"Unknown Scholia atom: <{child.tag}> "
-                "(not in v0.2 catalog)."
+                "(not in v0.2 catalog).",
+                rule="unknown_kind",
             )
         step.atoms.append(_build_atom(child))
     return step
@@ -826,7 +923,8 @@ def parse(text: str) -> list[Step]:
             steps.append(implicit)
             continue
         raise ScholiaParseError(
-            f"Unknown Scholia atom: <{tag}> (not in v0.2 catalog)."
+            f"Unknown Scholia atom: <{tag}> (not in v0.2 catalog).",
+            rule="unknown_kind",
         )
     return steps
 

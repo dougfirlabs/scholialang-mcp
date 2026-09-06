@@ -27,8 +27,8 @@ assert _SPEC is not None and _SPEC.loader is not None
 gate = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(gate)
 
-RELEASE = "0.7.2"
-GRAMMAR = "0.6.2"
+RELEASE = "0.7.3"
+GRAMMAR = "0.7.0"
 
 
 def _git(*args: str) -> str:
@@ -98,7 +98,7 @@ def test_version_recommendation_is_non_binding_and_never_applied(tmp_path):
     elif recommendation["commits_since_released_tag"] == 0:
         assert recommendation["action"] == "none"
     else:
-        # A released v0.7.2 tag with newer commits: a bump is required but the
+        # A released v0.7.3 tag with newer commits: a bump is required but the
         # gate must not choose it.
         assert recommendation["action"] == "bump_before_publish"
         assert recommendation["mechanically_unambiguous"] is False

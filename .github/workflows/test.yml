@@ -18,6 +18,10 @@ jobs:
           python-version: "${{ matrix.python-version }}"
       - name: Install test dependencies
         run: python -m pip install pytest pytest-timeout
+      - name: Install accepted core from the local wheelhouse
+        run: |
+          python scripts/verify_core_input.py
+          python -m pip install --no-index --find-links vendor/core --require-hashes -r vendor/core/requirements.txt
+          python -m pip install --no-deps .
       - name: Run tests
         run: PYTHONPATH=src pytest
-

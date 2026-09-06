@@ -37,9 +37,9 @@ def test_desktop_manifest_and_staged_server_are_release_aligned():
     with tempfile.TemporaryDirectory() as tmp:
         staged = Path(tmp) / "scholialang"
         manifest = stage_bundle(staged)
-        assert manifest["version"] == "0.7.2"
-        assert "plugin 0.7.2" in manifest["description"]
-        assert "Scholia v0.6.2" in manifest["description"]
+        assert manifest["version"] == "0.7.3"
+        assert "plugin 0.7.3" in manifest["description"]
+        assert "Scholia v0.7.0" in manifest["description"]
         assert (staged / "src" / "scholialang_mcp_server.py").is_file()
         assert (staged / "src" / "_scholia_vendored" / "validator.py").is_file()
         assert not (staged / "src" / "scholialang_mcp_server.py").is_symlink()

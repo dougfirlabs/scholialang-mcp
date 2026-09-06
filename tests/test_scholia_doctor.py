@@ -29,8 +29,8 @@ assert _SPEC is not None and _SPEC.loader is not None
 doctor = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(doctor)
 
-RELEASE = "0.7.2"
-GRAMMAR = "0.6.2"
+RELEASE = "0.7.3"
+GRAMMAR = "0.7.0"
 
 _PYPROJECT_TEMPLATE = """\
 [project]
@@ -48,7 +48,7 @@ name: scholialang-doctor
 description: fixture doctor skill
 metadata:
   version: "{version}"
-  grammar: "0.6.2"
+  grammar: "0.7.0"
 ---
 
 # fixture
@@ -286,16 +286,16 @@ def test_json_report_is_stable_across_runs(tmp_path):
 
 def _make_site(site: Path, *, with_mcp: bool = True) -> Path:
     _write(
-        site / "scholialang-0.7.2.dist-info/METADATA",
-        "Metadata-Version: 2.1\nName: scholialang\nVersion: 0.7.2\n",
+        site / "scholialang-0.7.3.dist-info/METADATA",
+        "Metadata-Version: 2.1\nName: scholialang\nVersion: 0.7.3\n",
     )
     if with_mcp:
         _write(
-            site / "scholialang_mcp-0.7.2.dist-info/METADATA",
-            "Metadata-Version: 2.1\nName: scholialang-mcp\nVersion: 0.7.2\n",
+            site / "scholialang_mcp-0.7.3.dist-info/METADATA",
+            "Metadata-Version: 2.1\nName: scholialang-mcp\nVersion: 0.7.3\n",
         )
         _write(
-            site / "scholialang_mcp-0.7.2.dist-info/entry_points.txt",
+            site / "scholialang_mcp-0.7.3.dist-info/entry_points.txt",
             "[console_scripts]\n"
             "scholialang-mcp = scholialang_mcp.server:main\n"
             "scholialang-lsp = scholialang_mcp.lsp.server:main\n",

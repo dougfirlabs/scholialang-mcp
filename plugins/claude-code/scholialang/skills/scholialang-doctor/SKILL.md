@@ -2,8 +2,8 @@
 name: scholialang-doctor
 description: Use when someone asks whether Scholialang is healthy, which Scholialang package, plugin, vendored validator, grammar, or skill versions are loaded, why MCP or LSP tools are missing, whether auto-emit is on, or whether these surfaces are compatible. Runs a deterministic read-only doctor script that reports per-facet versions and an overall pass, not_ready, or fail. It never installs, upgrades, authenticates, or edits configuration.
 metadata:
-  version: "0.7.2"
-  grammar: "0.6.2"
+  version: "0.7.3"
+  grammar: "0.7.0"
 ---
 
 # Scholialang Doctor
@@ -39,8 +39,8 @@ installed mode; repeatable).
   (scholialang), `mcp_package` (scholialang-mcp), `plugin`,
   `vendored_validator`, `skill`, `mcp_entry_point`, `lsp_entry_point`,
   `auto_emit`, `database`, `compatibility`.
-- Grammar and release are distinct axes: release 0.7.2 implements the stable
-  Scholia grammar v0.6.2. Never describe that relationship as a downgrade.
+- Grammar and release are distinct axes: release 0.7.3 implements the stable
+  Scholia grammar v0.7.0. Never describe that relationship as a downgrade.
 - `overall.status` is `pass`, `not_ready`, or `fail`, with per-facet
   `reasons`. Missing optional surfaces (for example, no local database yet)
   are reported per-facet and are not generic failures.

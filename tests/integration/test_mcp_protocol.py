@@ -15,7 +15,7 @@ FIXTURE = ROOT / "tests" / "fixtures" / "atlas" / "sample"
 
 def _env() -> dict[str, str]:
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(ROOT / "src")
+    env["PYTHONPATH"] = "" if env.get("MCP_EXPECT_IMPORT_PREFIX") else str(ROOT / "src")
     return env
 
 
