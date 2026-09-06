@@ -1,0 +1,2077 @@
+[
+  {
+    "name": "discovery_request",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "server/discover",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "DiscoverRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "discovery_missing_meta",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "server/discover",
+      "params": {}
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "DiscoverRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "discovery_missing_client_capabilities",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "server/discover",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28"
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "DiscoverRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "discovery_result",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "supportedVersions": [
+          "2026-07-28"
+        ],
+        "capabilities": {
+          "tools": {
+            "listChanged": true
+          },
+          "resources": {
+            "subscribe": true
+          },
+          "extensions": {
+            "io.modelcontextprotocol/tasks": {}
+          }
+        },
+        "cacheScope": "private",
+        "ttlMs": 0
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "DiscoverResultResponse",
+        "path": ""
+      },
+      {
+        "schema": "tasks",
+        "definition": "TasksExtensionCapability",
+        "path": "/result/capabilities/extensions/io.modelcontextprotocol~1tasks"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "discovery_wrong_legacy_versions_name",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "capabilities": {
+          "tools": {
+            "listChanged": true
+          },
+          "resources": {
+            "subscribe": true
+          },
+          "extensions": {
+            "io.modelcontextprotocol/tasks": {}
+          }
+        },
+        "cacheScope": "private",
+        "ttlMs": 0,
+        "protocolVersions": [
+          "2026-07-28"
+        ]
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "DiscoverResultResponse",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "discovery_missing_cache_ttl",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "supportedVersions": [
+          "2026-07-28"
+        ],
+        "capabilities": {
+          "tools": {
+            "listChanged": true
+          },
+          "resources": {
+            "subscribe": true
+          },
+          "extensions": {
+            "io.modelcontextprotocol/tasks": {}
+          }
+        },
+        "cacheScope": "private"
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "DiscoverResultResponse",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "discovery_open_result_discriminator",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "invented",
+        "supportedVersions": [
+          "2026-07-28"
+        ],
+        "capabilities": {
+          "tools": {
+            "listChanged": true
+          },
+          "resources": {
+            "subscribe": true
+          },
+          "extensions": {
+            "io.modelcontextprotocol/tasks": {}
+          }
+        },
+        "cacheScope": "private",
+        "ttlMs": 0
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "DiscoverResultResponse",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Known-result semantic dispatcher must require complete; core schema only says string."
+  },
+  {
+    "name": "capability_nonempty_settings_rejected",
+    "wire": {
+      "legacy": true
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "TasksExtensionCapability",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "subscription_listen",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "s-1",
+      "method": "subscriptions/listen",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        },
+        "notifications": {
+          "toolsListChanged": true,
+          "resourceSubscriptions": [
+            "file:///example/config.json"
+          ]
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsListenRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "subscription_nonboolean_filter",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "s-1",
+      "method": "subscriptions/listen",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        },
+        "notifications": {
+          "toolsListChanged": "true",
+          "resourceSubscriptions": [
+            "file:///example/config.json"
+          ]
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsListenRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "subscription_missing_filter",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "s-1",
+      "method": "subscriptions/listen",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsListenRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "subscription_ack_supported_subset",
+    "wire": {
+      "jsonrpc": "2.0",
+      "method": "notifications/subscriptions/acknowledged",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "s-1"
+        },
+        "notifications": {
+          "toolsListChanged": true
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsAcknowledgedNotification",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "ack_missing_filter",
+    "wire": {
+      "jsonrpc": "2.0",
+      "method": "notifications/subscriptions/acknowledged",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "s-1"
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsAcknowledgedNotification",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "ack_missing_correlation_schema_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "method": "notifications/subscriptions/acknowledged",
+      "params": {
+        "notifications": {
+          "toolsListChanged": true
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsAcknowledgedNotification",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Subscription-stream prose requires subscriptionId; shared schema does not."
+  },
+  {
+    "name": "ack_wrong_correlation_schema_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "method": "notifications/subscriptions/acknowledged",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "wrong"
+        },
+        "notifications": {
+          "toolsListChanged": true
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsAcknowledgedNotification",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Must equal original listen request ID, including type."
+  },
+  {
+    "name": "ack_unrequested_filter_schema_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "method": "notifications/subscriptions/acknowledged",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "s-1"
+        },
+        "notifications": {
+          "toolsListChanged": true,
+          "promptsListChanged": true
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsAcknowledgedNotification",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Ack must be subset of requested and supported filters."
+  },
+  {
+    "name": "subscription_tools_changed",
+    "wire": {
+      "jsonrpc": "2.0",
+      "method": "notifications/tools/list_changed",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "s-1"
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "ToolListChangedNotification",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "subscription_resource_changed",
+    "wire": {
+      "jsonrpc": "2.0",
+      "method": "notifications/resources/updated",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "s-1"
+        },
+        "uri": "file:///example/config.json"
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "ResourceUpdatedNotification",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "subscription_cancel_by_request_id",
+    "wire": {
+      "jsonrpc": "2.0",
+      "method": "notifications/cancelled",
+      "params": {
+        "requestId": "s-1"
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "CancelledNotification",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "subscription_cancel_wrong_task_id_field",
+    "wire": {
+      "jsonrpc": "2.0",
+      "method": "notifications/cancelled",
+      "params": {
+        "taskId": "s-1"
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "CancelledNotification",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "subscription_graceful_close",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "s-1",
+      "result": {
+        "resultType": "complete",
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "s-1"
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsListenResultResponse",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "subscription_close_missing_meta",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "s-1",
+      "result": {
+        "resultType": "complete"
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsListenResultResponse",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "eligible_tool_request",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tools/call",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        },
+        "name": "example",
+        "arguments": {}
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "CallToolRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "flat_task_creation",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "task",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "working",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "JSONRPCResultResponse",
+        "path": ""
+      },
+      {
+        "schema": "tasks",
+        "definition": "CreateTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "nested_legacy_task_creation",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "task",
+        "task": {
+          "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+          "status": "working",
+          "createdAt": "2026-09-05T10:00:00Z",
+          "lastUpdatedAt": "2026-09-05T10:00:00Z",
+          "ttlMs": 3600000,
+          "pollIntervalMs": 500
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "CreateTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "legacy_ttl_rejected",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "task",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "working",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "pollIntervalMs": 500,
+        "ttl": 3600000
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "CreateTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "task_create_wrong_discriminator",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "working",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "CreateTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "task_creation_terminal_seed_allowed",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "task",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "completed",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "CreateTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "tasks/get_modern_request",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/get",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        },
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e"
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskRequest",
+        "path": ""
+      },
+      {
+        "schema": "core",
+        "definition": "RequestParams",
+        "path": "/params"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "tasks/get_extension_schema_meta_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/get",
+      "params": {
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e"
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Extension request shape omits modern core metadata requirements."
+  },
+  {
+    "name": "tasks/get_composed_meta_rejection",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/get",
+      "params": {
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e"
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskRequest",
+        "path": ""
+      },
+      {
+        "schema": "core",
+        "definition": "RequestParams",
+        "path": "/params"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "tasks/get_capability_absent_schema_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/get",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {}
+        },
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e"
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskRequest",
+        "path": ""
+      },
+      {
+        "schema": "core",
+        "definition": "RequestParams",
+        "path": "/params"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Runtime must reject missing Tasks extension with -32021 on each request."
+  },
+  {
+    "name": "tasks/update_modern_request",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/update",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        },
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "inputResponses": {
+          "request1": {
+            "action": "accept",
+            "content": {
+              "name": "Ada"
+            }
+          }
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "UpdateTaskRequest",
+        "path": ""
+      },
+      {
+        "schema": "core",
+        "definition": "RequestParams",
+        "path": "/params"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "tasks/update_extension_schema_meta_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/update",
+      "params": {
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "inputResponses": {
+          "request1": {
+            "action": "accept",
+            "content": {
+              "name": "Ada"
+            }
+          }
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "UpdateTaskRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Extension request shape omits modern core metadata requirements."
+  },
+  {
+    "name": "tasks/update_composed_meta_rejection",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/update",
+      "params": {
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "inputResponses": {
+          "request1": {
+            "action": "accept",
+            "content": {
+              "name": "Ada"
+            }
+          }
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "UpdateTaskRequest",
+        "path": ""
+      },
+      {
+        "schema": "core",
+        "definition": "RequestParams",
+        "path": "/params"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "tasks/update_capability_absent_schema_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/update",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {}
+        },
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "inputResponses": {
+          "request1": {
+            "action": "accept",
+            "content": {
+              "name": "Ada"
+            }
+          }
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "UpdateTaskRequest",
+        "path": ""
+      },
+      {
+        "schema": "core",
+        "definition": "RequestParams",
+        "path": "/params"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Runtime must reject missing Tasks extension with -32021 on each request."
+  },
+  {
+    "name": "tasks/cancel_modern_request",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/cancel",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        },
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e"
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "CancelTaskRequest",
+        "path": ""
+      },
+      {
+        "schema": "core",
+        "definition": "RequestParams",
+        "path": "/params"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "tasks/cancel_extension_schema_meta_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/cancel",
+      "params": {
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e"
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "CancelTaskRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Extension request shape omits modern core metadata requirements."
+  },
+  {
+    "name": "tasks/cancel_composed_meta_rejection",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/cancel",
+      "params": {
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e"
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "CancelTaskRequest",
+        "path": ""
+      },
+      {
+        "schema": "core",
+        "definition": "RequestParams",
+        "path": "/params"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "tasks/cancel_capability_absent_schema_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/cancel",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {}
+        },
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e"
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "CancelTaskRequest",
+        "path": ""
+      },
+      {
+        "schema": "core",
+        "definition": "RequestParams",
+        "path": "/params"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Runtime must reject missing Tasks extension with -32021 on each request."
+  },
+  {
+    "name": "invented_task_result_method",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/result",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        },
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e"
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "invented_provide_input_method",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/provide_input",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        },
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "inputResponses": {}
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "UpdateTaskRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "update_unkeyed_inputs",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/update",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        },
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "inputResponses": []
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "UpdateTaskRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "update_invalid_input_action",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "method": "tasks/update",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        },
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "inputResponses": {
+          "request1": {
+            "action": "approve"
+          }
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "UpdateTaskRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "task_get_working",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "working",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "task_get_input_required",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "input_required",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500,
+        "inputRequests": {
+          "request1": {
+            "method": "elicitation/create",
+            "params": {
+              "mode": "form",
+              "message": "Enter a name.",
+              "requestedSchema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "task_get_completed",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "completed",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500,
+        "result": {
+          "resultType": "complete",
+          "content": [
+            {
+              "type": "text",
+              "text": "Example operation failed."
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "task_get_failed",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "failed",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500,
+        "error": {
+          "code": -32603,
+          "message": "Execution protocol failure"
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "task_get_cancelled",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "cancelled",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "completed_tool_error_inner_result",
+    "wire": {
+      "resultType": "complete",
+      "content": [
+        {
+          "type": "text",
+          "text": "Example operation failed."
+        }
+      ],
+      "isError": true
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "CallToolResult",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "completed_missing_result",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "completed",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "failed_tool_error_without_jsonrpc_error",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "failed",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500,
+        "result": {
+          "resultType": "complete",
+          "content": [
+            {
+              "type": "text",
+              "text": "Example operation failed."
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "failed_missing_error",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "failed",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "input_required_missing_requests",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "input_required",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "task_get_wrong_discriminator",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "task",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "working",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "completed_opaque_invalid_inner_result_schema_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "completed",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500,
+        "result": {
+          "arbitrary": 42
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "DetailedTask only requires result object; validate it against original request's result schema."
+  },
+  {
+    "name": "completed_inner_result_composed_rejection",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "completed",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500,
+        "result": {
+          "arbitrary": 42
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      },
+      {
+        "schema": "core",
+        "definition": "CallToolResult",
+        "path": "/result/result"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "failed_with_both_error_and_tool_result_schema_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "failed",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500,
+        "error": {
+          "code": -32603,
+          "message": "Protocol fault"
+        },
+        "result": {
+          "resultType": "complete",
+          "content": [
+            {
+              "type": "text",
+              "text": "Example operation failed."
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Open properties cannot prove the actual execution outcome was a protocol error."
+  },
+  {
+    "name": "task_timestamp_and_negative_ttl_schema_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete",
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "working",
+        "createdAt": "not-a-date",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": -1,
+        "pollIntervalMs": -2
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "GetTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Timestamps lack JSON Schema format; integer limits do not enforce useful nonnegative durations. Apply normative timestamp/domain policy separately."
+  },
+  {
+    "name": "UpdateTaskResult_empty_complete_ack",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete"
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "UpdateTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "UpdateTaskResult_legacy_task_result_rejected",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "task",
+        "task": {
+          "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+          "status": "working",
+          "createdAt": "2026-09-05T10:00:00Z",
+          "lastUpdatedAt": "2026-09-05T10:00:00Z",
+          "ttlMs": 3600000,
+          "pollIntervalMs": 500
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "UpdateTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "CancelTaskResult_empty_complete_ack",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "complete"
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "CancelTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "CancelTaskResult_legacy_task_result_rejected",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "result": {
+        "resultType": "task",
+        "task": {
+          "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+          "status": "working",
+          "createdAt": "2026-09-05T10:00:00Z",
+          "lastUpdatedAt": "2026-09-05T10:00:00Z",
+          "ttlMs": 3600000,
+          "pollIntervalMs": 500
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "CancelTaskResult",
+        "path": "/result"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "tasks_subscription_filter",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "s-1",
+      "method": "subscriptions/listen",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        },
+        "notifications": {
+          "taskIds": [
+            "f2b1bd50-355a-461a-b266-ab321044fc7e"
+          ]
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsListenRequest",
+        "path": ""
+      },
+      {
+        "schema": "tasks",
+        "definition": "TaskSubscriptionNotifications",
+        "path": "/params/notifications"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "tasks_subscription_bad_id_core_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "s-1",
+      "method": "subscriptions/listen",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        },
+        "notifications": {
+          "taskIds": [
+            4
+          ]
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsListenRequest",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Core filter permits unknown properties; add Tasks extension filter schema."
+  },
+  {
+    "name": "tasks_subscription_bad_id_composed_rejected",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "s-1",
+      "method": "subscriptions/listen",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        },
+        "notifications": {
+          "taskIds": [
+            4
+          ]
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsListenRequest",
+        "path": ""
+      },
+      {
+        "schema": "tasks",
+        "definition": "TaskSubscriptionNotifications",
+        "path": "/params/notifications"
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "tasks_subscription_ack",
+    "wire": {
+      "jsonrpc": "2.0",
+      "method": "notifications/subscriptions/acknowledged",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "s-1"
+        },
+        "notifications": {
+          "taskIds": [
+            "f2b1bd50-355a-461a-b266-ab321044fc7e"
+          ]
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "SubscriptionsAcknowledgedNotification",
+        "path": ""
+      },
+      {
+        "schema": "tasks",
+        "definition": "TaskSubscriptionAcknowledgedNotifications",
+        "path": "/params/notifications"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "tasks_complete_notification",
+    "wire": {
+      "jsonrpc": "2.0",
+      "method": "notifications/tasks",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "s-1"
+        },
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "completed",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500,
+        "result": {
+          "resultType": "complete",
+          "content": [
+            {
+              "type": "text",
+              "text": "Example operation failed."
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "TaskStatusNotification",
+        "path": ""
+      },
+      {
+        "schema": "core",
+        "definition": "CallToolResult",
+        "path": "/params/result"
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "legacy_task_notification_rejected",
+    "wire": {
+      "jsonrpc": "2.0",
+      "method": "notifications/tasks/status",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "s-1"
+        },
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "completed",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500,
+        "result": {
+          "resultType": "complete",
+          "content": [
+            {
+              "type": "text",
+              "text": "Example operation failed."
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "TaskStatusNotification",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": false,
+    "semantic_class": "valid",
+    "note": ""
+  },
+  {
+    "name": "tasks_notification_no_correlation_gap",
+    "wire": {
+      "jsonrpc": "2.0",
+      "method": "notifications/tasks",
+      "params": {
+        "taskId": "f2b1bd50-355a-461a-b266-ab321044fc7e",
+        "status": "completed",
+        "createdAt": "2026-09-05T10:00:00Z",
+        "lastUpdatedAt": "2026-09-05T10:00:00Z",
+        "ttlMs": 3600000,
+        "pollIntervalMs": 500,
+        "result": {
+          "resultType": "complete",
+          "content": [
+            {
+              "type": "text",
+              "text": "Example operation failed."
+            }
+          ],
+          "isError": true
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "tasks",
+        "definition": "TaskStatusNotification",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "schema_blindspot",
+    "note": "Task stream still requires correlation and ack-first/filter checks from core prose."
+  },
+  {
+    "name": "missing_capability_error",
+    "wire": {
+      "jsonrpc": "2.0",
+      "id": "r-1",
+      "error": {
+        "code": -32021,
+        "message": "Missing required client capability",
+        "data": {
+          "requiredCapabilities": {
+            "extensions": {
+              "io.modelcontextprotocol/tasks": {}
+            }
+          }
+        }
+      }
+    },
+    "checks": [
+      {
+        "schema": "core",
+        "definition": "JSONRPCErrorResponse",
+        "path": ""
+      },
+      {
+        "schema": "core",
+        "definition": "MissingRequiredClientCapabilityError",
+        "path": ""
+      }
+    ],
+    "expected_schema_valid": true,
+    "semantic_class": "valid",
+    "note": ""
+  }
+]

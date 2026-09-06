@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dougfirlabs.com/schema/mcp-heartbeat-0.1.schema.json",
+  "title": "MCP Heartbeat 0.1",
+  "description": "A heartbeat is a short-lived, ordered liveness lease published by one participant. It asserts only that the participant was alive and publishing at issued_at and claims the window to expires_at. It never asserts readiness, health, authorization, correctness, or task success. extension_version is independent of any MCP protocol revision.",
+  "type": "object",
+  "required": [
+    "extension_version",
+    "node_id",
+    "boot_id",
+    "sequence",
+    "issued_at",
+    "expires_at"
+  ],
+  "properties": {
+    "extension_version": {
+      "description": "Version of THIS heartbeat contract. Independent of the MCP protocol era; a consumer that supports 0.1 reads only documents declaring 0.1.",
+      "const": "0.1"
+    },
+    "node_id": {
+      "description": "Participant identity: whatever publishes exactly one totally-ordered heartbeat stream. Wire key retained at 0.1; the normative term is 'participant'. Renaming to participant_id is deferred to extension_version 1.0.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,254}$"
+    },
+    "boot_id": {
+      "description": "Epoch identity: minted once per process start, never reused, derived, or predicted. Wire key retained at 0.1; the normative term is 'epoch'. Renaming to epoch_id is deferred to extension_version 1.0.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "sequence": {
+      "description": "Strictly increasing counter scoped to (participant, epoch). Resets with the epoch.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "issued_at": {
+      "description": "RFC 3339 UTC instant at which the participant issued this heartbeat.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "description": "RFC 3339 UTC instant after which this heartbeat proves nothing. Must be strictly after issued_at and no more than 3600s later.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "extensions": {
+      "description": "Optional, safely ignorable data. Every key must be namespaced (contain a dot). Nothing here may participate in core freshness validation.",
+      "type": "object",
+      "propertyNames": {"pattern": "\\."}
+    }
+  },
+  "additionalProperties": false,
+  "patternProperties": {
+    "\\.": {
+      "description": "Namespaced top-level extension members are permitted and ignored by the core."
+    }
+  }
+}

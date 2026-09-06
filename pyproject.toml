@@ -17,6 +17,7 @@ dependencies = [
 keywords = ["scholia", "scholialang", "mcp", "lsp", "agents"]
 
 [project.optional-dependencies]
+adapters = ["jsonschema==4.23.0"]
 claude = []
 codex = []
 ollama = []
@@ -25,6 +26,7 @@ all = []
 dev = [
     "pytest>=8.1.1",
     "pytest-timeout>=2.0",
+    "jsonschema==4.23.0",
 ]
 
 [project.urls]
@@ -38,6 +40,9 @@ scholialang-lsp = "scholialang_mcp.lsp.server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+scholialang_mcp = ["wire_schemas/*.json", "_heartbeat/*.md", "_heartbeat/LICENSE"]
 
 [tool.pytest.ini_options]
 addopts = "-q --import-mode=importlib"

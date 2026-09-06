@@ -67,6 +67,8 @@ class ScholiaServerConfig:
 
     repo_root: Path
     allow_regenerate: bool = False
+    # Host-only injection. CLI/config snippets do not activate new facets.
+    adapters: Any = None
 
 
 def resolve_mode() -> str:
@@ -497,7 +499,11 @@ def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Option
                 -32602,
                 "server/discover requires 2026-07-28 per-request _meta",
             )
-        return _ok(request_id, _discover_result())
+        result = _discover_result()
+        if server.config.adapters is not None and resolve_mode() == MODE_ENABLED:
+            result["capabilities"].update(server.config.adapters.capabilities())
+            result["ttlMs"] = 0  # authority can be revoked between requests
+        return _ok(request_id, result)
     # Legacy handshake — retained for pre-2026 hosts (dual-version). New hosts
     # never send it; they call server/discover and carry version in _meta.
     if method == "initialize":
@@ -529,11 +535,17 @@ def _handle_request(server: ScholiaMCPServer, payload: dict[str, Any]) -> Option
         # CacheableResult (SEP-2549): static catalog, private scope (see
         # CACHE_SCOPE). Definition order is the wire order — deterministic
         # across calls and processes per the 2026-07-28 SHOULD.
+        tools = list(TOOL_DEFINITIONS)
+        adapters = server.config.adapters
+        if (modern_version == MCP_PROTOCOL_VERSION and adapters is not None
+                and resolve_mode() == MODE_ENABLED and adapters.enabled("tasks")
+                and adapters.peer(params, "io.modelcontextprotocol/tasks")):
+            tools += list(adapters.tasks.tools.values())
         return _ok(
             request_id,
             {
-                "tools": list(TOOL_DEFINITIONS),
-                "ttlMs": TOOLS_LIST_TTL_MS,
+                "tools": tools,
+                "ttlMs": 0 if adapters is not None else TOOLS_LIST_TTL_MS,
                 "cacheScope": CACHE_SCOPE,
             },
         )
@@ -589,6 +601,83 @@ def codex_trace_config_snippet(repo_root: Path, *, python_bin: Optional[str] = N
     )
 
 
+def serve_stdio(server: ScholiaMCPServer, source=None, sink=None) -> int:
+    """Serve actual JSON-RPC lines, polling committed events while stdin is idle.
+
+    Only the trusted embedding API can inject adapters. A bounded reader queue
+    avoids TextIO buffering/select races without creating an HTTP transport.
+    """
+    import queue
+    import threading
+
+    source = sys.stdin if source is None else source
+    sink = sys.stdout if sink is None else sink
+    adapters = server.config.adapters
+
+    def send(payload):
+        sink.write(json.dumps(payload, allow_nan=False) + "\n")
+        sink.flush()
+
+    def dispatch(line):
+        try:
+            payload = json.loads(line, parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
+            if not isinstance(payload, dict):
+                raise ValueError("request must be an object")
+        except ValueError:
+            send(_err(None, -32700, "invalid_json"))
+            return
+        responses = None
+        if adapters is not None and resolve_mode() == MODE_ENABLED:
+            with adapters.lock:
+                responses = adapters.handle(payload)
+        if responses is None:
+            response = _handle_request(server, payload)
+            responses = [response] if response is not None else []
+        for response in responses:
+            send(response)
+
+    if adapters is None:
+        for line in source:
+            if line.strip():
+                dispatch(line)
+        return 0
+
+    pending = queue.Queue(maxsize=64)
+    def read_lines():
+        while True:
+            line = source.readline(65_537)
+            pending.put(line)
+            if not line or len(line) > 65_536:
+                return
+
+    threading.Thread(target=read_lines, daemon=True).start()
+    try:
+        while True:
+            try:
+                line = pending.get(timeout=0.05)
+            except queue.Empty:
+                line = None
+            if line == "":
+                for request_id in list(adapters.events.subscriptions):
+                    send(adapters.events.close(request_id))
+                return 0
+            if line is not None:
+                if len(line) > 65_536:
+                    send(_err(None, -32600, "request_too_large"))
+                    return 1
+                if line.strip():
+                    dispatch(line)
+            with adapters.lock:
+                if resolve_mode() != MODE_ENABLED:
+                    messages = [adapters.events.close(i) for i in list(adapters.events.subscriptions)]
+                else:
+                    messages = adapters.events.poll()
+            for message in messages:
+                send(message)
+    except BrokenPipeError:
+        return 0
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m scholialang_mcp")
     parser.add_argument(
@@ -629,26 +718,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     server = ScholiaMCPServer(ScholiaServerConfig(repo))
     if resolve_mode() != MODE_ENABLED:
         sys.stderr.write(f"warning: {ENV_MODE} is not enabled; every request will be refused\n")
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            payload = json.loads(line)
-        except json.JSONDecodeError as exc:
-            sys.stdout.write(json.dumps({"error": f"bad json: {exc}"}) + "\n")
-            sys.stdout.flush()
-            continue
-        if not isinstance(payload, dict):
-            sys.stdout.write(json.dumps({"error": "request must be an object"}) + "\n")
-            sys.stdout.flush()
-            continue
-        response = _handle_request(server, payload)
-        if response is None:
-            continue
-        sys.stdout.write(json.dumps(response) + "\n")
-        sys.stdout.flush()
-    return 0
+    return serve_stdio(server)
 
 
 if __name__ == "__main__":
