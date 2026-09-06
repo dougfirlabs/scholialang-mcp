@@ -1,19 +1,224 @@
 {
-  "kind": "prd", "schema_version": 1, "status": "approved",
-  "group_id": "sch073-mcp-next-steps-astra-recovery-20260906", "run_policy": "gated_stack",
-  "approval": {"approved": true, "execution_authorized": true, "merge_authorized": true, "release_authorized": false},
+  "kind": "prd",
+  "schema_version": 1,
+  "status": "completed",
+  "group_id": "sch073-mcp-next-steps-astra-recovery-20260906",
+  "run_policy": "gated_stack",
+  "approval": {
+    "approved": true,
+    "execution_authorized": true,
+    "merge_authorized": true,
+    "release_authorized": false
+  },
   "authority": "Darren approved cumulative acceptance and merge preparation. PyPI release, production activation, and Scholialang-cloud propagation remain separate gates.",
   "evidence_contract": "Test the combined immutable candidate from a clean export; verify ancestry, remote parity, cross-PRD interfaces, full regression, protocol evidence, rollback refs, and public-evidence hygiene.",
-  "id": "sch073-08-integrated-acceptance", "title": "Cumulative MCP acceptance and merge package", "sequence": 8,
-  "depends_on_prds": ["sch073-07-real-adapters"], "repositories": ["scholialang-mcp"],
-  "problem": "Individual implementation proofs do not establish that the combined MCP artifact is coherent or ready for downstream consumers.", "outcome": "One independently adjudicated cumulative MCP candidate is prepared for the approved merge decision.",
-  "key_files": ["combined candidate", "acceptance report", "rollback refs", "consumer handoff receipt"],
-  "hard_constraints": ["All accepted predecessor tips remain ancestral or are explicitly reconciled.", "Run combined tests from a clean export.", "Do not publish to PyPI.", "Do not propagate to Scholialang-cloud.", "Downstream OT work remains receipt-gated until this candidate is accepted.", "Preserve report-only trace caveats and historical evidence."],
-  "stories": [{"id":"SCH073-08-S1","title":"Cumulative regression","description":"Run the full combined MCP and protocol battery against the final cumulative tip.","priority":1,"passes":0},{"id":"SCH073-08-S2","title":"Independent adjudication","description":"Verify exact SHA, branch lineage, remote parity, tests, wire evidence, and hygiene.","priority":2,"passes":0},{"id":"SCH073-08-S3","title":"Merge package","description":"Prepare rollback, downstream handoff, and one consolidated operator decision package.","priority":3,"passes":0}],
-  "acceptance": ["Combined candidate passes all required tests and real adapter checks.", "All caveats are explicit and non-blocking or named as blockers.", "Exact final SHA and rollback ref are recorded.", "One merge-ready package is published for review."],
-  "verification": "Run cumulative clean-export tests and independent PM adjudication; stop before any release or Cloud propagation.", "out_of_scope": ["PyPI release", "production activation", "Scholialang-cloud propagation", "unapproved downstream OT implementation"],
-  "rollback": "Provide exact revert/branch rollback instructions and preserve each predecessor receipt.", "success_metrics": ["cumulative candidate green", "independent verdict pass or pass_with_caveats", "merge package complete"],
-  "target_repo": "scholialang-mcp", "target_root": "/tmp/sch073-mcp-stage-base-20260906", "allowed_drivers": ["codex"],
-  "coordination_metadata": {"job_id":"sch073-j08-integrated-acceptance","launch_ready":true,"gui_port":7706,"source_branch":"integration/sch073-mcp-stage-base-20260906","source_tip":"b7b44b6","launch_model":"gpt-6-astra","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only"},
-  "launch_contract": {"project":"scholialang-mcp-stage-base-20260906","port":7706,"source_branch":"integration/sch073-mcp-stage-base-20260906","execution_mode":"sequential","driver":"codex","model":"gpt-6-astra","validation_enforcement":"report_only","scholia_feedback_mode":"midstream_report_only","protected_merge_authorized":true}
+  "id": "sch073-08-integrated-acceptance",
+  "title": "Cumulative MCP acceptance and merge package",
+  "sequence": 8,
+  "depends_on_prds": [
+    "sch073-07-real-adapters"
+  ],
+  "repositories": [
+    "scholialang-mcp"
+  ],
+  "problem": "Individual implementation proofs do not establish that the combined MCP artifact is coherent or ready for downstream consumers.",
+  "outcome": "One independently adjudicated cumulative MCP candidate is prepared for the approved merge decision.",
+  "key_files": [
+    "combined candidate",
+    "acceptance report",
+    "rollback refs",
+    "consumer handoff receipt"
+  ],
+  "hard_constraints": [
+    "All accepted predecessor tips remain ancestral or are explicitly reconciled.",
+    "Run combined tests from a clean export.",
+    "Do not publish to PyPI.",
+    "Do not propagate to Scholialang-cloud.",
+    "Downstream OT work remains receipt-gated until this candidate is accepted.",
+    "Preserve report-only trace caveats and historical evidence."
+  ],
+  "stories": [
+    {
+      "id": "SCH073-08-S1",
+      "title": "Cumulative regression",
+      "description": "Run the full combined MCP and protocol battery against the final cumulative tip.",
+      "priority": 1,
+      "passes": 0
+    },
+    {
+      "id": "SCH073-08-S2",
+      "title": "Independent adjudication",
+      "description": "Verify exact SHA, branch lineage, remote parity, tests, wire evidence, and hygiene.",
+      "priority": 2,
+      "passes": 0
+    },
+    {
+      "id": "SCH073-08-S3",
+      "title": "Merge package",
+      "description": "Prepare rollback, downstream handoff, and one consolidated operator decision package.",
+      "priority": 3,
+      "passes": 0
+    }
+  ],
+  "acceptance": [
+    "Combined candidate passes all required tests and real adapter checks.",
+    "All caveats are explicit and non-blocking or named as blockers.",
+    "Exact final SHA and rollback ref are recorded.",
+    "One merge-ready package is published for review."
+  ],
+  "verification": "Run cumulative clean-export tests and independent PM adjudication; stop before any release or Cloud propagation.",
+  "out_of_scope": [
+    "PyPI release",
+    "production activation",
+    "Scholialang-cloud propagation",
+    "unapproved downstream OT implementation"
+  ],
+  "rollback": "Provide exact revert/branch rollback instructions and preserve each predecessor receipt.",
+  "success_metrics": [
+    "cumulative candidate green",
+    "independent verdict pass or pass_with_caveats",
+    "merge package complete"
+  ],
+  "target_repo": "scholialang-mcp",
+  "target_root": "/tmp/sch073-mcp-stage-base-20260906",
+  "allowed_drivers": [
+    "codex"
+  ],
+  "coordination_metadata": {
+    "job_id": "sch073-j08-integrated-acceptance",
+    "launch_ready": true,
+    "gui_port": 7706,
+    "source_branch": "integration/sch073-mcp-stage-base-20260906",
+    "source_tip": "b7b44b6",
+    "launch_model": "gpt-6-astra",
+    "validation_enforcement": "report_only",
+    "scholia_feedback_mode": "midstream_report_only"
+  },
+  "launch_contract": {
+    "project": "scholialang-mcp-stage-base-20260906",
+    "port": 7706,
+    "source_branch": "integration/sch073-mcp-stage-base-20260906",
+    "execution_mode": "sequential",
+    "driver": "codex",
+    "model": "gpt-6-astra",
+    "validation_enforcement": "report_only",
+    "scholia_feedback_mode": "midstream_report_only",
+    "protected_merge_authorized": true
+  },
+  "lifecycle": {
+    "run_status": "completed",
+    "last_successful_run_id": "d0482867768a4661a076cca142c89839",
+    "last_successful_branch": "feat/sch073-08-integrated-acceptance",
+    "last_successful_commit": "5c8e8b7064ec47799e27d79ed936307819d9603f",
+    "completed_at": "2026-09-06T12:29:48+00:00",
+    "completion_evidence": {
+      "task": "sch073-08-integrated-acceptance",
+      "prd_id": "sch073-08-integrated-acceptance",
+      "provider": "codex",
+      "model": "gpt-6-astra",
+      "post_path": "/tmp/sch073-mcp-stage-base-20260906/.opentalon/kb/posts/2026_09_06_POST_pjsvffs7d8_home_horse.md",
+      "post_status": "present",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "d0482867768a4661a076cca142c89839",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion": {
+    "run_id": "d0482867768a4661a076cca142c89839",
+    "task": "sch073-08-integrated-acceptance",
+    "completed_at": "2026-09-06T12:29:48+00:00",
+    "branch": "feat/sch073-08-integrated-acceptance",
+    "commit": "5c8e8b7064ec47799e27d79ed936307819d9603f",
+    "final_status": "success",
+    "previous_status": "approved",
+    "lifecycle": {
+      "run_status": "completed",
+      "last_successful_run_id": "d0482867768a4661a076cca142c89839",
+      "last_successful_branch": "feat/sch073-08-integrated-acceptance",
+      "last_successful_commit": "5c8e8b7064ec47799e27d79ed936307819d9603f",
+      "completed_at": "2026-09-06T12:29:48+00:00",
+      "completion_evidence": {
+        "task": "sch073-08-integrated-acceptance",
+        "prd_id": "sch073-08-integrated-acceptance",
+        "provider": "codex",
+        "model": "gpt-6-astra",
+        "post_path": "/tmp/sch073-mcp-stage-base-20260906/.opentalon/kb/posts/2026_09_06_POST_pjsvffs7d8_home_horse.md",
+        "post_status": "present",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "d0482867768a4661a076cca142c89839",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
+    },
+    "completion_evidence": {
+      "task": "sch073-08-integrated-acceptance",
+      "prd_id": "sch073-08-integrated-acceptance",
+      "provider": "codex",
+      "model": "gpt-6-astra",
+      "post_path": "/tmp/sch073-mcp-stage-base-20260906/.opentalon/kb/posts/2026_09_06_POST_pjsvffs7d8_home_horse.md",
+      "post_status": "present",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "d0482867768a4661a076cca142c89839",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion_history": [
+    {
+      "run_id": "d0482867768a4661a076cca142c89839",
+      "task": "sch073-08-integrated-acceptance",
+      "completed_at": "2026-09-06T12:29:48+00:00",
+      "branch": "feat/sch073-08-integrated-acceptance",
+      "commit": "5c8e8b7064ec47799e27d79ed936307819d9603f",
+      "final_status": "success",
+      "previous_status": "approved",
+      "lifecycle": {
+        "run_status": "completed",
+        "last_successful_run_id": "d0482867768a4661a076cca142c89839",
+        "last_successful_branch": "feat/sch073-08-integrated-acceptance",
+        "last_successful_commit": "5c8e8b7064ec47799e27d79ed936307819d9603f",
+        "completed_at": "2026-09-06T12:29:48+00:00",
+        "completion_evidence": {
+          "task": "sch073-08-integrated-acceptance",
+          "prd_id": "sch073-08-integrated-acceptance",
+          "provider": "codex",
+          "model": "gpt-6-astra",
+          "post_path": "/tmp/sch073-mcp-stage-base-20260906/.opentalon/kb/posts/2026_09_06_POST_pjsvffs7d8_home_horse.md",
+          "post_status": "present",
+          "test_gate": {
+            "all_passed": true,
+            "commands": [],
+            "run_id": "d0482867768a4661a076cca142c89839",
+            "skipped": true,
+            "skipped_reason": "no machine-runnable commands in success_metrics"
+          }
+        }
+      },
+      "completion_evidence": {
+        "task": "sch073-08-integrated-acceptance",
+        "prd_id": "sch073-08-integrated-acceptance",
+        "provider": "codex",
+        "model": "gpt-6-astra",
+        "post_path": "/tmp/sch073-mcp-stage-base-20260906/.opentalon/kb/posts/2026_09_06_POST_pjsvffs7d8_home_horse.md",
+        "post_status": "present",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "d0482867768a4661a076cca142c89839",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
+    }
+  ]
 }

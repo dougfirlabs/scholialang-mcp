@@ -1,0 +1,142 @@
+{
+  "schema_version": "scholialang-mcp.integrated-acceptance.v1",
+  "candidate_sha": "d253d120f4062bd7be041d2be32f2316a7a82451",
+  "candidate_branch": "feat/sch073-08-integrated-acceptance",
+  "combined_input_sha": "db34b6e418f36086d12ac9047060cb35f5a75dc4",
+  "source_archive_sha256": "f51f9f09a7b00c8446b84522bd87aece411a858dda58ca5f6a5d37d88f1b8ff9",
+  "package_delta": "Only this receipt and its Markdown report; product SHA remains the tested immutable candidate.",
+  "verdict": "pass_with_caveats",
+  "independent_review": {
+    "role": "sch073_acceptance_reviewer",
+    "receipt_sha256": "c857459933f3ac79dd8beb0e5ddd6dd73417d2104ef1d11163da5e2ab417ec5f",
+    "blockers": [],
+    "checked_ancestry_pins": 13,
+    "fresh_wire_captures": 152,
+    "fresh_server_messages": 642,
+    "fresh_notifications": 86,
+    "wire_violations": 0,
+    "tracked_package_files_compared": 29,
+    "package_byte_mismatches": 0,
+    "malformed_routing_regressions": 14,
+    "additional_independent_subprocess_cases": 14
+  },
+  "tests": [
+    {
+      "scope": "tests and all three host plugin test trees",
+      "passed": 627,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "scope": "installed wheel: tests/integration and core artifact contracts",
+      "passed": 213,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "test_floor": "skipped (OT_SKIP_TEST_FLOOR=1)",
+  "python": "3.12",
+  "core": {
+    "sha": "9a86a4645c49074c4a415ade01093bff0e2ca70c",
+    "validator_version": "0.7.3",
+    "grammar_version": "0.7.0",
+    "spec_sha": "4e19eae3e55566dac450c0dbf7bcba03d12afc50",
+    "receipt": "core-0.7.3.md"
+  },
+  "wire": {
+    "core_sha": "e76e9c572c6f2bfcb730357101acc90f2f802e02",
+    "tasks_sha": "9263312d11a682ac83f83fe84794d4627efd22f5",
+    "heartbeat_source_sha": "cb87379bbe4e26a8e59bab9cc18dc51ef4079bff",
+    "heartbeat_contract": "0.1"
+  },
+  "artifacts": {
+    "built_from": "git archive HEAD (clean isolated checkout)",
+    "wheel": {
+      "builds": [
+        {
+          "checkout": "first",
+          "built": true,
+          "filename": "scholialang_mcp-0.7.3-py3-none-any.whl",
+          "sha256": "c9a1fcaf7d36f5798f9a54b9a77cdf9f0e53e03b3affee0b55d2a466c35b5f1e",
+          "errors": []
+        },
+        {
+          "checkout": "second",
+          "built": true,
+          "filename": "scholialang_mcp-0.7.3-py3-none-any.whl",
+          "sha256": "c9a1fcaf7d36f5798f9a54b9a77cdf9f0e53e03b3affee0b55d2a466c35b5f1e",
+          "errors": []
+        }
+      ],
+      "reproducible": true,
+      "artifact": "artifacts/scholialang_mcp-0.7.3-py3-none-any.whl"
+    },
+    "mcpb": {
+      "staged": true,
+      "manifest_version": "0.7.3",
+      "staged_tree_sha256": "193657dcc9dc2d261deece4023a79cf155e51bfc8d9fe2a846587d3263bd905b",
+      "native_skill_surface": false,
+      "skill_md_in_bundle": false,
+      "packed": false,
+      "pack_skipped_reason": "npx pack not requested (--mcpb-pack); staged tree digest recorded instead"
+    },
+    "materialization": {
+      "fresh": true,
+      "deterministic": true,
+      "issues": [],
+      "hosts": [
+        {
+          "host": "claude-code",
+          "native_skill_surface": true,
+          "role": "canonical",
+          "delivery": "plugin skills directory (canonical source)"
+        },
+        {
+          "host": "codex",
+          "native_skill_surface": true,
+          "role": "generated",
+          "delivery": "plugin skills directory (generated copy with provenance)"
+        },
+        {
+          "host": "claude-desktop",
+          "native_skill_surface": false,
+          "role": "mcp_bundle",
+          "delivery": ".mcpb MCP server bundle (scripts/build_claude_desktop_mcpb.py); SKILL.md is not loaded by this host"
+        },
+        {
+          "host": "ollama",
+          "native_skill_surface": false,
+          "role": "mcp_only",
+          "delivery": "MCP server + integration recipes; no skill files shipped"
+        }
+      ]
+    }
+  },
+  "rollback": {
+    "ref": "refs/heads/backup/sch073-08-stage-before-acceptance-20260906",
+    "sha": "f08062fb9f3ea56645ab1ba1c75a177e21c29e9f",
+    "merge_target": "stage",
+    "proposed_method": "no-ff after exact package SHA and stage freshness review",
+    "after_merge": "git revert -m 1 <recorded-merge-sha>"
+  },
+  "consumer_handoff": {
+    "state": "prepared",
+    "delivered": false,
+    "acknowledged": false,
+    "downstream_implementation": "receipt-gated until operator acceptance",
+    "activation_authorized": false,
+    "release_authorized": false,
+    "cloud_propagation_authorized": false
+  },
+  "caveats": [
+    "Original recovered-core run remains historically failed; recovered code is independently accepted by current evidence.",
+    "Durable/adapter completed run records retain historical fallback-POST race caveats.",
+    "Current run terminal adjudication awaits launcher finalization and final POST.",
+    "Trace validation remains report-only.",
+    "Synthetic host certificate is not production certification; defaults remain off.",
+    "Desktop staged only; no fresh browser claim; local Python 3.12 only.",
+    "Atlas tools unavailable; targeted reads used."
+  ]
+}
