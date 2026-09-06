@@ -1,0 +1,83 @@
+{
+  "kind": "prd",
+  "schema_version": 1,
+  "id": "sch073-manual-acceptance-smoke-20260906",
+  "title": "ScholiaLang MCP 0.7.3 manual acceptance smoke (report-only)",
+  "status": "approved",
+  "group_id": "sch073-manual-acceptance-smoke-20260906",
+  "run_policy": "gated_stack",
+  "skip_commit_gate": true,
+  "approval": {
+    "approved": true,
+    "execution_authorized": true,
+    "merge_authorized": false,
+    "release_authorized": false
+  },
+  "authority": "Execute an isolated, report-only acceptance smoke against the already integrated ScholiaLang-MCP candidate. No source edits, merge, deployment, PyPI publication, or Scholialang-cloud propagation is authorized.",
+  "problem": "The cumulative candidate has unit, integration, and wire evidence, but Barry and Darren need one explicit no-op run that exercises the updated grammar/spec artifact and real stdio MCP Events, Tasks, and Heartbeat adapters together.",
+  "outcome": "A durable acceptance report with command output and protocol captures proving (or clearly falsifying) the requested 0.7.3 grammar/spec and MCP feature paths on the exact cumulative integration tip.",
+  "evidence_contract": "Record exact branch and SHA, package/spec fingerprints, commands, exit codes, stdio wire captures, default-off behavior, authorization/revocation behavior, task completion, event delivery, heartbeat renewal, and any caveats. Evidence is report-only and never a release signal.",
+  "repositories": ["scholialang-mcp"],
+  "target_repo": "scholialang-mcp",
+  "target_root": "/tmp/sch073-mcp-stage-base-20260906",
+  "allowed_drivers": ["codex"],
+  "hard_constraints": [
+    "Run from integration/sch073-mcp-stage-base-20260906 at the pinned source tip; do not use stage or main.",
+    "Do not modify tracked source, grammar, spec, adapter, fixture, or test files.",
+    "Do not commit product changes, merge any branch, restart agent sessions, publish to PyPI, deploy, or propagate to Scholialang-cloud.",
+    "Use real subprocess stdio adapters and wire-level evidence; do not substitute unit-test claims for protocol execution.",
+    "Treat KB degradation or missing semantic prose as report-only caveats; the concluding evidence receipt and test results decide this smoke.",
+    "Sequential execution only; preserve all existing run artifacts and unrelated working-tree files."
+  ],
+  "stories": [
+    {
+      "id": "SCH073-SMOKE-S1",
+      "title": "Verify the 0.7.3 grammar and spec artifact",
+      "priority": 1,
+      "passes": false,
+      "description": "From a clean read-only checkout of the pinned integration tip, verify the Scholialang 0.7.3 package/spec fingerprints, grammar fixtures, and generated/packaged artifact contract using the repository's existing core073 and spec-fingerprint tests. Capture exact commands and results.",
+      "acceptance_criteria": ["Pinned 0.7.3 artifact and grammar/spec fingerprint checks pass", "No tracked files change", "Exact SHA and test output are recorded"]
+    },
+    {
+      "id": "SCH073-SMOKE-S2",
+      "title": "Exercise real MCP Events, Tasks, and Heartbeat stdio",
+      "priority": 1,
+      "passes": false,
+      "description": "Launch the existing real-adapter fixture as a subprocess and exercise authorized Events publication/subscription, Tasks submission/progress/completion/cancellation, and Heartbeat renewal/expiry behavior over stdio. Also verify default-off behavior, malformed routing-key rejection, reconnect/idempotency, and revocation denial. Use tests/integration/test_real_adapters.py and the repository's targeted protocol tests; preserve wire captures.",
+      "acceptance_criteria": ["Real subprocess stdio tests pass", "Events, Tasks, and Heartbeat wire evidence is present", "Default-off and authorization/revocation boundaries are explicit", "No production host, HTTP, PyPI, or Cloud claim is made"]
+    },
+    {
+      "id": "SCH073-SMOKE-S3",
+      "title": "Produce a merge-review evidence receipt",
+      "priority": 2,
+      "passes": false,
+      "description": "Write a report-only receipt containing branch/SHA, package and grammar fingerprints, commands, exit codes, capture paths, changed-file check, caveats, and a clear PASS/PASS_WITH_CAVEATS/FAIL verdict. Do not alter source or merge anything.",
+      "acceptance_criteria": ["Receipt is durable and independently reproducible", "Changed-file check proves no product source mutation", "Any caveat is non-blocking or explicitly named"]
+    }
+  ],
+  "verification": "Run targeted grammar/spec tests plus tests/integration/test_real_adapters.py and related protocol regression tests from the pinned integration tip; inspect wire captures and git diff; independently adjudicate the run.",
+  "out_of_scope": ["source implementation", "stage/main merge", "PyPI publication", "production activation", "Scholialang-cloud propagation", "credential changes", "GUI or tmux restart"],
+  "rollback": "No product rollback is required. If run artifacts are malformed, discard only the report-only run record; preserve the integration branch and its existing backup refs.",
+  "success_metrics": ["grammar/spec checks pass", "real stdio Events/Tasks/Heartbeat checks pass", "no tracked product changes", "durable acceptance receipt", "independent adjudication pass or pass_with_caveats"],
+  "coordination_metadata": {
+    "job_id": "sch073-j-smoke-20260906",
+    "launch_ready": true,
+    "gui_port": 7706,
+    "source_branch": "integration/sch073-mcp-stage-base-20260906",
+    "source_tip": "51dac1f73ee522d322e0676d754d7cbb1950cbd0",
+    "launch_model": "gpt-6-astra",
+    "validation_enforcement": "report_only",
+    "scholia_feedback_mode": "midstream_report_only"
+  },
+  "launch_contract": {
+    "project": "scholialang-mcp-stage-base-20260906",
+    "port": 7706,
+    "source_branch": "integration/sch073-mcp-stage-base-20260906",
+    "execution_mode": "sequential",
+    "driver": "codex",
+    "model": "gpt-6-astra",
+    "validation_enforcement": "report_only",
+    "scholia_feedback_mode": "midstream_report_only",
+    "protected_merge_authorized": false
+  }
+}
