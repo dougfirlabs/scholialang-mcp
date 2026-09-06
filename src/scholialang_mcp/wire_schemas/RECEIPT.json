@@ -1,0 +1,35 @@
+{
+  "core_revision": "e76e9c572c6f2bfcb730357101acc90f2f802e02",
+  "tasks_revision": "9263312d11a682ac83f83fe84794d4627efd22f5",
+  "heartbeat_revision": "cb87379bbe4e26a8e59bab9cc18dc51ef4079bff",
+  "files": {
+    "wire_schemas/core-schema.json": "ef70b61f99b6d2e5e3b46863822eab08dff6a45bedc7a08914e0e5b133f40203",
+    "wire_schemas/tasks-schema.json": "bf30afb7ac251e3e22c037b7a685f60ef6603031b5484c0d08b1fa0bbe86d460",
+    "_heartbeat/__init__.py": "39ff5829ea74028c3b9aa88e41277b4ffa9d0a136164e3951138472764c43e30",
+    "_heartbeat/clock.py": "a144fd149b46dbf91221d89b6c71ce4211b1735df1cd1f14f603f66efe434242",
+    "_heartbeat/errors.py": "dc5de7e869e5fe1a5b83f0329a9cd736765a6613c50890ff5db1ea13d5dff28a",
+    "_heartbeat/issuer.py": "7c6e8e6befcc8befe182de82d563bfe6b90c3d9ecfb127a88d8ea32efa7072cc",
+    "_heartbeat/lineage.py": "7e8a3aff5e2beaa73b54f7f2c3cb7303db13476666e068ffa67d4f44b3fc4e0d",
+    "_heartbeat/model.py": "ac5e8b1a53445ac15907f1b37c3bb047fa4050c8a930b1e94a4a27b718b0f3bd",
+    "_heartbeat/ports.py": "47832227a7a24ac0b7f8fb8c5168b744f99f5fe99cb0c4116b1665596dfb587b",
+    "_heartbeat/validation.py": "5b7964052ffd4e1b0312c42db3283601e5d9754fa3ee2f0dd829de56d513538d",
+    "wire_schemas/heartbeat-schema.json": "b51c3d114650156adee4cef81c4aa75c935299fca9656425e65e49729f5ae10d",
+    "_heartbeat/CONTRACT.md": "f8198dcbd505620ca849fbdcfb9a372cef44a03bbe603b68dac18c80678b3196",
+    "_heartbeat/LICENSE": "730bb7c5784188be32cac67228ebd4d4f17d1f7f8795c21858c1e3af2d284e1f"
+  },
+  "upstream_files": {
+    "wire_schemas/core-schema.json": "ef70b61f99b6d2e5e3b46863822eab08dff6a45bedc7a08914e0e5b133f40203",
+    "wire_schemas/tasks-schema.json": "bf30afb7ac251e3e22c037b7a685f60ef6603031b5484c0d08b1fa0bbe86d460",
+    "_heartbeat/__init__.py": "39ff5829ea74028c3b9aa88e41277b4ffa9d0a136164e3951138472764c43e30",
+    "_heartbeat/clock.py": "a144fd149b46dbf91221d89b6c71ce4211b1735df1cd1f14f603f66efe434242",
+    "_heartbeat/errors.py": "dc5de7e869e5fe1a5b83f0329a9cd736765a6613c50890ff5db1ea13d5dff28a",
+    "_heartbeat/issuer.py": "7c6e8e6befcc8befe182de82d563bfe6b90c3d9ecfb127a88d8ea32efa7072cc",
+    "_heartbeat/lineage.py": "7e8a3aff5e2beaa73b54f7f2c3cb7303db13476666e068ffa67d4f44b3fc4e0d",
+    "_heartbeat/model.py": "5ec936429b6a3fb492abbb3d0498761fdb82cb8a6a62a428c867a9d690ae6ed8",
+    "_heartbeat/ports.py": "47832227a7a24ac0b7f8fb8c5168b744f99f5fe99cb0c4116b1665596dfb587b",
+    "_heartbeat/validation.py": "e1c7d36dc3ebfad55c03eff48270a4d03e89184d29b1806293fa770b89c7d2c5",
+    "wire_schemas/heartbeat-schema.json": "bef38d0ee22195aae082baceb6ae56e4336eb7f0dbb5386fd1b4e4529b12431d",
+    "_heartbeat/CONTRACT.md": "99de03913f2f2b6c935579e4e1d41f03d76dd9b25b4e3d15b0f799da76795149"
+  },
+  "public_normalization": "Replace internal source-project names in prose/examples and the heartbeat schema $id only; schema constraints and executable behavior are unchanged."
+}
