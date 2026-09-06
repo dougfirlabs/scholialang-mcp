@@ -1,16 +1,16 @@
 {
   "kind": "prd",
   "schema_version": 1,
-  "status": "draft",
+  "status": "approved",
   "group_id": "scholialang-073-convergence-20260904",
   "run_policy": "gated_stack",
   "approval": {
-    "approved": false,
-    "execution_authorized": false,
+    "approved": true,
+    "execution_authorized": true,
     "merge_authorized": false,
     "release_authorized": false
   },
-  "authority": "Overnight implementation authorized by operator in the program; this specific draft remains receipt-gated. Activate only when PM records accepted dependencies. Only this isolated repository workbranch may change. No protected-branch integration, original PR changes, release, deployment, global installation or Cloud work.",
+  "authority": "Darren's overnight GO authorizes this receipt-gated implementation run. Launch only this isolated MCP control branch through candidate GUI7709. No protected merge, release, deployment, global install, original PR mutation, shared stage movement, GUI restart, or Cloud work.",
   "evidence_contract": "Acceptance binds to full source SHA(s), pinned dependency/spec revisions, clean isolated environment, exact commands and exit codes, required scenario counts with zero skips, artifact hashes, independent verdict, preserved behavior matrix, and rollback notes. Existing green CI does not override a reproducible contract violation.",
   "id": "sch073-04-capability-contract-scholialang-mcp",
   "title": "Freeze MCP capability, identity and durable-state contracts",
@@ -106,10 +106,17 @@
     "job_id": "sch073-j05",
     "requires_receipts": [
       "sch073-j02",
+      "sch073-j03",
       "sch073-j04"
     ],
     "enforcement": "manual_PM_immutable_SHA_artifact_corpus_gate",
-    "launch_ready": false
+    "launch_ready": true,
+    "gui_port": 7709,
+    "source_branch": "feat/sch073-mcp-control-20260905",
+    "source_tip": "9596a00a30677b579444270d8027c7bcd5ed2ef1",
+    "launch_model": "claude-fable-5",
+    "validation_enforcement": "report_only",
+    "scholia_feedback_mode": "midstream_report_only"
   },
   "protocol_pins": {
     "core": "modelcontextprotocol/modelcontextprotocol@e76e9c572c6f2bfcb730357101acc90f2f802e02",
@@ -135,6 +142,50 @@
     "baseline_wire_checks_passed": 137,
     "support_combinations_prepared": 8,
     "policy_combinations_prepared": 27,
-    "status": "preparation_only_not_candidate_acceptance"
+    "status": "preparation_only_parent_receipts_now_satisfied_candidate_acceptance_pending",
+    "accepted_core_wheel": "/home/horselover/projects/backups/sch073-preflight-20260904.VKrsy3/j04-adjudication/9a86a4645c49074c4a415ade01093bff0e2ca70c-astra-resume-20260905/artifacts/scholialang-0.7.3-py3-none-any.whl",
+    "accepted_core_sdist": "/home/horselover/projects/backups/sch073-preflight-20260904.VKrsy3/j04-adjudication/9a86a4645c49074c4a415ade01093bff0e2ca70c-astra-resume-20260905/artifacts/scholialang-0.7.3.tar.gz",
+    "wheel_sha256": "bbe08813bb0431824fa82db6b086ff2aafca5f6024e0b377dcfa7d37c25c1831",
+    "sdist_sha256": "457fe675175adf2c3166eeb55ffe86f8e9e0fb72b5acea54615ac3401c2557b2"
+  },
+  "source_pins": {
+    "j02_accepted_sha": "19aef56b75f17ba387721cf16dccc6402a4dcf42",
+    "mcp_control_base": "b873a37ec138f6d21ad42e7ff2f2da611f2dc810",
+    "j03_spec_sha": "4e19eae3e55566dac450c0dbf7bcba03d12afc50",
+    "j04_core_candidate": "9a86a4645c49074c4a415ade01093bff0e2ca70c",
+    "j04_core_control_tip": "efa41c0",
+    "j04_wheel_sha256": "bbe08813bb0431824fa82db6b086ff2aafca5f6024e0b377dcfa7d37c25c1831",
+    "j04_sdist_sha256": "457fe675175adf2c3166eeb55ffe86f8e9e0fb72b5acea54615ac3401c2557b2",
+    "j04_review": "/home/horselover/projects/backups/sch073-preflight-20260904.VKrsy3/j04-adjudication/9a86a4645c49074c4a415ade01093bff0e2ca70c-astra-resume-20260905/ASTRA-RESUME-INDEPENDENT-REVIEW.md"
+  },
+  "predecessor_receipt": {
+    "j02": {
+      "accepted_sha": "19aef56b75f17ba387721cf16dccc6402a4dcf42",
+      "control_tip": "b873a37ec138f6d21ad42e7ff2f2da611f2dc810",
+      "verdict": "pass_with_caveats"
+    },
+    "j03": {
+      "accepted_sha": "4e19eae3e55566dac450c0dbf7bcba03d12afc50",
+      "control_tip": "40a100125ba937a6561c30ef5eb58c11ed4cbec5",
+      "verdict": "accepted"
+    },
+    "j04": {
+      "accepted_sha": "9a86a4645c49074c4a415ade01093bff0e2ca70c",
+      "control_tip": "efa41c0",
+      "verdict": "pass_with_caveats",
+      "wheel_sha256": "bbe08813bb0431824fa82db6b086ff2aafca5f6024e0b377dcfa7d37c25c1831",
+      "sdist_sha256": "457fe675175adf2c3166eeb55ffe86f8e9e0fb72b5acea54615ac3401c2557b2"
+    }
+  },
+  "launch_contract": {
+    "project": "scholialang-mcp-sch073",
+    "port": 7709,
+    "source_branch": "feat/sch073-mcp-control-20260905",
+    "execution_mode": "skolem_worktree",
+    "driver": "claude",
+    "model": "claude-fable-5",
+    "validation_enforcement": "report_only",
+    "scholia_feedback_mode": "midstream_report_only",
+    "protected_merge_authorized": false
   }
 }
