@@ -1,7 +1,7 @@
 {
   "kind": "prd",
   "schema_version": 1,
-  "status": "approved",
+  "status": "completed",
   "group_id": "scholialang-073-convergence-20260904",
   "run_policy": "gated_stack",
   "approval": {
@@ -187,5 +187,121 @@
     "validation_enforcement": "report_only",
     "scholia_feedback_mode": "midstream_report_only",
     "protected_merge_authorized": false
-  }
+  },
+  "lifecycle": {
+    "run_status": "completed",
+    "last_successful_run_id": "aa595d6b67af414994f6ab8a60c59347",
+    "last_successful_branch": "feat/sch073-mcp-control-20260905",
+    "last_successful_commit": "baf87efa1639b2330b8fa83c10072dae27b99eab",
+    "completed_at": "2026-09-06T01:11:34+00:00",
+    "completion_evidence": {
+      "task": "sch073-04-capability-contract-scholialang-mcp",
+      "prd_id": "sch073-04-capability-contract-scholialang-mcp",
+      "provider": "claude",
+      "model": "claude-fable-5",
+      "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_19p0m83wqd_freeze_mcp.md",
+      "post_status": "present",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "aa595d6b67af414994f6ab8a60c59347",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion": {
+    "run_id": "aa595d6b67af414994f6ab8a60c59347",
+    "task": "sch073-04-capability-contract-scholialang-mcp",
+    "completed_at": "2026-09-06T01:11:34+00:00",
+    "branch": "feat/sch073-mcp-control-20260905",
+    "commit": "baf87efa1639b2330b8fa83c10072dae27b99eab",
+    "final_status": "success",
+    "previous_status": "approved",
+    "lifecycle": {
+      "run_status": "completed",
+      "last_successful_run_id": "aa595d6b67af414994f6ab8a60c59347",
+      "last_successful_branch": "feat/sch073-mcp-control-20260905",
+      "last_successful_commit": "baf87efa1639b2330b8fa83c10072dae27b99eab",
+      "completed_at": "2026-09-06T01:11:34+00:00",
+      "completion_evidence": {
+        "task": "sch073-04-capability-contract-scholialang-mcp",
+        "prd_id": "sch073-04-capability-contract-scholialang-mcp",
+        "provider": "claude",
+        "model": "claude-fable-5",
+        "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_19p0m83wqd_freeze_mcp.md",
+        "post_status": "present",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "aa595d6b67af414994f6ab8a60c59347",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
+    },
+    "completion_evidence": {
+      "task": "sch073-04-capability-contract-scholialang-mcp",
+      "prd_id": "sch073-04-capability-contract-scholialang-mcp",
+      "provider": "claude",
+      "model": "claude-fable-5",
+      "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_19p0m83wqd_freeze_mcp.md",
+      "post_status": "present",
+      "test_gate": {
+        "all_passed": true,
+        "commands": [],
+        "run_id": "aa595d6b67af414994f6ab8a60c59347",
+        "skipped": true,
+        "skipped_reason": "no machine-runnable commands in success_metrics"
+      }
+    }
+  },
+  "completion_history": [
+    {
+      "run_id": "aa595d6b67af414994f6ab8a60c59347",
+      "task": "sch073-04-capability-contract-scholialang-mcp",
+      "completed_at": "2026-09-06T01:11:34+00:00",
+      "branch": "feat/sch073-mcp-control-20260905",
+      "commit": "baf87efa1639b2330b8fa83c10072dae27b99eab",
+      "final_status": "success",
+      "previous_status": "approved",
+      "lifecycle": {
+        "run_status": "completed",
+        "last_successful_run_id": "aa595d6b67af414994f6ab8a60c59347",
+        "last_successful_branch": "feat/sch073-mcp-control-20260905",
+        "last_successful_commit": "baf87efa1639b2330b8fa83c10072dae27b99eab",
+        "completed_at": "2026-09-06T01:11:34+00:00",
+        "completion_evidence": {
+          "task": "sch073-04-capability-contract-scholialang-mcp",
+          "prd_id": "sch073-04-capability-contract-scholialang-mcp",
+          "provider": "claude",
+          "model": "claude-fable-5",
+          "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_19p0m83wqd_freeze_mcp.md",
+          "post_status": "present",
+          "test_gate": {
+            "all_passed": true,
+            "commands": [],
+            "run_id": "aa595d6b67af414994f6ab8a60c59347",
+            "skipped": true,
+            "skipped_reason": "no machine-runnable commands in success_metrics"
+          }
+        }
+      },
+      "completion_evidence": {
+        "task": "sch073-04-capability-contract-scholialang-mcp",
+        "prd_id": "sch073-04-capability-contract-scholialang-mcp",
+        "provider": "claude",
+        "model": "claude-fable-5",
+        "post_path": "/home/horselover/projects/opentalon-worktrees/ot-rsi-sch073-night-20260905-mcp-control/.opentalon/kb/posts/2026_09_05_POST_19p0m83wqd_freeze_mcp.md",
+        "post_status": "present",
+        "test_gate": {
+          "all_passed": true,
+          "commands": [],
+          "run_id": "aa595d6b67af414994f6ab8a60c59347",
+          "skipped": true,
+          "skipped_reason": "no machine-runnable commands in success_metrics"
+        }
+      }
+    }
+  ]
 }
