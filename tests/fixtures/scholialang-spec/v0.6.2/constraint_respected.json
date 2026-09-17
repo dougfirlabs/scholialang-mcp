@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0",
+  "spec_version": "0.6.2",
+  "validator_version": "0.7.2",
+  "rule": "constraint_respected",
+  "title": "Scholia v0.6.2 constraint phrase and token-boundary contract",
+  "description": "Shared positive and negative fixtures for Rule 7. These cases prevent articles and token substrings from being misclassified as forbidden actions while retaining explicit forbidden-verb detection.",
+  "cases": [
+    {
+      "id": "v062-constraint-bare-null-article-is-not-a-verb",
+      "category": "positive",
+      "description": "The article in 'Never a bare null' must not become the forbidden verb 'a'.",
+      "trace": "<Step id=\"S_01\">\n  <Constraint id=\"C_01\">Never a bare null.</Constraint>\n  <Action id=\"A_01\">Persist a structured result.<Finding id=\"F_01\">The structured result was persisted.</Finding></Action>\n</Step>",
+      "expects": {
+        "rule": "constraint_respected",
+        "outcome": "pass",
+        "error_count": 0
+      }
+    },
+    {
+      "id": "v062-constraint-forbidden-token-needs-word-boundary",
+      "category": "positive",
+      "description": "A forbidden token must not match as a substring inside an unrelated word.",
+      "trace": "<Step id=\"S_01\">\n  <Constraint id=\"C_01\">Never delete records.</Constraint>\n  <Action id=\"A_01\">Report the undeleted record count.<Finding id=\"F_01\">The count was reported.</Finding></Action>\n</Step>",
+      "expects": {
+        "rule": "constraint_respected",
+        "outcome": "pass",
+        "error_count": 0
+      }
+    },
+    {
+      "id": "v062-constraint-not-retroactive",
+      "category": "positive",
+      "description": "A Constraint only applies after it appears in trace order.",
+      "trace": "<Step id=\"S_01\">\n  <Action id=\"A_01\">Delete the disposable fixture.<Finding id=\"F_01\">The fixture was removed.</Finding></Action>\n  <Constraint id=\"C_01\">Never delete fixtures.</Constraint>\n</Step>",
+      "expects": {
+        "rule": "constraint_respected",
+        "outcome": "pass",
+        "error_count": 0
+      }
+    },
+    {
+      "id": "v062-constraint-never-explicit-violation",
+      "category": "negative",
+      "description": "An Action using the explicit forbidden verb after Never is rejected.",
+      "trace": "<Step id=\"S_01\">\n  <Constraint id=\"C_01\">Never delete records.</Constraint>\n  <Action id=\"A_01\">Delete the customer records.<Finding id=\"F_01\">The records were deleted.</Finding></Action>\n</Step>",
+      "expects": {
+        "rule": "constraint_respected",
+        "outcome": "fail",
+        "error_count": 1,
+        "atom_ids": ["A_01"]
+      }
+    },
+    {
+      "id": "v062-constraint-must-not-explicit-violation",
+      "category": "negative",
+      "description": "The 'must not' form detects the explicit forbidden verb.",
+      "trace": "<Step id=\"S_01\">\n  <Constraint id=\"C_01\">Agents must not expose credentials.</Constraint>\n  <Action id=\"A_01\">Expose the credentials in the log.<Finding id=\"F_01\">The log contained credentials.</Finding></Action>\n</Step>",
+      "expects": {
+        "rule": "constraint_respected",
+        "outcome": "fail",
+        "error_count": 1,
+        "atom_ids": ["A_01"]
+      }
+    },
+    {
+      "id": "v062-constraint-do-not-explicit-violation",
+      "category": "negative",
+      "description": "The 'do not' form detects the explicit forbidden verb.",
+      "trace": "<Step id=\"S_01\">\n  <Constraint id=\"C_01\">Do not overwrite files.</Constraint>\n  <Action id=\"A_01\">Overwrite the release file.<Finding id=\"F_01\">The file was overwritten.</Finding></Action>\n</Step>",
+      "expects": {
+        "rule": "constraint_respected",
+        "outcome": "fail",
+        "error_count": 1,
+        "atom_ids": ["A_01"]
+      }
+    }
+  ]
+}

@@ -1,5 +1,9 @@
 # Scholialang Claude Code Plugin
 
+Current package/plugin release: **0.7.2**. The bundled validator implements
+the stable **Scholia v0.6.2 grammar**, the approved additive `fingerprint=`
+contract, and the 0.7.2 constraint-validation fixes.
+
 Local Claude Code plugin for explicit Scholialang traces, SQLite-backed DAG
 storage, validation of the stable Scholia v0.6.2 language grammar, and rollout exhaust imports.
 

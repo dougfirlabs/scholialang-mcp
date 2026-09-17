@@ -24,7 +24,7 @@ SCHOLIALANG_COMMIT = "c6ff32a5b028ac40fd1c12303c3eb37700f51dca"
 # Shared action_recorded conformance corpus: unchanged, still cut at spec
 # v0.6.2 (fingerprint fixtures live separately in scholialang-spec).
 SPEC_CORPUS_VERSION = "0.6.2"
-SPEC_COMMIT = "eb238069df1c907674f688a46fa23b8179263e1a"
+SPEC_COMMIT = "02089621d21652b741e5a75a0b295c905848c97e"
 HOSTS = ("claude-code", "codex", "ollama")
 VENDOR_FILES = ("atoms.py", "parser.py", "validator.py", "UPSTREAM.json")
 

@@ -1,5 +1,9 @@
 # Scholialang for Claude Desktop
 
+Current package/plugin release: **0.7.2**. The bundled validator implements
+the stable **Scholia v0.6.2 grammar**, the approved additive `fingerprint=`
+contract, and the 0.7.2 constraint-validation fixes.
+
 This directory is the source template for the forwardable Scholialang MCP
 Bundle (`.mcpb`). The release artifact is assembled from this template and the
 canonical server under `plugins/claude-code/scholialang/scripts/`; the server

@@ -14,6 +14,7 @@ SPEC_VERSION = "0.6.2"
 SOURCE_FILES = (
     "conformance/v0.6.2/README.md",
     "conformance/v0.6.2/action_recorded.json",
+    "conformance/v0.6.2/constraint_respected.json",
 )
 
 
@@ -61,6 +62,16 @@ def main() -> int:
     ):
         raise SystemExit("unexpected v0.6.2 action_recorded conformance corpus")
 
+    constraints = json.loads(blobs["conformance/v0.6.2/constraint_respected.json"])
+    if (
+        constraints.get("spec_version") != SPEC_VERSION
+        or constraints.get("validator_version") != "0.7.2"
+        or constraints.get("rule") != "constraint_respected"
+        or len(constraints.get("cases", [])) != 6
+        or {case.get("category") for case in constraints["cases"]} != {"positive", "negative"}
+    ):
+        raise SystemExit("unexpected 0.7.2 constraint_respected conformance corpus")
+
     destination = (
         Path(__file__).resolve().parents[1]
         / "tests"
@@ -89,7 +100,7 @@ def main() -> int:
         json.dumps(provenance, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    print(f"vendored {len(cases)} Scholia {SPEC_VERSION} cases from {commit}")
+    print(f"vendored {len(cases) + len(constraints['cases'])} Scholia {SPEC_VERSION} cases from {commit}")
     return 0
 
 

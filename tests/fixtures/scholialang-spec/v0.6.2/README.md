@@ -1,7 +1,9 @@
 # Scholia v0.6.2 conformance fixtures
 
 This directory is the shared cross-implementation contract for Scholia
-v0.6.2 validator changes. Consumers should load the JSON suite, parse
+v0.6.2 grammar, exercised by the current **0.7.2** reference validator and
+MCP/plugin release. The directory name is the grammar version; each suite
+records the implementation version for its rule contract. Consumers should load the JSON suite, parse
 each `trace`, adapt `graph_edges` to their validator's optional graph
 view, run the named rule, and compare the rule-local errors with
 `expects`.
@@ -46,3 +48,11 @@ expected to emit exactly the stated errors for Rule 4; it need not be
 treated as a parser failure. Implementations may additionally run the
 entire validator and assert that fixtures do not produce unintended
 errors in other rules.
+
+## `constraint_respected.json`
+
+The **0.7.2** reference implementation fixes Rule 7. Its keyword-level linter
+must distinguish a forbidden action token from
+an article or a substring inside another word. The shared cases pin three
+positive boundaries (including `Never a bare null`) and all three supported
+negative phrase forms: `Never`, `must not`, and `do not`.
