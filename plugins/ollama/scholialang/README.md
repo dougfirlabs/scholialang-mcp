@@ -1,5 +1,9 @@
 # Scholialang Ollama / Local-Model Integration
 
+Current package/plugin release: **0.7.2**. The bundled validator implements
+the stable **Scholia v0.6.2 grammar**, the approved additive `fingerprint=`
+contract, and the 0.7.2 constraint-validation fixes.
+
 Ollama is an inference server, not a plugin host. This tree ships the
 Scholialang MCP server alongside recipe snippets for the most common
 Ollama-backed coding harnesses that *do* speak MCP. The MCP server itself

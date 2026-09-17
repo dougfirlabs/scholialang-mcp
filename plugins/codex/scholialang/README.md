@@ -1,5 +1,9 @@
 # Scholialang Codex Plugin
 
+Current package/plugin release: **0.7.2**. The bundled validator implements
+the stable **Scholia v0.6.2 grammar**, the approved additive `fingerprint=`
+contract, and the 0.7.2 constraint-validation fixes.
+
 Local Codex plugin for explicit Scholialang traces, SQLite-backed DAG storage,
 and full Codex rollout exhaust imports.
 

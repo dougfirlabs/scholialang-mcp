@@ -118,7 +118,7 @@ licensed separately under CC-BY-4.0.
 Artifacts are read from a generic `.scholia-atlas/` directory when present.
 Missing artifacts return structured `not_generated_yet` responses so host
 agents can fall back to ordinary file reads. Regeneration is host-specific in
-v0.6 and returns `regenerate_unavailable` unless a host adapter enables it.
+package 0.7.2 and returns `regenerate_unavailable` unless a host adapter enables it.
 
 ### Codex Atlas MCP Snippet
 
@@ -174,8 +174,8 @@ Each plugin's tool surface is identical:
 - `scholia_dag_*` — local SQLite DAG traces
 - `scholia_trace_*` — compatibility aliases
 - `scholia_catalog`, `scholia_lookup` — reference lookups across the
-  v0.6 closed-set vocabulary (32 atom kinds, 11 canonical
-  operators, v0.6 structural primitive closed sets for `Edge`, `Effect`,
+  stable v0.6.2 closed-set vocabulary (32 atom kinds, 11 canonical
+  operators, structural primitive closed sets for `Edge`, `Effect`,
   `Ref`, and `Meta`, and the criticality ladder)
 - `scholia_lint_snippet` — stable Scholia v0.6.2 grammar validation (closed-set
   atoms, reference completeness, decision closure, action recording,
@@ -243,7 +243,7 @@ Run the LSP server:
 python -m scholialang_mcp.lsp --workspace-root /path/to/repo
 ```
 
-MVP v0.6 LSP scope:
+LSP scope in package 0.7.2:
 
 - Hover over `location="path:start:end"` attributes and show the referenced
   source span.
@@ -252,10 +252,11 @@ MVP v0.6 LSP scope:
 - Definition resolution order: workspace-relative file path,
   `path.py::symbol` path prefix, then Scholia atom id in the current document
   when that atom has a `location` attribute.
-- Version alignment with the v0.6 language/runtime stack; full v0.6 grammar
-  validation is exposed through the MCP lint tools rather than the LSP MVP.
+- Package/server version 0.7.2, aligned with the reference implementation;
+  stable v0.6.2 grammar validation and the additive fingerprint rule are
+  exposed through the MCP lint tools rather than the LSP MVP.
 
-Deferred past the v0.6 LSP MVP:
+Not yet implemented in the LSP server:
 
 - completions
 - diagnostics as you type

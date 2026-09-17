@@ -1,5 +1,9 @@
 # Codex Plugins
 
+Current package/plugin release: **0.7.2**. The bundled validator implements
+the stable **Scholia v0.6.2 grammar**, the approved additive `fingerprint=`
+contract, and the 0.7.2 constraint-validation fixes.
+
 This directory contains Codex-specific integrations for `scholialang-mcp`.
 
 ## Scholialang

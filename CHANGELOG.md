@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Refresh root and host-plugin READMEs with explicit package/plugin 0.7.2 and
+  stable grammar v0.6.2 labels, including the current LSP scope.
+- Refresh the vendored conformance README and corpus from the same exact spec
+  commit, recording source hashes and including the six constraint fixtures.
+
 - Align the pinned spec with the core repository's current conformance revision
   and run all six shared constraint-regression cases against the vendored 0.7.2
   validator in the existing spec-parity gate, alongside fingerprint fixtures.

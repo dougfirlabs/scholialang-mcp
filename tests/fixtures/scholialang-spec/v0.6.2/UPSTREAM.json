@@ -1,13 +1,17 @@
 {
-  "commit": "eb238069df1c907674f688a46fa23b8179263e1a",
+  "commit": "02089621d21652b741e5a75a0b295c905848c97e",
   "files": {
     "README.md": {
-      "sha256": "dc8bb7cd069f8ffd279c5ad2189d5cb213775343368a0089459bcd54566d5785",
+      "sha256": "7a541750d09483f12a73c210613040aeabe0da769dce7b5e53faf259c0e3d6bf",
       "source_path": "conformance/v0.6.2/README.md"
     },
     "action_recorded.json": {
       "sha256": "61b5fb9db03c9f3999028d32b614129f28925b26d566d4a165d1a9ca061620b5",
       "source_path": "conformance/v0.6.2/action_recorded.json"
+    },
+    "constraint_respected.json": {
+      "sha256": "a20eee36b9e4447f4c78711a8891d1c6cfb725d8fb6cdf90ee241e57f8d305b6",
+      "source_path": "conformance/v0.6.2/constraint_respected.json"
     }
   },
   "schema": 1,
