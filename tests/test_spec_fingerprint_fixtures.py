@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import json
 import os
 import sys
 from pathlib import Path
@@ -226,3 +227,26 @@ def test_fingerprint_requires_a_location_to_bind() -> None:
         "</Step>"
     )
     assert [error.atom_id for error in _fingerprint_errors(trace)] == ["Obs_01"]
+
+
+def test_vendored_engine_matches_shared_constraint_regressions() -> None:
+    """The same pinned spec also covers the package 0.7.2 constraint fix."""
+    assert _FIXTURE_DIR is not None
+    corpus_path = (
+        _FIXTURE_DIR.parents[2]
+        / "conformance" / "v0.6.2" / "constraint_respected.json"
+    )
+    assert corpus_path.is_file(), "pinned spec is missing constraint regressions"
+    corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
+    assert corpus["rule"] == "constraint_respected"
+    assert len(corpus["cases"]) == 6, "shared constraint corpus is truncated"
+    assert {case["category"] for case in corpus["cases"]} == {"positive", "negative"}
+    parser, validator = _load_vendored_engine()
+    for case in corpus["cases"]:
+        result = validator.validate(parser.parse(case["trace"]))
+        errors = result.errors_by_rule["constraint_respected"]
+        expected = case["expects"]
+        assert len(errors) == expected["error_count"], case["id"]
+        assert (not errors) == (expected["outcome"] == "pass"), case["id"]
+        if "atom_ids" in expected:
+            assert [error.atom_id for error in errors] == expected["atom_ids"], case["id"]

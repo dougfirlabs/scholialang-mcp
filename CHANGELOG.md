@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Align the pinned spec with the core repository's current conformance revision
+  and run all six shared constraint-regression cases against the vendored 0.7.2
+  validator in the existing spec-parity gate, alongside fingerprint fixtures.
+
 ## v0.7.2
 
 - Repair the public DAG-to-grammar contract: XML exports now use canonical
